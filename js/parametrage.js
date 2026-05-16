@@ -21,14 +21,11 @@
   const CLE_STORAGE = 'muf_config';
 
   const CONFIG_DEFAUT = {
-    nom:              '',
-    prenom:           '',
-    email:            '',
-    telephone:        '',
-    agence:           '',
-    signature:        '',
-    emails_frequents: [],   /* tableau de { label, adresse } */
-    notion_token:     '',
+    nom:               '',
+    prenom:            '',
+    emails_frequents:  [],   /* tableau de { label, adresse } */
+    email_maintenance: '',   /* adresse du service maintenance Multivac */
+    notion_token:      '',
     notion_page_id:   '',
     date_format:      'DD/MM/YYYY',
     unites:           'SI',

@@ -13,14 +13,13 @@
        style="display:none;"></div>
 
   <!-- ================================================================
-       SECTION 1 — Identité du technicien
+       SECTION 1 — Identité du technicien (Nom / Prénom)
        ================================================================ -->
   <section class="card mb-24" aria-labelledby="titre-identite">
     <div class="card-header">
       <h2 class="card-title" id="titre-identite">Identité</h2>
     </div>
     <div class="card-body">
-
       <div class="param-grid-2col">
 
         <div class="form-group">
@@ -37,69 +36,12 @@
                  placeholder="ex : Jean" />
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="param-email">Email professionnel</label>
-          <input class="form-control" type="email" id="param-email"
-                 name="email" autocomplete="email"
-                 inputmode="email"
-                 placeholder="ex : j.dupont@multivac.com" />
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="param-telephone">Téléphone</label>
-          <input class="form-control" type="tel" id="param-telephone"
-                 name="telephone" autocomplete="tel"
-                 inputmode="tel"
-                 placeholder="ex : 06 12 34 56 78" />
-        </div>
-
-      </div><!-- /.param-grid-2col -->
-
-    </div>
-  </section>
-
-  <!-- ================================================================
-       SECTION 2 — Agence / Secteur géographique
-       ================================================================ -->
-  <section class="card mb-24" aria-labelledby="titre-agence">
-    <div class="card-header">
-      <h2 class="card-title" id="titre-agence">Agence</h2>
-    </div>
-    <div class="card-body">
-
-      <div class="form-group">
-        <label class="form-label" for="param-agence">Nom de l'agence / secteur géographique</label>
-        <input class="form-control" type="text" id="param-agence"
-               name="agence"
-               placeholder="ex : Agence Sud-Ouest, Bordeaux" />
       </div>
-
     </div>
   </section>
 
   <!-- ================================================================
-       SECTION 3 — Signature automatique
-       ================================================================ -->
-  <section class="card mb-24" aria-labelledby="titre-signature">
-    <div class="card-header">
-      <h2 class="card-title" id="titre-signature">Signature automatique</h2>
-    </div>
-    <div class="card-body">
-
-      <div class="form-group">
-        <label class="form-label" for="param-signature">
-          Signature utilisée dans les emails et rapports
-        </label>
-        <textarea class="form-control" id="param-signature"
-                  name="signature" rows="5"
-                  placeholder="ex :&#10;Jean Dupont — Technicien terrain&#10;Multivac France | Agence Sud-Ouest&#10;Tél : 06 12 34 56 78"></textarea>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ================================================================
-       SECTION 4 — Emails fréquents
+       SECTION 2 — Emails fréquents
        ================================================================ -->
   <section class="card mb-24" aria-labelledby="titre-emails">
     <div class="card-header">
@@ -107,9 +49,22 @@
     </div>
     <div class="card-body">
 
+      <div class="form-group mb-16">
+        <label class="form-label" for="param-email-maintenance">
+          Email service maintenance Multivac
+        </label>
+        <input class="form-control" type="email" id="param-email-maintenance"
+               name="email_maintenance" autocomplete="off"
+               inputmode="email"
+               placeholder="ex : maintenance@multivac.com" />
+        <p class="text-muted text-sm mt-4">
+          Utilisé comme destinataire par défaut dans les demandes d'OS.
+        </p>
+      </div>
+
       <p class="text-muted text-sm mb-16">
         Enregistrez les adresses email que vous utilisez régulièrement
-        (service OS, responsable, client type…).
+        (responsable, client type…).
       </p>
 
       <!-- Liste dynamique des emails -->
@@ -324,14 +279,11 @@
      Références DOM
      ---------------------------------------------------------- */
   const champsCles = {
-    nom:            document.getElementById('param-nom'),
-    prenom:         document.getElementById('param-prenom'),
-    email:          document.getElementById('param-email'),
-    telephone:      document.getElementById('param-telephone'),
-    agence:         document.getElementById('param-agence'),
-    signature:      document.getElementById('param-signature'),
-    notion_token:   document.getElementById('param-notion-token'),
-    notion_page_id: document.getElementById('param-notion-page-id'),
+    nom:               document.getElementById('param-nom'),
+    prenom:            document.getElementById('param-prenom'),
+    email_maintenance: document.getElementById('param-email-maintenance'),
+    notion_token:      document.getElementById('param-notion-token'),
+    notion_page_id:    document.getElementById('param-notion-page-id'),
     date_format:    document.getElementById('param-date-format'),
     unites:         document.getElementById('param-unites'),
   };
