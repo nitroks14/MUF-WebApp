@@ -1,0 +1,705 @@
+<!--
+  Plugin : Demande d'OS
+  Source originale : nitroks14/WebApp_Demande-OS (assainie et harmonisée)
+  Assainissement : données personnelles remplacées par Parametrage.get()
+  Harmonisation  : thème MUF-WebApp (variables CSS main.css)
+-->
+
+<style>
+  /* ============================================================
+     Styles spécifiques au plugin Demande d'OS
+     Utilise exclusivement les variables CSS de main.css
+     ============================================================ */
+
+  /* Grille 2 colonnes sur écran large */
+  .dos-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  @media (min-width: 600px) {
+    .dos-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* Fieldset pour les blocs conditionnels */
+  .dos-fieldset {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-top: 12px;
+  }
+  .dos-fieldset legend {
+    padding: 0 8px;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    font-weight: 600;
+  }
+
+  /* Radio inline */
+  .dos-radio-group {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .dos-radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--font-size-base);
+    font-weight: normal;
+    color: var(--color-text);
+    cursor: pointer;
+    min-height: 44px; /* touch-friendly */
+  }
+  .dos-radio-group input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-primary);
+    flex-shrink: 0;
+  }
+
+  /* Note d'information en italique */
+  .dos-note {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    font-style: italic;
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+
+  /* Bloc destinataires */
+  .dos-destinataires {
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 12px;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin-top: 8px;
+    line-height: 1.6;
+  }
+  .dos-destinataires strong {
+    color: var(--color-text);
+  }
+
+  /* Masqué par défaut — affiché en JS */
+  .dos-hidden { display: none !important; }
+
+  /* Espacement vertical entre sections du formulaire */
+  .dos-section { margin-top: 16px; }
+
+  /* Champ invalide */
+  .form-control.dos-invalid {
+    border-color: #E53E3E;
+    box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.15);
+  }
+
+  /* Bouton principal pleine largeur sur mobile */
+  @media (max-width: 599px) {
+    .dos-btn-wrap { width: 100%; }
+    .dos-btn-wrap .btn { width: 100%; }
+  }
+
+  /* Liste des emails fréquents (destinataires rapides) */
+  .dos-emails-frequents {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .dos-email-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background-color var(--transition), border-color var(--transition);
+    min-height: 36px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .dos-email-chip:hover,
+  .dos-email-chip.dos-chip-actif {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-white);
+  }
+</style>
+
+<!-- ============================================================
+     EN-TÊTE DU PLUGIN
+     ============================================================ -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h2 class="card-title">Demande de création d'OS</h2>
+    <span class="badge badge-secondary">Brouillon Outlook</span>
+  </div>
+  <div class="card-body">
+    <p class="text-muted text-sm">
+      Remplissez le formulaire puis cliquez sur le bouton pour ouvrir un brouillon
+      pré-rempli dans Outlook. Aucun email n'est envoyé automatiquement.
+    </p>
+  </div>
+</div>
+
+<!-- ============================================================
+     FORMULAIRE
+     ============================================================ -->
+<div class="card">
+
+  <!-- Ligne 1 : Client / Machine -->
+  <div class="dos-grid">
+    <div class="form-group">
+      <label class="form-label" for="dos-client">Nom du client <span aria-hidden="true">*</span></label>
+      <input class="form-control" id="dos-client" type="text"
+             placeholder="Ex. Société Martin" autocomplete="off" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="dos-machine">Type et N° de la machine <span aria-hidden="true">*</span></label>
+      <input class="form-control" id="dos-machine" type="text"
+             placeholder="Ex. R230 924" autocomplete="off" required>
+    </div>
+  </div>
+
+  <!-- Ligne 2 : Motif -->
+  <div class="dos-section dos-grid">
+    <div class="form-group">
+      <label class="form-label" for="dos-motif">Motif de l'OS <span aria-hidden="true">*</span></label>
+      <select class="form-control" id="dos-motif" required>
+        <option value="contrat">Contrat d'entretien</option>
+        <option value="installation">Installation</option>
+        <option value="preinst">Pré-installation</option>
+        <option value="fat">Réception usine (FAT)</option>
+        <option value="retravailler">Retravailler</option>
+        <option value="garantie">Garantie</option>
+        <option value="ec_service">Effort commercial – Service</option>
+        <option value="ec_ventes">Effort commercial – Ventes</option>
+        <option value="visite">Visite client</option>
+        <option value="formation">Technicien en formation</option>
+        <option value="autre">Autre…</option>
+      </select>
+    </div>
+    <!-- Précision si motif "Autre" -->
+    <div class="form-group dos-hidden" id="dos-motif-autre-bloc">
+      <label class="form-label" for="dos-motif-prec">Préciser le motif</label>
+      <input class="form-control" id="dos-motif-prec" type="text"
+             placeholder="Décrire le motif exact">
+    </div>
+  </div>
+
+  <!-- Bloc PN/SD — conditionnel -->
+  <div class="dos-section dos-hidden" id="dos-pnsd-bloc">
+    <div class="form-group">
+      <label class="form-label" for="dos-pnsd">
+        N° PN ou SD
+        <small class="text-muted">(obligatoire pour FAT / Pré-installation / Installation / Retravailler)</small>
+      </label>
+      <input class="form-control" id="dos-pnsd" type="text"
+             placeholder="Ex. PN123456 ou SD7890">
+    </div>
+  </div>
+
+  <!-- Bloc Contrat d'entretien — conditionnel -->
+  <div class="dos-section dos-hidden" id="dos-contrat-bloc">
+    <fieldset class="dos-fieldset">
+      <legend>Contrat d'entretien — précisions</legend>
+      <div class="dos-grid">
+        <div class="form-group">
+          <label class="form-label">OS splitté ?</label>
+          <div class="dos-radio-group">
+            <label>
+              <input type="radio" name="dos-split" value="Non" checked> Non
+            </label>
+            <label>
+              <input type="radio" name="dos-split" value="Oui"> Oui
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">OS de calibration ?</label>
+          <div class="dos-radio-group">
+            <label>
+              <input type="radio" name="dos-calib" value="Non" checked> Non
+            </label>
+            <label>
+              <input type="radio" name="dos-calib" value="Oui"> Oui
+            </label>
+          </div>
+        </div>
+      </div>
+      <!-- Noms des techniciens si split — conditionnel -->
+      <div class="dos-grid dos-hidden" id="dos-split-tech-bloc">
+        <div class="form-group">
+          <label class="form-label" for="dos-tech1">Nom du technicien 1</label>
+          <input class="form-control" id="dos-tech1" type="text"
+                 placeholder="Prénom Nom">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="dos-tech2">Nom du technicien 2</label>
+          <input class="form-control" id="dos-tech2" type="text"
+                 placeholder="Prénom Nom">
+        </div>
+      </div>
+      <p class="dos-note">
+        Rappel : 1 technicien = 1 OS. Le split est exceptionnel si la machine est
+        indisponible la journée entière. Toujours préciser si l'OS est splitté.
+      </p>
+    </fieldset>
+  </div>
+
+  <!-- Bloc Garantie — conditionnel -->
+  <div class="dos-section dos-hidden" id="dos-garantie-bloc">
+    <div class="dos-grid">
+      <div class="form-group">
+        <label class="form-label" for="dos-garantie-etat">Machine sous garantie ?</label>
+        <select class="form-control" id="dos-garantie-etat">
+          <option value="À confirmer">À confirmer</option>
+          <option value="Oui">Oui</option>
+          <option value="Non">Non</option>
+        </select>
+      </div>
+    </div>
+    <p class="dos-note">
+      Vérifier la date de garantie avec l'assistante ; validation RTR si nécessaire.
+    </p>
+  </div>
+
+  <!-- Ligne 3 : Dates / Contact client -->
+  <div class="dos-section dos-grid">
+    <div class="form-group">
+      <label class="form-label" for="dos-dates">Date(s) de l'intervention <span aria-hidden="true">*</span></label>
+      <input class="form-control" id="dos-dates" type="text"
+             placeholder="Ex. 16/09/2025 ou 16/09 et 17/09/2025">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="dos-contact">Contact chez le client <span aria-hidden="true">*</span></label>
+      <input class="form-control" id="dos-contact" type="text"
+             placeholder="Prénom Nom">
+    </div>
+  </div>
+
+  <!-- Objectif -->
+  <div class="dos-section form-group">
+    <label class="form-label" for="dos-objectif">Objectif de l'intervention <span aria-hidden="true">*</span></label>
+    <textarea class="form-control" id="dos-objectif"
+              placeholder="Décrire l'objectif de l'intervention…"
+              rows="3"></textarea>
+  </div>
+
+  <!-- ============================================================
+       DESTINATAIRES
+       ============================================================ -->
+  <div class="dos-section">
+    <p class="form-label">Destinataires</p>
+
+    <!-- Email principal (À :) — depuis Parametrage -->
+    <div class="form-group">
+      <label class="form-label" for="dos-email-to">À (email de maintenance) <span aria-hidden="true">*</span></label>
+      <input class="form-control" id="dos-email-to" type="email"
+             placeholder="email-maintenance@votre-domaine.fr">
+    </div>
+
+    <!-- CC — depuis Parametrage ou emails_frequents -->
+    <div class="form-group">
+      <label class="form-label" for="dos-email-cc">CC (optionnel)</label>
+      <input class="form-control" id="dos-email-cc" type="email"
+             placeholder="adresse-en-copie@votre-domaine.fr">
+    </div>
+
+    <!-- Emails fréquents depuis le paramétrage -->
+    <div id="dos-emails-frequents-wrap" class="dos-hidden">
+      <p class="form-label">Emails fréquents (cliquer pour renseigner le CC) :</p>
+      <div class="dos-emails-frequents" id="dos-emails-frequents-liste">
+        <!-- Alimenté dynamiquement depuis Parametrage.get('emails_frequents') -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       ACTION
+       ============================================================ -->
+  <div class="dos-section" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+    <div class="dos-btn-wrap">
+      <button class="btn btn-primary" id="dos-btn-outlook" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0
+               002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+        Ouvrir le brouillon dans Outlook
+      </button>
+    </div>
+    <button class="btn btn-outline btn-sm" id="dos-btn-reset" type="button">
+      Réinitialiser
+    </button>
+  </div>
+
+  <!-- Note de bas de formulaire -->
+  <div id="dos-note-destinataires" class="dos-destinataires mt-16">
+    <!-- Alimenté dynamiquement -->
+    Configurez vos destinataires dans le module <strong>Paramétrage</strong>
+    (champ "Email de maintenance" et "Emails fréquents").
+  </div>
+
+</div>
+<!-- /.card -->
+
+<!-- ============================================================
+     LOGIQUE DU PLUGIN
+     ============================================================ -->
+<script>
+(function () {
+  'use strict';
+
+  /* ----------------------------------------------------------
+     Correspondance code motif → libellé texte
+     ---------------------------------------------------------- */
+  const MOTIFS = {
+    contrat:      "Contrat d'entretien",
+    installation: "Installation",
+    preinst:      "Pré-installation",
+    fat:          "Réception usine (FAT)",
+    retravailler: "Retravailler",
+    garantie:     "Garantie",
+    ec_service:   "Effort commercial – Service",
+    ec_ventes:    "Effort commercial – Ventes",
+    visite:       "Visite client",
+    formation:    "Technicien en formation",
+    autre:        "Autre",
+  };
+
+  /* Motifs nécessitant un N° PN ou SD */
+  const MOTIFS_PNSD = new Set(['fat', 'preinst', 'installation', 'retravailler']);
+
+  /* ----------------------------------------------------------
+     Références DOM (préfixées "dos-" pour éviter tout conflit)
+     ---------------------------------------------------------- */
+  function el(id) { return document.getElementById(id); }
+
+  const domClient         = el('dos-client');
+  const domMachine        = el('dos-machine');
+  const domMotif          = el('dos-motif');
+  const domMotifPrec      = el('dos-motif-prec');
+  const domMotifAutreBloc = el('dos-motif-autre-bloc');
+  const domPnSd           = el('dos-pnsd');
+  const domPnSdBloc       = el('dos-pnsd-bloc');
+  const domContratBloc    = el('dos-contrat-bloc');
+  const domSplitTechBloc  = el('dos-split-tech-bloc');
+  const domTech1          = el('dos-tech1');
+  const domTech2          = el('dos-tech2');
+  const domGarantieBloc   = el('dos-garantie-bloc');
+  const domGarantieEtat   = el('dos-garantie-etat');
+  const domDates          = el('dos-dates');
+  const domContact        = el('dos-contact');
+  const domObjectif       = el('dos-objectif');
+  const domEmailTo        = el('dos-email-to');
+  const domEmailCc        = el('dos-email-cc');
+  const domEmailsFreqWrap = el('dos-emails-frequents-wrap');
+  const domEmailsFreqList = el('dos-emails-frequents-liste');
+  const domNoteDestinat   = el('dos-note-destinataires');
+  const domBtnOutlook     = el('dos-btn-outlook');
+  const domBtnReset       = el('dos-btn-reset');
+
+  /* ----------------------------------------------------------
+     Pré-remplissage depuis window.Parametrage
+     ---------------------------------------------------------- */
+  function preremplirDepuisParametrage() {
+    if (!window.Parametrage) return;
+
+    /* Email de maintenance (champ À :) — clé "email_maintenance" ou fallback "email" */
+    const emailMaint = window.Parametrage.get('email_maintenance')
+                    || window.Parametrage.get('email')
+                    || '';
+    if (emailMaint) {
+      domEmailTo.value = emailMaint;
+    }
+
+    /* Emails fréquents (chips de sélection rapide pour le CC) */
+    const emailsFreq = window.Parametrage.get('emails_frequents');
+    if (Array.isArray(emailsFreq) && emailsFreq.length > 0) {
+      domEmailsFreqWrap.classList.remove('dos-hidden');
+      emailsFreq.forEach(function(entree) {
+        /* Accepte { label, adresse } ou une simple chaîne */
+        const label   = typeof entree === 'string' ? entree : (entree.label   || entree.adresse || '');
+        const adresse = typeof entree === 'string' ? entree : (entree.adresse || entree.label   || '');
+        if (!adresse) return;
+
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'dos-email-chip';
+        chip.textContent = label;
+        chip.title = adresse;
+        chip.setAttribute('aria-label', 'Renseigner CC : ' + adresse);
+
+        chip.addEventListener('click', function() {
+          /* Sélection/désélection */
+          const dejaActif = chip.classList.contains('dos-chip-actif');
+          /* Désactiver tous les chips */
+          domEmailsFreqList.querySelectorAll('.dos-email-chip').forEach(function(c) {
+            c.classList.remove('dos-chip-actif');
+          });
+          if (!dejaActif) {
+            chip.classList.add('dos-chip-actif');
+            domEmailCc.value = adresse;
+          } else {
+            domEmailCc.value = '';
+          }
+        });
+
+        domEmailsFreqList.appendChild(chip);
+      });
+    }
+
+    /* Mise à jour de la note de bas de formulaire */
+    const to = domEmailTo.value || '(non configuré — voir Paramétrage)';
+    domNoteDestinat.innerHTML =
+      '<strong>À :</strong> ' + to +
+      ' &nbsp;|&nbsp; <strong>CC :</strong> à sélectionner ou saisir ci-dessus' +
+      '<br><em>Ouverture en brouillon uniquement — aucun envoi automatique.</em>';
+  }
+
+  /* ----------------------------------------------------------
+     Affichage/masquage des blocs conditionnels
+     ---------------------------------------------------------- */
+  function majVisibilite() {
+    const v = domMotif.value;
+
+    domMotifAutreBloc.classList.toggle('dos-hidden', v !== 'autre');
+    domPnSdBloc.classList.toggle('dos-hidden', !MOTIFS_PNSD.has(v));
+    domContratBloc.classList.toggle('dos-hidden', v !== 'contrat');
+    domGarantieBloc.classList.toggle('dos-hidden', v !== 'garantie');
+  }
+
+  /* ----------------------------------------------------------
+     Affichage/masquage du bloc "noms des techniciens" (split)
+     ---------------------------------------------------------- */
+  function majVisibiliteSplit() {
+    const splitChecked = document.querySelector('input[name="dos-split"]:checked');
+    const oui = splitChecked && splitChecked.value === 'Oui';
+    domSplitTechBloc.classList.toggle('dos-hidden', !oui);
+  }
+
+  /* ----------------------------------------------------------
+     Validation — retourne la liste des champs manquants
+     ---------------------------------------------------------- */
+  function valider() {
+    /* Réinitialiser les indicateurs d'erreur */
+    document.querySelectorAll('.dos-invalid').forEach(function(e) {
+      e.classList.remove('dos-invalid');
+    });
+
+    const code   = domMotif.value;
+    const erreurs = [];
+
+    function verifier(champDom, libelle) {
+      const vide = !champDom.value.trim();
+      if (vide) {
+        champDom.classList.add('dos-invalid');
+        erreurs.push(libelle);
+      }
+    }
+
+    verifier(domClient,   'Nom du client');
+    verifier(domMachine,  'Type et N° de la machine');
+    verifier(domDates,    "Date(s) de l'intervention");
+    verifier(domObjectif, "Objectif de l'intervention");
+    verifier(domContact,  'Contact chez le client');
+    verifier(domEmailTo,  'Email destinataire (À :)');
+
+    if (code === 'autre') {
+      verifier(domMotifPrec, 'Précision du motif');
+    }
+    if (MOTIFS_PNSD.has(code)) {
+      verifier(domPnSd, 'N° PN/SD (obligatoire pour ce motif)');
+    }
+    if (code === 'contrat') {
+      const splitChecked = document.querySelector('input[name="dos-split"]:checked');
+      if (splitChecked && splitChecked.value === 'Oui') {
+        verifier(domTech1, 'Nom du technicien 1 (OS splitté)');
+        verifier(domTech2, 'Nom du technicien 2 (OS splitté)');
+      }
+    }
+
+    return erreurs;
+  }
+
+  /* ----------------------------------------------------------
+     Construction du sujet et du corps de l'email
+     ---------------------------------------------------------- */
+  function construireEmail() {
+    const code    = domMotif.value;
+    const motif   = code === 'autre'
+                    ? (domMotifPrec.value.trim() || 'Autre')
+                    : MOTIFS[code];
+    const client  = domClient.value.trim();
+    const machine = domMachine.value.trim();
+    const dates   = domDates.value.trim();
+    const contact = domContact.value.trim();
+    const objectif = domObjectif.value.trim();
+    const pnSd    = domPnSd ? domPnSd.value.trim() : '';
+    const split   = (document.querySelector('input[name="dos-split"]:checked') || {}).value || 'Non';
+    const calib   = (document.querySelector('input[name="dos-calib"]:checked') || {}).value || 'Non';
+    const garantieEtat = domGarantieEtat ? domGarantieEtat.value : 'À confirmer';
+    const tech1   = domTech1 ? domTech1.value.trim() : '';
+    const tech2   = domTech2 ? domTech2.value.trim() : '';
+
+    /* Signature du technicien depuis Parametrage */
+    let signature = '';
+    if (window.Parametrage) {
+      const prenom = window.Parametrage.get('prenom') || '';
+      const nom    = window.Parametrage.get('nom')    || '';
+      const tel    = window.Parametrage.get('telephone') || '';
+      const sigCustom = window.Parametrage.get('signature') || '';
+      if (sigCustom) {
+        signature = '\n\n--\n' + sigCustom;
+      } else if (prenom || nom) {
+        signature = '\n\n--\n' + [prenom, nom].filter(Boolean).join(' ');
+        if (tel) signature += '\n' + tel;
+      }
+    }
+
+    /* Corps de l'email */
+    let corps =
+      'Nom du client : ' + client + '\n' +
+      'Type et N° de la machine : ' + machine + '\n' +
+      "Motif de l'OS : " + motif + '\n' +
+      "Date(s) de l'intervention : " + dates + '\n' +
+      "Objectif de l'intervention : " + objectif + '\n' +
+      "Contact chez le client : " + contact;
+
+    if (MOTIFS_PNSD.has(code) && pnSd) {
+      corps += '\nN° PN/SD : ' + pnSd;
+    }
+    if (code === 'contrat') {
+      corps += '\nOS splitté : ' + split + '  |  OS de calibration : ' + calib;
+      if (split === 'Oui') {
+        corps += '\nTechniciens : ' + tech1 + ' et ' + tech2;
+      }
+      corps += '\n(merci de préciser formellement si l\'OS est splitté)';
+    }
+    if (code === 'garantie') {
+      corps += '\nGarantie : ' + garantieEtat +
+               " (date à vérifier avec l'assistante / validation RTR)";
+    }
+
+    corps += signature;
+
+    const sujet = "Demande de création d'OS – " + client + ' – ' + machine;
+
+    return { sujet: sujet, corps: corps };
+  }
+
+  /* ----------------------------------------------------------
+     Ouverture du brouillon Outlook (deep link ms-outlook://)
+     ---------------------------------------------------------- */
+  function ouvrirBrouillonOutlook() {
+    const erreurs = valider();
+    if (erreurs.length > 0) {
+      alert('Merci de renseigner les champs suivants :\n\n• ' + erreurs.join('\n• '));
+      /* Focus sur le premier champ invalide */
+      const premier = document.querySelector('.dos-invalid');
+      if (premier) premier.focus();
+      return;
+    }
+
+    const { sujet, corps } = construireEmail();
+    const to  = encodeURIComponent(domEmailTo.value.trim());
+    const cc  = domEmailCc.value.trim() ? encodeURIComponent(domEmailCc.value.trim()) : '';
+    const sub = encodeURIComponent(sujet);
+    const bod = encodeURIComponent(corps);
+
+    let url = 'ms-outlook://compose?to=' + to + '&subject=' + sub + '&body=' + bod;
+    if (cc) url += '&cc=' + cc;
+
+    /* Ouverture via un lien caché (plus fiable sur iOS Safari) */
+    const lienTemp = document.createElement('a');
+    lienTemp.href = url;
+    lienTemp.style.display = 'none';
+    document.body.appendChild(lienTemp);
+    lienTemp.click();
+    /* Fallback après 100 ms */
+    setTimeout(function() {
+      document.body.removeChild(lienTemp);
+      window.location.href = url;
+    }, 100);
+  }
+
+  /* ----------------------------------------------------------
+     Réinitialisation du formulaire
+     ---------------------------------------------------------- */
+  function reinitialiser() {
+    domClient.value   = '';
+    domMachine.value  = '';
+    domMotif.value    = 'contrat';
+    domMotifPrec.value = '';
+    if (domPnSd) domPnSd.value = '';
+    if (domTech1) domTech1.value = '';
+    if (domTech2) domTech2.value = '';
+    domDates.value    = '';
+    domContact.value  = '';
+    domObjectif.value = '';
+    domEmailCc.value  = '';
+    /* Réinitialiser les radios */
+    const splitNon = document.querySelector('input[name="dos-split"][value="Non"]');
+    if (splitNon) splitNon.checked = true;
+    const calibNon = document.querySelector('input[name="dos-calib"][value="Non"]');
+    if (calibNon) calibNon.checked = true;
+    /* Chips */
+    domEmailsFreqList.querySelectorAll('.dos-email-chip').forEach(function(c) {
+      c.classList.remove('dos-chip-actif');
+    });
+    /* Supprimer les indicateurs d'erreur */
+    document.querySelectorAll('.dos-invalid').forEach(function(e) {
+      e.classList.remove('dos-invalid');
+    });
+    majVisibilite();
+    majVisibiliteSplit();
+  }
+
+  /* ----------------------------------------------------------
+     Branchement des écouteurs d'événements
+     ---------------------------------------------------------- */
+  domMotif.addEventListener('change', majVisibilite);
+
+  document.querySelectorAll('input[name="dos-split"]').forEach(function(radio) {
+    radio.addEventListener('change', majVisibiliteSplit);
+  });
+
+  domBtnOutlook.addEventListener('click', ouvrirBrouillonOutlook);
+  domBtnReset.addEventListener('click', reinitialiser);
+
+  /* Mise à jour de la note sur changement d'email */
+  domEmailTo.addEventListener('input', function() {
+    const to = domEmailTo.value.trim() || '(non configuré)';
+    domNoteDestinat.innerHTML =
+      '<strong>À :</strong> ' + to +
+      ' &nbsp;|&nbsp; <strong>CC :</strong> ' + (domEmailCc.value.trim() || '—') +
+      '<br><em>Ouverture en brouillon uniquement — aucun envoi automatique.</em>';
+  });
+  domEmailCc.addEventListener('input', function() {
+    const to = domEmailTo.value.trim() || '(non configuré)';
+    domNoteDestinat.innerHTML =
+      '<strong>À :</strong> ' + to +
+      ' &nbsp;|&nbsp; <strong>CC :</strong> ' + (domEmailCc.value.trim() || '—') +
+      '<br><em>Ouverture en brouillon uniquement — aucun envoi automatique.</em>';
+    /* Désactiver le chip actif si l'utilisateur saisit manuellement */
+    domEmailsFreqList.querySelectorAll('.dos-email-chip').forEach(function(c) {
+      c.classList.remove('dos-chip-actif');
+    });
+  });
+
+  /* ----------------------------------------------------------
+     Initialisation
+     ---------------------------------------------------------- */
+  majVisibilite();
+  majVisibiliteSplit();
+  preremplirDepuisParametrage();
+
+})();
+</script>
