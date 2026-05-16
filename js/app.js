@@ -1,0 +1,290 @@
+/**
+ * MUF-WebApp — Moteur principal
+ * Routing hash-based + chargement dynamique des plugins
+ *
+ * Convention : chaque plugin vit dans plugins/<nom>/index.html
+ * L'URL prend la forme : index.html#plugin-<nom>
+ */
+
+'use strict';
+
+/* ============================================================
+   Configuration — liste des plugins disponibles
+   Ajouter un plugin ici pour qu'il apparaisse dans la nav
+   ============================================================ */
+const PLUGINS = [
+  {
+    id:   'parametrage',
+    nom:  'Paramétrage',
+    desc: 'Configuration de l\'application',
+    icone: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+              viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0
+                   002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0
+                   001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0
+                   00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0
+                   00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0
+                   00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0
+                   00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0
+                   001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07
+                   2.572-1.065z"/>
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>`,
+  },
+  /* Exemple de futurs plugins — décommenter quand ils existent :
+  {
+    id:   'diagnostic',
+    nom:  'Diagnostic',
+    desc: 'Outils de diagnostic machine',
+    icone: '...',
+  },
+  {
+    id:   'interventions',
+    nom:  'Interventions',
+    desc: 'Suivi des interventions terrain',
+    icone: '...',
+  },
+  */
+];
+
+/* ============================================================
+   Références DOM
+   ============================================================ */
+const appContent   = document.getElementById('app-content');
+const sidebarNav   = document.getElementById('sidebar-nav');
+const bottomNav    = document.getElementById('bottom-nav');
+const headerTitle  = document.getElementById('header-title');
+
+/* ============================================================
+   Construction de la navigation (sidebar + bottom nav)
+   Appelée une seule fois au démarrage
+   ============================================================ */
+function construireNavigation() {
+  PLUGINS.forEach(plugin => {
+    const hash = `#plugin-${plugin.id}`;
+
+    /* ---- Lien sidebar ---- */
+    const lienSidebar = document.createElement('a');
+    lienSidebar.href = hash;
+    lienSidebar.dataset.plugin = plugin.id;
+    lienSidebar.innerHTML = `
+      <span class="nav-icon" aria-hidden="true">${plugin.icone}</span>
+      ${plugin.nom}
+    `;
+    sidebarNav.appendChild(lienSidebar);
+
+    /* ---- Lien bottom nav ---- */
+    const lienBottom = document.createElement('a');
+    lienBottom.href = hash;
+    lienBottom.dataset.plugin = plugin.id;
+    lienBottom.innerHTML = `
+      <span class="nav-icon" aria-hidden="true">${plugin.icone}</span>
+      <span>${plugin.nom}</span>
+    `;
+    bottomNav.appendChild(lienBottom);
+  });
+}
+
+/* ============================================================
+   Mise à jour de l'état actif dans la navigation
+   ============================================================ */
+function mettreAJourNavActive(pluginId) {
+  /* Sidebar */
+  sidebarNav.querySelectorAll('a').forEach(lien => {
+    lien.classList.toggle('active', lien.dataset.plugin === pluginId);
+  });
+
+  /* Bottom nav */
+  bottomNav.querySelectorAll('a').forEach(lien => {
+    lien.classList.toggle('active', lien.dataset.plugin === pluginId);
+  });
+
+  /* Titre de l'en-tête */
+  if (pluginId) {
+    const plugin = PLUGINS.find(p => p.id === pluginId);
+    headerTitle.textContent = plugin ? plugin.nom : 'MUF-WebApp';
+  } else {
+    headerTitle.textContent = 'Accueil';
+  }
+}
+
+/* ============================================================
+   Chargeur de plugins
+   Stratégie : fetch le HTML du plugin, l'injecter dans #app-content
+   Les scripts inline dans le HTML du plugin sont réexécutés via
+   la recréation des balises <script>.
+   ============================================================ */
+async function chargerPlugin(nom) {
+  /* Affichage du spinner de chargement */
+  appContent.innerHTML = `
+    <div class="plugin-loading" role="status" aria-live="polite">
+      <div class="spinner" aria-hidden="true"></div>
+      <span>Chargement de ${nom}…</span>
+    </div>
+  `;
+
+  const url = `./plugins/${nom}/index.html`;
+
+  try {
+    const reponse = await fetch(url);
+
+    if (!reponse.ok) {
+      throw new Error(`HTTP ${reponse.status} — ${reponse.statusText}`);
+    }
+
+    const html = await reponse.text();
+
+    /* Injection du HTML dans la zone principale */
+    appContent.innerHTML = html;
+
+    /* Réexécution des scripts inline du plugin */
+    appContent.querySelectorAll('script').forEach(scriptOriginal => {
+      const scriptNouveau = document.createElement('script');
+      /* Copie des attributs */
+      Array.from(scriptOriginal.attributes).forEach(attr => {
+        scriptNouveau.setAttribute(attr.name, attr.value);
+      });
+      /* Copie du contenu inline */
+      if (scriptOriginal.textContent) {
+        scriptNouveau.textContent = scriptOriginal.textContent;
+      }
+      scriptOriginal.replaceWith(scriptNouveau);
+    });
+
+  } catch (erreur) {
+    console.error(`[MUF] Erreur chargement plugin "${nom}" :`, erreur);
+
+    appContent.innerHTML = `
+      <div class="plugin-error" role="alert">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none"
+             viewBox="0 0 24 24" stroke="#E53E3E" stroke-width="1.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0
+               001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        </svg>
+        <p class="plugin-error-title">Impossible de charger le module</p>
+        <p class="plugin-error-msg">
+          Le module <strong>${nom}</strong> n'est pas disponible.<br>
+          Vérifiez que le fichier <code>plugins/${nom}/index.html</code> existe.
+        </p>
+        <a href="#" class="btn btn-outline mt-16">Retour à l'accueil</a>
+      </div>
+    `;
+  }
+}
+
+/* ============================================================
+   Écran d'accueil
+   Affiché quand aucun hash n'est présent dans l'URL
+   ============================================================ */
+function afficherAccueil() {
+  /* Construction de la grille de plugins */
+  const cardsPlugins = PLUGINS.map(plugin => `
+    <a href="#plugin-${plugin.id}" class="plugin-card" aria-label="Ouvrir ${plugin.nom}">
+      <span class="plugin-card-icon" aria-hidden="true">${plugin.icone}</span>
+      <span class="plugin-card-name">${plugin.nom}</span>
+      <span class="plugin-card-desc">${plugin.desc}</span>
+    </a>
+  `).join('');
+
+  appContent.innerHTML = `
+    <div class="card mb-24">
+      <div class="card-header">
+        <h1 class="card-title">Bienvenue dans MUF-WebApp</h1>
+      </div>
+      <div class="card-body">
+        <p class="text-muted">
+          Application couteau suisse pour techniciens terrain Multivac France.
+          Sélectionnez un module dans la navigation ou ci-dessous.
+        </p>
+      </div>
+    </div>
+
+    <section aria-labelledby="titre-modules">
+      <h2 id="titre-modules" class="font-semibold text-primary mb-16">
+        Modules disponibles
+      </h2>
+      <div class="plugin-grid">
+        ${cardsPlugins.length > 0 ? cardsPlugins : `
+          <p class="text-muted">Aucun module installé pour le moment.</p>
+        `}
+      </div>
+    </section>
+  `;
+}
+
+/* ============================================================
+   Routeur — lit le hash de l'URL et décide quoi afficher
+   ============================================================ */
+function router() {
+  const hash = window.location.hash; /* ex : "#plugin-parametrage" */
+
+  if (!hash || hash === '#') {
+    /* Accueil */
+    mettreAJourNavActive(null);
+    afficherAccueil();
+    return;
+  }
+
+  const matchPlugin = hash.match(/^#plugin-(.+)$/);
+  if (matchPlugin) {
+    const nomPlugin = matchPlugin[1];
+    mettreAJourNavActive(nomPlugin);
+    chargerPlugin(nomPlugin);
+    return;
+  }
+
+  /* Hash inconnu → accueil */
+  mettreAJourNavActive(null);
+  afficherAccueil();
+}
+
+/* ============================================================
+   Enregistrement du Service Worker (PWA)
+   ============================================================ */
+function enregistrerServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('./service-worker.js')
+        .then(registration => {
+          console.log('[MUF] Service Worker enregistré :', registration.scope);
+        })
+        .catch(erreur => {
+          console.warn('[MUF] Échec enregistrement Service Worker :', erreur);
+        });
+    });
+  }
+}
+
+/* ============================================================
+   Initialisation
+   ============================================================ */
+function init() {
+  construireNavigation();
+
+  /* Écoute des changements de hash (navigation) */
+  window.addEventListener('hashchange', router);
+
+  /* Route initiale au chargement */
+  router();
+
+  /* PWA */
+  enregistrerServiceWorker();
+
+  /* Synchronisation Notion au démarrage si token présent */
+  if (window.Parametrage && window.Parametrage.get('notion_token')) {
+    window.Parametrage.syncFromNotion().catch(erreur => {
+      console.warn('[MUF] Sync Notion au démarrage échouée :', erreur.message);
+    });
+  }
+}
+
+/* Démarrage quand le DOM est prêt */
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}

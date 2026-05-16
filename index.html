@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="MUF-WebApp — Application couteau suisse pour techniciens terrain Multivac France">
+  <meta name="theme-color" content="#003A70">
+
+  <!-- PWA -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MUF">
+
+  <!-- Feuille de style principale -->
+  <link rel="stylesheet" href="./css/main.css">
+
+  <title>MUF-WebApp</title>
+</head>
+<body>
+
+  <!-- ======================================================
+       WRAPPER GLOBAL
+       ====================================================== -->
+  <div class="app-wrapper">
+
+    <!-- ====================================================
+         SIDEBAR — navigation desktop (≥ 768px)
+         ==================================================== -->
+    <nav class="sidebar" aria-label="Navigation principale">
+
+      <!-- Logo Multivac -->
+      <div class="sidebar-logo">
+        <!-- Icône "M" stylisée en SVG — pas d'image externe -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"
+             aria-hidden="true" focusable="false">
+          <rect width="32" height="32" rx="6" fill="rgba(255,255,255,0.15)"/>
+          <text x="16" y="23" font-family="Inter,Roboto,sans-serif" font-size="18"
+                font-weight="700" text-anchor="middle" fill="white">M</text>
+        </svg>
+        <span class="sidebar-logo-text">Multivac</span>
+        <span class="sidebar-logo-badge">FR</span>
+      </div>
+
+      <!-- Liens de navigation — alimentés dynamiquement par app.js -->
+      <div class="sidebar-nav" id="sidebar-nav" role="list"
+           aria-label="Modules de l'application">
+        <!-- Les liens plugins sont insérés ici par JavaScript -->
+      </div>
+
+      <!-- Pied de sidebar -->
+      <div class="sidebar-footer">
+        <span>MUF-WebApp v1.0</span>
+      </div>
+    </nav>
+
+    <!-- ====================================================
+         CONTENU PRINCIPAL
+         ==================================================== -->
+    <div class="main-content">
+
+      <!-- En-tête mobile (visible uniquement < 768px) -->
+      <header class="mobile-header" role="banner">
+        <span class="mobile-header-logo">Multivac</span>
+        <span class="mobile-header-badge">FR</span>
+      </header>
+
+      <!-- En-tête desktop (visible uniquement ≥ 768px) -->
+      <header class="main-header" role="banner">
+        <h1 class="main-header-title" id="header-title">Accueil</h1>
+      </header>
+
+      <!-- Zone d'injection des plugins -->
+      <main id="app-content" role="main" aria-live="polite" aria-atomic="true">
+        <!-- Le contenu est chargé dynamiquement par app.js -->
+      </main>
+
+    </div><!-- /.main-content -->
+
+  </div><!-- /.app-wrapper -->
+
+  <!-- ========================================================
+       BOTTOM NAV — navigation mobile (< 768px)
+       ======================================================== -->
+  <nav class="bottom-nav" aria-label="Navigation mobile">
+    <div class="bottom-nav-inner" id="bottom-nav" role="list">
+      <!-- Les liens plugins sont insérés ici par JavaScript -->
+    </div>
+  </nav>
+
+  <!-- Module Paramétrage — doit être chargé avant app.js -->
+  <script src="./js/parametrage.js"></script>
+
+  <!-- Script principal -->
+  <script src="./js/app.js"></script>
+
+</body>
+</html>

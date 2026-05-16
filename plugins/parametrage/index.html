@@ -1,0 +1,563 @@
+<!--
+  Plugin Paramétrage — MUF-WebApp
+  Formulaire de configuration persisté en localStorage
+  avec synchronisation optionnelle vers Notion.
+-->
+
+<div class="parametrage-wrap">
+
+  <!-- ================================================================
+       BANDEAU D'ÉTAT — messages de succès / erreur Notion
+       ================================================================ -->
+  <div id="param-alerte" class="alert" role="alert" aria-live="polite"
+       style="display:none;"></div>
+
+  <!-- ================================================================
+       SECTION 1 — Identité du technicien
+       ================================================================ -->
+  <section class="card mb-24" aria-labelledby="titre-identite">
+    <div class="card-header">
+      <h2 class="card-title" id="titre-identite">Identité</h2>
+    </div>
+    <div class="card-body">
+
+      <div class="param-grid-2col">
+
+        <div class="form-group">
+          <label class="form-label" for="param-nom">Nom</label>
+          <input class="form-control" type="text" id="param-nom"
+                 name="nom" autocomplete="family-name"
+                 placeholder="ex : Dupont" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="param-prenom">Prénom</label>
+          <input class="form-control" type="text" id="param-prenom"
+                 name="prenom" autocomplete="given-name"
+                 placeholder="ex : Jean" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="param-email">Email professionnel</label>
+          <input class="form-control" type="email" id="param-email"
+                 name="email" autocomplete="email"
+                 inputmode="email"
+                 placeholder="ex : j.dupont@multivac.com" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="param-telephone">Téléphone</label>
+          <input class="form-control" type="tel" id="param-telephone"
+                 name="telephone" autocomplete="tel"
+                 inputmode="tel"
+                 placeholder="ex : 06 12 34 56 78" />
+        </div>
+
+      </div><!-- /.param-grid-2col -->
+
+    </div>
+  </section>
+
+  <!-- ================================================================
+       SECTION 2 — Agence / Secteur géographique
+       ================================================================ -->
+  <section class="card mb-24" aria-labelledby="titre-agence">
+    <div class="card-header">
+      <h2 class="card-title" id="titre-agence">Agence</h2>
+    </div>
+    <div class="card-body">
+
+      <div class="form-group">
+        <label class="form-label" for="param-agence">Nom de l'agence / secteur géographique</label>
+        <input class="form-control" type="text" id="param-agence"
+               name="agence"
+               placeholder="ex : Agence Sud-Ouest, Bordeaux" />
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================================================================
+       SECTION 3 — Signature automatique
+       ================================================================ -->
+  <section class="card mb-24" aria-labelledby="titre-signature">
+    <div class="card-header">
+      <h2 class="card-title" id="titre-signature">Signature automatique</h2>
+    </div>
+    <div class="card-body">
+
+      <div class="form-group">
+        <label class="form-label" for="param-signature">
+          Signature utilisée dans les emails et rapports
+        </label>
+        <textarea class="form-control" id="param-signature"
+                  name="signature" rows="5"
+                  placeholder="ex :&#10;Jean Dupont — Technicien terrain&#10;Multivac France | Agence Sud-Ouest&#10;Tél : 06 12 34 56 78"></textarea>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================================================================
+       SECTION 4 — Emails fréquents
+       ================================================================ -->
+  <section class="card mb-24" aria-labelledby="titre-emails">
+    <div class="card-header">
+      <h2 class="card-title" id="titre-emails">Emails fréquents</h2>
+    </div>
+    <div class="card-body">
+
+      <p class="text-muted text-sm mb-16">
+        Enregistrez les adresses email que vous utilisez régulièrement
+        (service OS, responsable, client type…).
+      </p>
+
+      <!-- Liste dynamique des emails -->
+      <div id="emails-liste" aria-label="Liste des emails fréquents">
+        <!-- Entrées générées par JS -->
+      </div>
+
+      <!-- Bouton d'ajout -->
+      <button type="button" class="btn btn-outline btn-sm mt-8"
+              id="btn-ajouter-email"
+              aria-label="Ajouter un email fréquent">
+        + Ajouter un email
+      </button>
+
+    </div>
+  </section>
+
+  <!-- ================================================================
+       SECTION 5 — Connexion Notion
+       ================================================================ -->
+  <section class="card mb-24" aria-labelledby="titre-notion">
+    <div class="card-header">
+      <h2 class="card-title" id="titre-notion">Connexion Notion</h2>
+    </div>
+    <div class="card-body">
+
+      <div class="alert alert-info mb-16" role="note">
+        Optionnel. Permet de synchroniser votre configuration entre
+        vos appareils via une page Notion privée.
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="param-notion-token">
+          Token d'intégration Notion
+          <span class="text-muted text-sm">(secret_…)</span>
+        </label>
+        <input class="form-control" type="password" id="param-notion-token"
+               name="notion_token" autocomplete="off"
+               spellcheck="false"
+               placeholder="secret_xxxxxxxxxxxxxxxxxxxx" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="param-notion-page-id">
+          ID de votre page Notion racine
+        </label>
+        <input class="form-control" type="text" id="param-notion-page-id"
+               name="notion_page_id" autocomplete="off"
+               spellcheck="false"
+               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+        <p class="text-muted text-sm mt-4">
+          Trouvable dans l'URL de votre page Notion : notion.so/…/<strong>cet-identifiant</strong>
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================================================================
+       SECTION 6 — Préférences
+       ================================================================ -->
+  <section class="card mb-24" aria-labelledby="titre-preferences">
+    <div class="card-header">
+      <h2 class="card-title" id="titre-preferences">Préférences</h2>
+    </div>
+    <div class="card-body">
+
+      <div class="param-grid-2col">
+
+        <div class="form-group">
+          <label class="form-label" for="param-date-format">Format de date</label>
+          <select class="form-control" id="param-date-format" name="date_format">
+            <option value="DD/MM/YYYY">DD/MM/YYYY (France)</option>
+            <option value="MM/DD/YYYY">MM/DD/YYYY (États-Unis)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="param-unites">Unités de mesure</label>
+          <select class="form-control" id="param-unites" name="unites">
+            <option value="SI">SI — Système international (kg, °C, bar…)</option>
+            <option value="imperial">Impérial (lb, °F, psi…)</option>
+          </select>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================================================================
+       BARRE D'ACTIONS
+       ================================================================ -->
+  <div class="param-actions">
+    <button type="button" class="btn btn-primary btn-lg" id="btn-enregistrer">
+      Enregistrer
+    </button>
+    <button type="button" class="btn btn-outline btn-lg" id="btn-sync-notion"
+            id="btn-sync">
+      Synchroniser avec Notion
+    </button>
+  </div>
+
+</div><!-- /.parametrage-wrap -->
+
+<!-- ================================================================
+     Styles spécifiques au plugin Paramétrage
+     ================================================================ -->
+<style>
+  /* Grille 2 colonnes — passe en 1 colonne sur mobile */
+  .param-grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 20px;
+  }
+
+  @media (max-width: 600px) {
+    .param-grid-2col {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Ligne d'un email fréquent */
+  .email-row {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr auto;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  @media (max-width: 600px) {
+    .email-row {
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+    }
+
+    .email-row .form-control:first-child {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .email-row .form-control:nth-child(2) {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .email-row .btn-supprimer-email {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      align-self: center;
+    }
+  }
+
+  /* Bouton suppression email */
+  .btn-supprimer-email {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 44px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background: transparent;
+    color: #C53030;
+    cursor: pointer;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    transition: background-color var(--transition), border-color var(--transition);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn-supprimer-email:hover {
+    background-color: #FDECEA;
+    border-color: #F5B8B2;
+  }
+
+  /* Barre d'actions sticky en bas */
+  .param-actions {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 16px 0 32px;
+  }
+
+  .param-actions .btn {
+    flex: 1;
+    min-width: 180px;
+  }
+
+  @media (max-width: 480px) {
+    .param-actions {
+      flex-direction: column;
+    }
+  }
+
+  /* État du bouton sync en cours */
+  .btn-sync-en-cours {
+    opacity: 0.7;
+    cursor: wait;
+  }
+</style>
+
+<!-- ================================================================
+     Script du plugin — utilise window.Parametrage (chargé dans index.html)
+     ================================================================ -->
+<script>
+(function () {
+  'use strict';
+
+  /* ----------------------------------------------------------
+     Références DOM
+     ---------------------------------------------------------- */
+  const champsCles = {
+    nom:            document.getElementById('param-nom'),
+    prenom:         document.getElementById('param-prenom'),
+    email:          document.getElementById('param-email'),
+    telephone:      document.getElementById('param-telephone'),
+    agence:         document.getElementById('param-agence'),
+    signature:      document.getElementById('param-signature'),
+    notion_token:   document.getElementById('param-notion-token'),
+    notion_page_id: document.getElementById('param-notion-page-id'),
+    date_format:    document.getElementById('param-date-format'),
+    unites:         document.getElementById('param-unites'),
+  };
+
+  const emailsListe     = document.getElementById('emails-liste');
+  const btnAjouterEmail = document.getElementById('btn-ajouter-email');
+  const btnEnregistrer  = document.getElementById('btn-enregistrer');
+  const btnSyncNotion   = document.getElementById('btn-sync-notion');
+  const zoneAlerte      = document.getElementById('param-alerte');
+
+  /* Tableau local des emails en cours d'édition */
+  let emailsEnCours = [];
+
+  /* ----------------------------------------------------------
+     Affichage d'une alerte
+     ---------------------------------------------------------- */
+  function afficherAlerte(type, message) {
+    /* type : 'success' | 'danger' | 'warning' | 'info' */
+    zoneAlerte.className = `alert alert-${type}`;
+    zoneAlerte.textContent = message;
+    zoneAlerte.style.display = 'block';
+
+    /* Scroll vers le haut pour rendre l'alerte visible */
+    zoneAlerte.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    /* Masquage automatique après 6 secondes pour les succès */
+    if (type === 'success') {
+      setTimeout(() => {
+        zoneAlerte.style.display = 'none';
+      }, 6000);
+    }
+  }
+
+  function masquerAlerte() {
+    zoneAlerte.style.display = 'none';
+  }
+
+  /* ----------------------------------------------------------
+     Gestion de la liste des emails fréquents
+     ---------------------------------------------------------- */
+
+  /**
+   * Construit le DOM pour tous les emails de emailsEnCours.
+   * Chaque ligne a : label | adresse | bouton supprimer
+   */
+  function rendreListe() {
+    emailsListe.innerHTML = '';
+
+    if (emailsEnCours.length === 0) {
+      const vide = document.createElement('p');
+      vide.className = 'text-muted text-sm mb-8';
+      vide.textContent = 'Aucun email enregistré.';
+      emailsListe.appendChild(vide);
+      return;
+    }
+
+    emailsEnCours.forEach(function (entry, index) {
+      const ligne = document.createElement('div');
+      ligne.className = 'email-row';
+      ligne.setAttribute('data-index', index);
+
+      const inputLabel = document.createElement('input');
+      inputLabel.type = 'text';
+      inputLabel.className = 'form-control';
+      inputLabel.value = entry.label || '';
+      inputLabel.placeholder = 'Ex : Service OS';
+      inputLabel.setAttribute('aria-label', `Libellé de l'email ${index + 1}`);
+      inputLabel.addEventListener('input', function () {
+        emailsEnCours[index].label = this.value;
+      });
+
+      const inputAdresse = document.createElement('input');
+      inputAdresse.type = 'email';
+      inputAdresse.className = 'form-control';
+      inputAdresse.value = entry.adresse || '';
+      inputAdresse.placeholder = 'adresse@exemple.com';
+      inputAdresse.inputMode = 'email';
+      inputAdresse.setAttribute('aria-label', `Adresse email ${index + 1}`);
+      inputAdresse.addEventListener('input', function () {
+        emailsEnCours[index].adresse = this.value;
+      });
+
+      const btnSuppr = document.createElement('button');
+      btnSuppr.type = 'button';
+      btnSuppr.className = 'btn-supprimer-email';
+      btnSuppr.setAttribute('aria-label', `Supprimer l'email ${entry.label || index + 1}`);
+      btnSuppr.innerHTML = '&times;';
+      btnSuppr.addEventListener('click', function () {
+        emailsEnCours.splice(index, 1);
+        rendreListe();
+      });
+
+      ligne.appendChild(inputLabel);
+      ligne.appendChild(inputAdresse);
+      ligne.appendChild(btnSuppr);
+      emailsListe.appendChild(ligne);
+    });
+  }
+
+  btnAjouterEmail.addEventListener('click', function () {
+    emailsEnCours.push({ label: '', adresse: '' });
+    rendreListe();
+    /* Focus sur le dernier label ajouté */
+    const dernierInputs = emailsListe.querySelectorAll('.email-row:last-child input');
+    if (dernierInputs.length > 0) dernierInputs[0].focus();
+  });
+
+  /* ----------------------------------------------------------
+     Remplissage du formulaire depuis la config stockée
+     ---------------------------------------------------------- */
+  function remplirFormulaire() {
+    const config = window.Parametrage.getAll();
+
+    /* Champs simples */
+    Object.keys(champsCles).forEach(function (key) {
+      const el = champsCles[key];
+      if (!el) return;
+      el.value = config[key] || '';
+    });
+
+    /* Emails fréquents */
+    emailsEnCours = Array.isArray(config.emails_frequents)
+      ? config.emails_frequents.map(function (e) {
+          return { label: e.label || '', adresse: e.adresse || '' };
+        })
+      : [];
+    rendreListe();
+  }
+
+  /* ----------------------------------------------------------
+     Lecture des valeurs du formulaire → objet plat
+     ---------------------------------------------------------- */
+  function lireFormulaire() {
+    const valeurs = {};
+    Object.keys(champsCles).forEach(function (key) {
+      const el = champsCles[key];
+      if (!el) return;
+      valeurs[key] = el.value.trim();
+    });
+    /* Nettoyage des emails vides */
+    valeurs.emails_frequents = emailsEnCours.filter(function (e) {
+      return e.label.trim() || e.adresse.trim();
+    });
+    return valeurs;
+  }
+
+  /* ----------------------------------------------------------
+     Sauvegarde locale
+     ---------------------------------------------------------- */
+  btnEnregistrer.addEventListener('click', function () {
+    masquerAlerte();
+    const valeurs = lireFormulaire();
+    Object.keys(valeurs).forEach(function (key) {
+      window.Parametrage.set(key, valeurs[key]);
+    });
+    afficherAlerte('success', 'Configuration enregistree localement.');
+  });
+
+  /* ----------------------------------------------------------
+     Synchronisation Notion (ecriture)
+     ---------------------------------------------------------- */
+  btnSyncNotion.addEventListener('click', async function () {
+    masquerAlerte();
+
+    /* Sauvegarde d'abord en local pour ne pas perdre les saisies */
+    const valeurs = lireFormulaire();
+    Object.keys(valeurs).forEach(function (key) {
+      window.Parametrage.set(key, valeurs[key]);
+    });
+
+    /* Verification rapide avant l'appel réseau */
+    if (!window.Parametrage.get('notion_token')) {
+      afficherAlerte('warning', 'Veuillez renseigner votre token Notion avant de synchroniser.');
+      champsCles.notion_token.focus();
+      return;
+    }
+    if (!window.Parametrage.get('notion_page_id')) {
+      afficherAlerte('warning', 'Veuillez renseigner l\'ID de votre page Notion avant de synchroniser.');
+      champsCles.notion_page_id.focus();
+      return;
+    }
+
+    /* Etat "en cours" */
+    btnSyncNotion.classList.add('btn-sync-en-cours');
+    btnSyncNotion.disabled = true;
+    btnSyncNotion.textContent = 'Synchronisation…';
+
+    try {
+      await window.Parametrage.syncToNotion();
+      afficherAlerte('success', 'Configuration synchronisee avec Notion avec succes.');
+    } catch (erreur) {
+      console.error('[Parametrage] Erreur sync Notion :', erreur);
+      afficherAlerte('danger', 'Erreur Notion : ' + erreur.message);
+    } finally {
+      btnSyncNotion.classList.remove('btn-sync-en-cours');
+      btnSyncNotion.disabled = false;
+      btnSyncNotion.textContent = 'Synchroniser avec Notion';
+    }
+  });
+
+  /* ----------------------------------------------------------
+     Sauvegarde automatique a la saisie (debounce 800 ms)
+     ---------------------------------------------------------- */
+  let timerAutoSave = null;
+
+  function autoSave() {
+    clearTimeout(timerAutoSave);
+    timerAutoSave = setTimeout(function () {
+      const valeurs = lireFormulaire();
+      Object.keys(valeurs).forEach(function (key) {
+        window.Parametrage.set(key, valeurs[key]);
+      });
+    }, 800);
+  }
+
+  /* Attacher l'auto-save sur tous les champs du formulaire */
+  Object.values(champsCles).forEach(function (el) {
+    if (!el) return;
+    el.addEventListener('input', autoSave);
+    el.addEventListener('change', autoSave);
+  });
+
+  /* ----------------------------------------------------------
+     Initialisation
+     ---------------------------------------------------------- */
+  remplirFormulaire();
+
+})();
+</script>
