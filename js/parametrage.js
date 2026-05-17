@@ -29,6 +29,12 @@
     notion_page_id:   '',
     date_format:      'DD/MM/YYYY',
     unites:           'SI',
+    /* IDs des bases Notion pour l'archivage en arrière-plan */
+    notion_db_clients:       '',
+    notion_db_machines:      '',
+    notion_db_listes_pieces: '',
+    notion_db_calculs_vide:  '',
+    notion_db_rapports:      '',
   };
 
   /* ----------------------------------------------------------
