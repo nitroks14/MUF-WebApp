@@ -302,6 +302,11 @@ function init() {
       console.warn('[MUF] Sync Notion au démarrage échouée :', erreur.message);
     });
   }
+
+  /* Drainer la file d'archivage offline si réseau disponible */
+  if (window.NotionArchive) {
+    window.NotionArchive.drainerFile();
+  }
 }
 
 /* Démarrage quand le DOM est prêt */
