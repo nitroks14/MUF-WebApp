@@ -670,8 +670,8 @@
   const btnScannerQR   = document.getElementById('btn-scanner-qr');
   const btnStopperScan = document.getElementById('btn-stopper-scan');
   const videoEl        = document.getElementById('qr-video');
-  const canvasScan     = document.getElementById('qr-scan-canvas');
-  const ctxScan        = canvasScan.getContext('2d');
+  const canvasScan = document.getElementById('qr-scan-canvas');
+  let ctxScan      = null; /* initialisé au premier appel de analyserFrame */
 
   let streamCamera = null;
   let rafScan      = null;
@@ -690,6 +690,10 @@
 
   function analyserFrame() {
     if (!scanEnCours) return;
+
+    /* Initialisation lazy du contexte canvas */
+    if (!ctxScan && canvasScan) ctxScan = canvasScan.getContext('2d');
+    if (!ctxScan) { rafScan = requestAnimationFrame(analyserFrame); return; }
 
     if (videoEl.readyState === videoEl.HAVE_ENOUGH_DATA) {
       canvasScan.width  = videoEl.videoWidth;
@@ -753,10 +757,10 @@
       zoneScan.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       rafScan = requestAnimationFrame(analyserFrame);
     } catch (e) {
-      let msg = 'Impossible d'accéder à la caméra.';
-      if (e.name === 'NotAllowedError')  msg = 'Permission caméra refusée. Autorisez l'accès dans les réglages.';
-      if (e.name === 'NotFoundError')    msg = 'Aucune caméra détectée sur cet appareil.';
-      if (e.name === 'NotReadableError') msg = 'La caméra est déjà utilisée par une autre application.';
+      let msg = "Impossible d'accéder à la caméra.";
+      if (e.name === 'NotAllowedError')  msg = "Permission caméra refusée. Autorisez l'accès dans les réglages.";
+      if (e.name === 'NotFoundError')    msg = "Aucune caméra détectée sur cet appareil.";
+      if (e.name === 'NotReadableError') msg = "La caméra est déjà utilisée par une autre application.";
       afficherFeedbackQR('danger', msg);
     }
   });
