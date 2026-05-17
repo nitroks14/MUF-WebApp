@@ -156,6 +156,59 @@
   </section>
 
   <!-- ================================================================
+       SECTION QR CODE - Partage rapide de configuration
+       ================================================================ -->
+  <section class="card mb-24" aria-labelledby="titre-qr">
+    <div class="card-header">
+      <h2 class="card-title" id="titre-qr">Partage rapide — QR Code</h2>
+    </div>
+    <div class="card-body">
+
+      <p class="text-muted text-sm mb-16">
+        Transférez instantanément votre configuration vers un autre appareil.
+      </p>
+
+      <div class="qr-actions">
+        <button type="button" class="btn btn-primary" id="btn-generer-qr">
+          Générer le QR Code
+        </button>
+        <button type="button" class="btn btn-outline" id="btn-scanner-qr">
+          Scanner un QR Code
+        </button>
+      </div>
+
+      <!-- Zone d'affichage du QR Code généré -->
+      <div id="qr-zone-generation" style="display:none;" class="qr-zone mt-16">
+        <p class="text-sm mb-8 text-muted">
+          Scannez ce QR Code depuis l'autre appareil pour importer la configuration.
+        </p>
+        <div id="qr-canvas-container"></div>
+        <button type="button" class="btn btn-outline btn-sm mt-8" id="btn-fermer-qr">
+          Fermer
+        </button>
+      </div>
+
+      <!-- Zone de scan caméra -->
+      <div id="qr-zone-scan" style="display:none;" class="qr-zone mt-16">
+        <p class="text-sm mb-8 text-muted">
+          Pointez la caméra vers le QR Code à importer.
+        </p>
+        <div class="qr-video-wrap">
+          <video id="qr-video" playsinline autoplay muted></video>
+          <canvas id="qr-scan-canvas" style="display:none;"></canvas>
+        </div>
+        <button type="button" class="btn btn-outline btn-sm mt-8" id="btn-stopper-scan">
+          Arrêter le scan
+        </button>
+      </div>
+
+      <!-- Feedback scan -->
+      <div id="qr-feedback" class="alert mt-16" role="alert" style="display:none;"></div>
+
+    </div>
+  </section>
+
+  <!-- ================================================================
        BARRE D'ACTIONS
        ================================================================ -->
   <div class="param-actions">
@@ -266,6 +319,50 @@
     opacity: 0.7;
     cursor: wait;
   }
+
+  /* ----------------------------------------------------------------
+     QR Code - Partage rapide
+     ---------------------------------------------------------------- */
+
+  .qr-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .qr-zone {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 16px;
+    background: var(--color-bg);
+  }
+
+  #qr-canvas-container canvas,
+  #qr-canvas-container img {
+    display: block;
+    max-width: 220px;
+    height: auto;
+    margin: 0 auto;
+    border: 4px solid white;
+    border-radius: 4px;
+  }
+
+  .qr-video-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+    background: #000;
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  #qr-video {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
 </style>
 
 <!-- ================================================================
@@ -510,6 +607,165 @@
      Initialisation
      ---------------------------------------------------------- */
   remplirFormulaire();
+
+  /* ----------------------------------------------------------
+     QR Code — Génération
+     ---------------------------------------------------------- */
+  const btnGenererQR   = document.getElementById('btn-generer-qr');
+  const btnFermerQR    = document.getElementById('btn-fermer-qr');
+  const zoneGeneration = document.getElementById('qr-zone-generation');
+  const qrContainer    = document.getElementById('qr-canvas-container');
+  const zoneScan       = document.getElementById('qr-zone-scan');
+  const qrFeedback     = document.getElementById('qr-feedback');
+
+  function afficherFeedbackQR(type, message) {
+    qrFeedback.className = 'alert alert-' + type + ' mt-16';
+    qrFeedback.textContent = message;
+    qrFeedback.style.display = 'block';
+    if (type === 'success') {
+      setTimeout(function () { qrFeedback.style.display = 'none'; }, 5000);
+    }
+  }
+
+  btnGenererQR.addEventListener('click', function () {
+    /* Sauvegarde d'abord la config courante */
+    const valeurs = lireFormulaire();
+    Object.keys(valeurs).forEach(function (key) {
+      window.Parametrage.set(key, valeurs[key]);
+    });
+
+    /* Sérialisation complète (notion_token inclus) */
+    const config = window.Parametrage.getAll();
+    const jsonConfig = JSON.stringify(config);
+
+    /* Vide le conteneur et génère le QR */
+    qrContainer.innerHTML = '';
+    try {
+      new QRCode(qrContainer, {
+        text:         jsonConfig,
+        width:        220,
+        height:       220,
+        colorDark:    '#003A70',
+        colorLight:   '#FFFFFF',
+        correctLevel: QRCode.CorrectLevel.M,
+      });
+    } catch (e) {
+      afficherFeedbackQR('danger', 'Impossible de générer le QR Code : ' + e.message);
+      return;
+    }
+
+    zoneScan.style.display       = 'none';
+    zoneGeneration.style.display = 'block';
+    zoneGeneration.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
+  btnFermerQR.addEventListener('click', function () {
+    zoneGeneration.style.display = 'none';
+    qrContainer.innerHTML = '';
+  });
+
+  /* ----------------------------------------------------------
+     QR Code — Scan caméra
+     ---------------------------------------------------------- */
+  const btnScannerQR   = document.getElementById('btn-scanner-qr');
+  const btnStopperScan = document.getElementById('btn-stopper-scan');
+  const videoEl        = document.getElementById('qr-video');
+  const canvasScan     = document.getElementById('qr-scan-canvas');
+  const ctxScan        = canvasScan.getContext('2d');
+
+  let streamCamera = null;
+  let rafScan      = null;
+  let scanEnCours  = false;
+
+  function stopperCamera() {
+    scanEnCours = false;
+    if (rafScan) { cancelAnimationFrame(rafScan); rafScan = null; }
+    if (streamCamera) {
+      streamCamera.getTracks().forEach(function (t) { t.stop(); });
+      streamCamera = null;
+    }
+    videoEl.srcObject = null;
+    zoneScan.style.display = 'none';
+  }
+
+  function analyserFrame() {
+    if (!scanEnCours) return;
+
+    if (videoEl.readyState === videoEl.HAVE_ENOUGH_DATA) {
+      canvasScan.width  = videoEl.videoWidth;
+      canvasScan.height = videoEl.videoHeight;
+      ctxScan.drawImage(videoEl, 0, 0, canvasScan.width, canvasScan.height);
+
+      const imageData = ctxScan.getImageData(0, 0, canvasScan.width, canvasScan.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: 'dontInvert',
+      });
+
+      if (code) {
+        stopperCamera();
+        try {
+          const configImportee = JSON.parse(code.data);
+
+          /* Validation minimale */
+          if (typeof configImportee !== 'object' || configImportee === null) {
+            throw new Error('Format de configuration invalide.');
+          }
+
+          /* Application de la config importée */
+          Object.keys(configImportee).forEach(function (key) {
+            window.Parametrage.set(key, configImportee[key]);
+          });
+
+          /* Mise à jour de l'affichage du formulaire */
+          remplirFormulaire();
+
+          afficherFeedbackQR('success', '✓ Configuration importée avec succès !');
+          zoneGeneration.style.display = 'none';
+        } catch (e) {
+          afficherFeedbackQR('danger', 'QR Code invalide : ' + e.message);
+        }
+        return;
+      }
+    }
+
+    rafScan = requestAnimationFrame(analyserFrame);
+  }
+
+  btnScannerQR.addEventListener('click', async function () {
+    zoneGeneration.style.display = 'none';
+    qrFeedback.style.display     = 'none';
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      afficherFeedbackQR('danger', 'Accès à la caméra non supporté sur cet appareil ou navigateur.');
+      return;
+    }
+
+    try {
+      /* Caméra arrière sur mobile, caméra disponible sur desktop */
+      streamCamera = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+      });
+      videoEl.srcObject = streamCamera;
+      await videoEl.play();
+
+      scanEnCours = true;
+      zoneScan.style.display = 'block';
+      zoneScan.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      rafScan = requestAnimationFrame(analyserFrame);
+    } catch (e) {
+      let msg = 'Impossible d'accéder à la caméra.';
+      if (e.name === 'NotAllowedError')  msg = 'Permission caméra refusée. Autorisez l'accès dans les réglages.';
+      if (e.name === 'NotFoundError')    msg = 'Aucune caméra détectée sur cet appareil.';
+      if (e.name === 'NotReadableError') msg = 'La caméra est déjà utilisée par une autre application.';
+      afficherFeedbackQR('danger', msg);
+    }
+  });
+
+  btnStopperScan.addEventListener('click', stopperCamera);
+
+  /* Arrêt propre si on quitte le plugin */
+  document.addEventListener('muf-plugin-unload', stopperCamera);
+
 
 })();
 </script>
