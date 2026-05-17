@@ -44,6 +44,17 @@ const PLUGINS = [
                    002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
             </svg>`,
   },
+  {
+    id:   'calage-embiellages',
+    nom:  'Calage embiellages',
+    desc: 'Contrôle de la cote X sur les embiellages formage et soudure',
+    icone: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+              viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0
+                   0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/>
+            </svg>`,
+  },
   /* Exemple de futurs plugins — décommenter quand ils existent :
   {
     id:   'diagnostic',

@@ -1,0 +1,493 @@
+<!--
+  Plugin : Calage embiellages
+  Source originale : Calage-Embiellage-MULTIVAC (assainie et harmonisée)
+  Harmonisation : thème MUF-WebApp (variables CSS main.css)
+-->
+
+<style>
+  /* ============================================================
+     Styles spécifiques au plugin Calage embiellages
+     Utilise exclusivement les variables CSS de main.css
+     ============================================================ */
+
+  /* Radio inline */
+  .ce-radio-group {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .ce-radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--font-size-base);
+    font-weight: normal;
+    color: var(--color-text);
+    cursor: pointer;
+    min-height: 44px;
+  }
+  .ce-radio-group input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-primary);
+    flex-shrink: 0;
+  }
+
+  /* Checkbox touch-friendly */
+  .ce-check-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: var(--font-size-base);
+    color: var(--color-text);
+    cursor: pointer;
+    min-height: 44px;
+    font-weight: normal;
+  }
+  .ce-check-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-primary);
+    flex-shrink: 0;
+  }
+
+  /* Bloc conditionnel masqué */
+  .ce-hidden { display: none !important; }
+
+  /* Voyant de conformité */
+  .ce-voyant {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    margin: 16px auto;
+    background: #cccccc;
+    border: 2px solid #666;
+  }
+  .ce-voyant.vert   { background: #2ecc71; border-color: #1e8449; }
+  .ce-voyant.orange { background: #f39c12; border-color: #b9770e; }
+  .ce-voyant.rouge  { background: #e74c3c; border-color: #922b21; }
+  .ce-voyant.neutre { background: #cccccc; border-color: #666; }
+
+  /* SVG : texte résultats */
+  .ce-svg-wrap {
+    overflow: visible;
+    margin-bottom: 8px;
+  }
+
+  /* Grille 2 colonnes pour les inputs M1-M4 */
+  .ce-mesures-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* Message global résultat */
+  .ce-message {
+    text-align: center;
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    min-height: 1.5em;
+    color: var(--color-text);
+  }
+
+  /* Bouton retour discret */
+  .ce-btn-retour {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    padding: 4px 0;
+    text-decoration: underline;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+  }
+  .ce-btn-retour:hover {
+    color: var(--color-primary-dark);
+  }
+
+  /* Pleine largeur sur mobile */
+  @media (max-width: 480px) {
+    .ce-mesures-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<!-- ============================================================
+     EN-TÊTE DU PLUGIN
+     ============================================================ -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h2 class="card-title">Calage embiellages</h2>
+  </div>
+  <div class="card-body">
+    <p class="text-muted">
+      Contrôle de la cote X sur les embiellages formage et soudure.
+      Renseignez les paramètres puis saisissez les quatre mesures pour analyser la conformité.
+    </p>
+  </div>
+</div>
+
+<!-- ============================================================
+     CARTE 1 — PRÉPARATION
+     ============================================================ -->
+<div class="card mb-24" id="ce-pageInit">
+  <div class="card-header">
+    <h3 class="card-title">Préparation</h3>
+  </div>
+  <div class="card-body">
+
+    <!-- Type d'embiellage -->
+    <div class="form-group mb-16">
+      <label class="form-label">Type d'embiellage <span aria-hidden="true">*</span></label>
+      <div class="ce-radio-group">
+        <label>
+          <input type="radio" name="ce-type" value="formage">
+          Formage
+        </label>
+        <label>
+          <input type="radio" name="ce-type" value="soudure">
+          Soudure
+        </label>
+      </div>
+    </div>
+
+    <!-- Barre de calage -->
+    <div class="form-group mb-16">
+      <label class="ce-check-label">
+        <input type="checkbox" id="ce-barreUsed">
+        Utilisation d'une barre de calage
+      </label>
+      <div class="mt-8 ce-hidden" id="ce-barreBloc">
+        <input
+          id="ce-epBarre"
+          class="form-input"
+          type="number"
+          step="0.1"
+          min="0"
+          placeholder="Hauteur barre (mm)"
+          inputmode="decimal"
+          style="max-width: 220px;"
+        >
+        <p class="form-hint">Épaisseur de la barre en mm</p>
+      </div>
+    </div>
+
+    <!-- Hauteur pied d'outillage -->
+    <div class="form-group mb-16">
+      <label class="form-label" for="ce-y">Hauteur pied d'outillage Y (mm) <span aria-hidden="true">*</span></label>
+      <input
+        id="ce-y"
+        class="form-input"
+        type="number"
+        step="0.01"
+        min="0"
+        placeholder="ex : 125.00"
+        inputmode="decimal"
+        style="max-width: 220px;"
+      >
+    </div>
+
+    <!-- Joint de soudure (conditionnel) -->
+    <div class="form-group mb-24 ce-hidden" id="ce-jointBloc">
+      <label class="form-label">Joint de soudure <span aria-hidden="true">*</span></label>
+      <div class="ce-radio-group">
+        <label>
+          <input type="radio" name="ce-joint" value="2.5">
+          2,5 mm
+        </label>
+        <label>
+          <input type="radio" name="ce-joint" value="3">
+          3 mm
+        </label>
+      </div>
+    </div>
+
+    <!-- Bouton démarrer -->
+    <div>
+      <button class="btn btn-primary" id="ce-btnDemarrer" type="button">
+        Démarrer le contrôle
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     CARTE 2 — REPÉRAGE DES MESURES (SVG)
+     ============================================================ -->
+<div class="card mb-24 ce-hidden" id="ce-pageControle">
+  <div class="card-header">
+    <h3 class="card-title">Repérage des mesures</h3>
+  </div>
+  <div class="card-body">
+
+    <button class="ce-btn-retour" id="ce-btnRetour" type="button">
+      ← Modifier les paramètres
+    </button>
+
+    <!-- SVG repérage M1-M4 -->
+    <div class="ce-svg-wrap mt-8">
+      <svg viewBox="0 0 420 260" width="100%" aria-label="Schéma de repérage des points de mesure M1 à M4">
+        <!-- Barre supérieure -->
+        <line x1="360" y1="30" x2="60" y2="30" stroke="#1A294A" stroke-width="6"/>
+        <!-- Corps outil -->
+        <rect x="110" y="70" width="200" height="120" rx="12" ry="12" fill="#f4f6f8" stroke="#333" stroke-width="3"/>
+        <text x="210" y="140" text-anchor="middle" font-weight="bold" font-family="inherit" font-size="14" fill="#333">OUTIL</text>
+        <!-- Points de mesure -->
+        <!-- M1 — haut droit -->
+        <circle cx="310" cy="70" r="9" fill="#1A294A"/>
+        <text x="325" y="65" font-size="13" font-family="inherit" fill="#333" font-weight="600">M1</text>
+        <text id="ce-resM1" x="325" y="85" font-size="12" font-family="inherit" fill="#666">—</text>
+        <!-- M2 — haut gauche -->
+        <circle cx="110" cy="70" r="9" fill="#1A294A"/>
+        <text x="10" y="65" font-size="13" font-family="inherit" fill="#333" font-weight="600">M2</text>
+        <text id="ce-resM2" x="10" y="85" font-size="12" font-family="inherit" fill="#666">—</text>
+        <!-- M3 — bas gauche -->
+        <circle cx="110" cy="190" r="9" fill="#1A294A"/>
+        <text x="10" y="205" font-size="13" font-family="inherit" fill="#333" font-weight="600">M3</text>
+        <text id="ce-resM3" x="10" y="225" font-size="12" font-family="inherit" fill="#666">—</text>
+        <!-- M4 — bas droit -->
+        <circle cx="310" cy="190" r="9" fill="#1A294A"/>
+        <text x="325" y="205" font-size="13" font-family="inherit" fill="#333" font-weight="600">M4</text>
+        <text id="ce-resM4" x="325" y="225" font-size="12" font-family="inherit" fill="#666">—</text>
+      </svg>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     CARTE 3 — MESURES X MESURÉES
+     ============================================================ -->
+<div class="card ce-hidden" id="ce-pageMesures">
+  <div class="card-header">
+    <h3 class="card-title">Mesures X mesurées</h3>
+  </div>
+  <div class="card-body">
+
+    <p class="text-muted mb-16">
+      Saisissez les quatre cotes X relevées au comparateur (en mm).
+    </p>
+
+    <div class="ce-mesures-grid mb-24">
+      <div class="form-group">
+        <label class="form-label" for="ce-m1">M1 (mm)</label>
+        <input id="ce-m1" class="form-input" type="number" step="0.01" placeholder="0.00" inputmode="decimal">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="ce-m2">M2 (mm)</label>
+        <input id="ce-m2" class="form-input" type="number" step="0.01" placeholder="0.00" inputmode="decimal">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="ce-m3">M3 (mm)</label>
+        <input id="ce-m3" class="form-input" type="number" step="0.01" placeholder="0.00" inputmode="decimal">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="ce-m4">M4 (mm)</label>
+        <input id="ce-m4" class="form-input" type="number" step="0.01" placeholder="0.00" inputmode="decimal">
+      </div>
+    </div>
+
+    <div style="text-align: center;">
+      <button class="btn btn-primary" id="ce-btnAnalyser" type="button">
+        Analyser
+      </button>
+    </div>
+
+    <!-- Voyant + message résultat -->
+    <div class="ce-voyant neutre" id="ce-voyant" role="status" aria-live="polite"></div>
+    <p class="ce-message" id="ce-messageGlobal"></p>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     SCRIPT IIFE
+     ============================================================ -->
+<script>
+(function () {
+  'use strict';
+
+  /* ----------------------------------------------------------
+     Références DOM
+     ---------------------------------------------------------- */
+  const pageInit     = document.getElementById('ce-pageInit');
+  const pageControle = document.getElementById('ce-pageControle');
+  const pageMesures  = document.getElementById('ce-pageMesures');
+
+  const jointBloc  = document.getElementById('ce-jointBloc');
+  const barreBloc  = document.getElementById('ce-barreBloc');
+  const barreUsed  = document.getElementById('ce-barreUsed');
+  const epBarre    = document.getElementById('ce-epBarre');
+  const inputY     = document.getElementById('ce-y');
+  const voyant     = document.getElementById('ce-voyant');
+  const msgGlobal  = document.getElementById('ce-messageGlobal');
+
+  const inputM1    = document.getElementById('ce-m1');
+  const inputM2    = document.getElementById('ce-m2');
+  const inputM3    = document.getElementById('ce-m3');
+  const inputM4    = document.getElementById('ce-m4');
+
+  const resM1      = document.getElementById('ce-resM1');
+  const resM2      = document.getElementById('ce-resM2');
+  const resM3      = document.getElementById('ce-resM3');
+  const resM4      = document.getElementById('ce-resM4');
+
+  /* ----------------------------------------------------------
+     Helpers visibilité
+     ---------------------------------------------------------- */
+  function afficher(el)  { el.classList.remove('ce-hidden'); }
+  function masquer(el)   { el.classList.add('ce-hidden'); }
+
+  /* ----------------------------------------------------------
+     Affichage conditionnel du bloc joint selon type
+     ---------------------------------------------------------- */
+  document.querySelectorAll('input[name="ce-type"]').forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      if (radio.value === 'soudure' && radio.checked) {
+        afficher(jointBloc);
+      } else {
+        masquer(jointBloc);
+        document.querySelectorAll('input[name="ce-joint"]').forEach(function (j) {
+          j.checked = false;
+        });
+      }
+    });
+  });
+
+  /* ----------------------------------------------------------
+     Affichage conditionnel du champ épaisseur barre
+     ---------------------------------------------------------- */
+  barreUsed.addEventListener('change', function () {
+    if (barreUsed.checked) {
+      afficher(barreBloc);
+    } else {
+      masquer(barreBloc);
+      epBarre.value = '';
+    }
+  });
+
+  /* ----------------------------------------------------------
+     Validation et passage à la page contrôle
+     ---------------------------------------------------------- */
+  document.getElementById('ce-btnDemarrer').addEventListener('click', function () {
+    var typeChecked = document.querySelector('input[name="ce-type"]:checked');
+    if (!typeChecked) {
+      alert("Veuillez sélectionner un type d'embiellage.");
+      return;
+    }
+    if (!inputY.value || isNaN(parseFloat(inputY.value))) {
+      alert("Veuillez saisir la hauteur du pied d'outillage (Y).");
+      return;
+    }
+    if (typeChecked.value === 'soudure') {
+      var jointChecked = document.querySelector('input[name="ce-joint"]:checked');
+      if (!jointChecked) {
+        alert('Joint de soudure requis.');
+        return;
+      }
+    }
+
+    /* Réinitialiser les résultats SVG et voyant */
+    [resM1, resM2, resM3, resM4].forEach(function (el) {
+      el.textContent = '—';
+      el.style.fill = '#666';
+    });
+    [inputM1, inputM2, inputM3, inputM4].forEach(function (el) {
+      el.value = '';
+    });
+    voyant.className = 'ce-voyant neutre';
+    msgGlobal.textContent = '';
+
+    masquer(pageInit);
+    afficher(pageControle);
+    afficher(pageMesures);
+  });
+
+  /* ----------------------------------------------------------
+     Retour à la préparation
+     ---------------------------------------------------------- */
+  document.getElementById('ce-btnRetour').addEventListener('click', function () {
+    afficher(pageInit);
+    masquer(pageControle);
+    masquer(pageMesures);
+
+    /* Remettre voyant à neutre */
+    voyant.className = 'ce-voyant neutre';
+    msgGlobal.textContent = '';
+  });
+
+  /* ----------------------------------------------------------
+     Calcul de la cote X théorique
+     ---------------------------------------------------------- */
+  function calculXtheorique() {
+    var type = document.querySelector('input[name="ce-type"]:checked').value;
+    var Y    = parseFloat(inputY.value);
+    var E    = 0.5; /* jeu mécanique constant */
+
+    if (type === 'formage') {
+      return Y;
+    }
+
+    var jointEl = document.querySelector('input[name="ce-joint"]:checked');
+    var J = parseFloat(jointEl.value);
+    return Y + J - E;
+  }
+
+  /* ----------------------------------------------------------
+     Analyse d'un écart individuel
+     ---------------------------------------------------------- */
+  function analyserEcart(ecart) {
+    if (Math.abs(ecart) <= 0.05) {
+      return { couleur: 'vert', msg: 'Conforme' };
+    }
+    if (ecart < 0) {
+      return { couleur: 'rouge', msg: "Risque mécanique : cisaillement ou verrouillage impossible" };
+    }
+    return { couleur: 'orange', msg: "Risque de fuite d'air ou de vide" };
+  }
+
+  /* ----------------------------------------------------------
+     Calcul et affichage des corrections
+     ---------------------------------------------------------- */
+  document.getElementById('ce-btnAnalyser').addEventListener('click', function () {
+    var Xth   = calculXtheorique();
+    var barre = barreUsed.checked ? parseFloat(epBarre.value || '0') : 0;
+    var base  = Xth + barre;
+
+    var valeurs = [inputM1, inputM2, inputM3, inputM4].map(function (inp) {
+      return parseFloat(inp.value);
+    });
+
+    if (valeurs.some(isNaN)) {
+      alert('Veuillez saisir les quatre mesures avant d\'analyser.');
+      return;
+    }
+
+    var ecarts   = valeurs.map(function (x) { return x - base; });
+    var resultats = ecarts.map(analyserEcart);
+
+    /* Mettre à jour le SVG */
+    var svgTexts = [resM1, resM2, resM3, resM4];
+    var colorMap = { vert: '#2ecc71', orange: '#f39c12', rouge: '#e74c3c' };
+
+    svgTexts.forEach(function (el, i) {
+      el.textContent = (ecarts[i] >= 0 ? '+' : '') + ecarts[i].toFixed(2) + ' mm';
+      el.style.fill  = colorMap[resultats[i].couleur];
+    });
+
+    /* Déterminer le pire cas : rouge > orange > vert */
+    var pire = resultats.find(function (r) { return r.couleur === 'rouge'; })
+            || resultats.find(function (r) { return r.couleur === 'orange'; })
+            || resultats[0];
+
+    voyant.className = 'ce-voyant ' + pire.couleur;
+    msgGlobal.textContent = pire.msg;
+  });
+
+})();
+</script>
