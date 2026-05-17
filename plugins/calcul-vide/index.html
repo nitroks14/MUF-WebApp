@@ -1,0 +1,875 @@
+<!--
+  Plugin : Calcul mise sous vide
+  Port de l'app React vacuum-multivac en vanilla JS IIFE.
+  Architecture : IIFE strict, IDs préfixés cv-, autosave localStorage (muf_calcul_vide_v1)
+-->
+
+<style>
+  /* ============================================================
+     Styles spécifiques au plugin Calcul mise sous vide
+     ============================================================ */
+
+  .cv-section {
+    margin-bottom: 20px;
+  }
+
+  .cv-section-title {
+    font-size: var(--font-size-sm, 13px);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary, #003A70);
+    margin: 0 0 12px 0;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--color-primary, #003A70);
+  }
+
+  .cv-field {
+    margin-bottom: 12px;
+  }
+
+  .cv-field label {
+    display: block;
+    font-size: var(--font-size-sm, 13px);
+    font-weight: 500;
+    color: var(--color-text-muted, #555);
+    margin-bottom: 4px;
+  }
+
+  .cv-field .form-control {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid var(--color-border, #d0d5dd);
+    border-radius: var(--radius-sm, 6px);
+    font-size: var(--font-size-base, 14px);
+    font-family: inherit;
+    background: var(--color-bg, #fff);
+    color: var(--color-text, #111);
+    min-height: 38px;
+    transition: border-color 0.15s;
+  }
+
+  .cv-field .form-control:focus {
+    outline: none;
+    border-color: var(--color-primary, #003A70);
+    box-shadow: 0 0 0 3px rgba(0, 58, 112, 0.12);
+  }
+
+  .cv-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .cv-checkbox-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-primary, #003A70);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .cv-checkbox-row label {
+    font-size: var(--font-size-sm, 13px);
+    font-weight: 500;
+    color: var(--color-text, #111);
+    cursor: pointer;
+    margin: 0;
+  }
+
+  .cv-result-box {
+    background: var(--color-bg-alt, #f0f4f8);
+    border: 1px solid var(--color-border, #d0d5dd);
+    border-radius: var(--radius-sm, 6px);
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    font-size: var(--font-size-sm, 13px);
+    color: var(--color-text-muted, #555);
+  }
+
+  .cv-result-box strong {
+    color: var(--color-text, #111);
+  }
+
+  .cv-results-panel {
+    background: var(--color-primary, #003A70);
+    color: #fff;
+    border-radius: var(--radius, 8px);
+    padding: 16px 20px;
+    margin-top: 8px;
+  }
+
+  .cv-results-panel h3 {
+    margin: 0 0 12px 0;
+    font-size: var(--font-size-base, 14px);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.85;
+  }
+
+  .cv-result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+    font-size: var(--font-size-sm, 13px);
+  }
+
+  .cv-result-row:last-child {
+    border-bottom: none;
+  }
+
+  .cv-result-row .cv-result-label {
+    opacity: 0.8;
+  }
+
+  .cv-result-row .cv-result-val {
+    font-weight: 700;
+    font-size: var(--font-size-base, 14px);
+  }
+
+  .cv-result-time {
+    font-size: 28px;
+    font-weight: 800;
+    text-align: center;
+    margin: 10px 0 4px;
+    letter-spacing: 0.02em;
+  }
+
+  .cv-result-interp {
+    text-align: center;
+    font-size: var(--font-size-sm, 13px);
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    display: inline-block;
+    margin: 0 auto 8px;
+  }
+
+  .cv-interp-ok      { background: rgba(72,187,120,0.25); color: #d1fae5; }
+  .cv-interp-warn    { background: rgba(246,173,85,0.25);  color: #fef3c7; }
+  .cv-interp-critical { background: rgba(245,101,101,0.25); color: #fee2e2; }
+
+  .cv-interp-center {
+    display: flex;
+    justify-content: center;
+    margin: 6px 0 10px;
+  }
+
+  .cv-results-empty {
+    text-align: center;
+    color: var(--color-text-muted, #888);
+    font-size: var(--font-size-sm, 13px);
+    padding: 16px 0;
+    font-style: italic;
+  }
+
+  #cv-fillerThickness-wrap { display: none; }
+</style>
+
+<!-- Section Outillage -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h2 class="card-title cv-section-title">1 — Outillage</h2>
+  </div>
+  <div class="card-body">
+
+    <div class="cv-field">
+      <label for="cv-laize">Laize (mm)</label>
+      <input id="cv-laize" type="number" step="any" min="0" placeholder="ex : 400" class="form-control">
+    </div>
+
+    <div class="cv-field">
+      <label for="cv-pitch">Pas d'avance (mm)</label>
+      <input id="cv-pitch" type="number" step="any" min="0" placeholder="ex : 150" class="form-control">
+    </div>
+
+    <div class="cv-field">
+      <label for="cv-depth">Profondeur (mm)</label>
+      <input id="cv-depth" type="number" step="any" min="0" placeholder="ex : 60" class="form-control">
+    </div>
+
+    <div class="cv-checkbox-row">
+      <input type="checkbox" id="cv-hasFillers">
+      <label for="cv-hasFillers">Cales / remplisseurs</label>
+    </div>
+
+    <div id="cv-fillerThickness-wrap" class="cv-field">
+      <label for="cv-fillerThickness">Épaisseur des cales (mm)</label>
+      <input id="cv-fillerThickness" type="number" step="any" min="0" placeholder="ex : 20" class="form-control">
+    </div>
+
+    <div class="cv-result-box">
+      Volume outillage :
+      <strong id="cv-vol-outillage">—</strong>
+    </div>
+  </div>
+</div>
+
+<!-- Section Source de vide -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h2 class="card-title cv-section-title">2 — Source de vide</h2>
+  </div>
+  <div class="card-body">
+
+    <div class="cv-field">
+      <label for="cv-sourceType">Type de source</label>
+      <select id="cv-sourceType" class="form-control">
+        <option value="network">Réseau</option>
+        <option value="pump">Pompe</option>
+      </select>
+    </div>
+
+    <div id="cv-network-fields">
+      <div class="cv-field">
+        <label for="cv-networkFlow">Débit réseau (m³/h)</label>
+        <input id="cv-networkFlow" type="number" step="any" min="0" placeholder="ex : 432" class="form-control">
+      </div>
+      <div class="cv-field">
+        <label for="cv-networkPressure">Pression réseau (mbar abs)</label>
+        <input id="cv-networkPressure" type="number" step="any" min="0" placeholder="ex : 35" class="form-control" value="35">
+      </div>
+    </div>
+
+    <div id="cv-pump-fields" style="display:none">
+      <div class="cv-field">
+        <label for="cv-pumpModel">Modèle de pompe</label>
+        <select id="cv-pumpModel" class="form-control">
+          <option value="Busch R5 RA 0025">Busch R5 RA 0025</option>
+          <option value="Busch R5 RA 0040">Busch R5 RA 0040</option>
+          <option value="Busch R5 RA 0063">Busch R5 RA 0063</option>
+          <option value="Busch R5 RA 0100">Busch R5 RA 0100</option>
+          <option value="Busch R5 RA 0160">Busch R5 RA 0160</option>
+          <option value="Busch R5 RA 0250" selected>Busch R5 RA 0250</option>
+          <option value="Busch R5 RA 0300">Busch R5 RA 0300</option>
+          <option value="Busch R5 RA 0400">Busch R5 RA 0400</option>
+          <option value="Busch R5 RA 0630">Busch R5 RA 0630</option>
+          <option value="Busch R5 RA 0700">Busch R5 RA 0700</option>
+          <option value="Busch COBRA NC 0300">Busch COBRA NC 0300</option>
+          <option value="Busch COBRA NC 0400">Busch COBRA NC 0400</option>
+          <option value="Busch COBRA NC 0450">Busch COBRA NC 0450</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Section Roots -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h2 class="card-title cv-section-title">3 — Roots (amplificateur)</h2>
+  </div>
+  <div class="card-body">
+    <div class="cv-field">
+      <label for="cv-rootsModel">Modèle Roots</label>
+      <select id="cv-rootsModel" class="form-control">
+        <option value="Aucune">Aucune</option>
+        <option value="Atlas Copco DRT1000">Atlas Copco DRT1000</option>
+        <option value="Atlas Copco DRT2000">Atlas Copco DRT2000</option>
+        <option value="Busch PANDA WV 1000">Busch PANDA WV 1000</option>
+        <option value="Busch PANDA WV 2000">Busch PANDA WV 2000</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- Section Configuration réseau -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h2 class="card-title cv-section-title">4 — Configuration réseau</h2>
+  </div>
+  <div class="card-body">
+
+    <div class="cv-field">
+      <label for="cv-distributionType">Type de distribution</label>
+      <select id="cv-distributionType" class="form-control">
+        <option value="centralized">Centralisée</option>
+        <option value="decentralized">Décentralisée</option>
+      </select>
+    </div>
+
+    <div class="cv-field">
+      <label for="cv-downstreamDiameter">Diamètre tuyau aval (mm)</label>
+      <input id="cv-downstreamDiameter" type="number" step="any" min="0" placeholder="ex : 32" class="form-control" value="32">
+    </div>
+
+    <div class="cv-field">
+      <label for="cv-downstreamLength">Longueur tuyau aval (m)</label>
+      <input id="cv-downstreamLength" type="number" step="any" min="0" placeholder="ex : 5" class="form-control">
+    </div>
+
+    <div class="cv-field">
+      <label for="cv-upstreamDiameter">Diamètre tuyau amont (mm)</label>
+      <input id="cv-upstreamDiameter" type="number" step="any" min="0" placeholder="ex : 60" class="form-control" value="60">
+    </div>
+
+    <div class="cv-field">
+      <label for="cv-upstreamLength">Longueur tuyau amont (m)</label>
+      <input id="cv-upstreamLength" type="number" step="any" min="0" placeholder="ex : 10" class="form-control">
+    </div>
+
+    <div class="cv-field">
+      <label for="cv-bends">Nombre de coudes</label>
+      <input id="cv-bends" type="number" step="1" min="0" placeholder="ex : 4" class="form-control" value="0">
+    </div>
+
+    <div class="cv-field">
+      <label for="cv-valvePosition">Position des vannes</label>
+      <select id="cv-valvePosition" class="form-control">
+        <option value="close">Proches outillage</option>
+        <option value="remote">Eloignees outillage</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- Section Objectif -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h2 class="card-title cv-section-title">5 — Objectif</h2>
+  </div>
+  <div class="card-body">
+    <div class="cv-field">
+      <label for="cv-finalPressure">Pression finale cible (mbar abs)</label>
+      <input id="cv-finalPressure" type="number" step="any" min="0" placeholder="ex : 80" class="form-control" value="80">
+    </div>
+  </div>
+</div>
+
+<!-- Résultats -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h2 class="card-title cv-section-title">Resultats</h2>
+  </div>
+  <div class="card-body">
+    <div id="cv-results-content">
+      <p class="cv-results-empty">Renseignez les parametres ci-dessus pour obtenir une estimation.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     DONNEES POMPES ET ROOTS (portees depuis data/pumps.js)
+     ============================================================ */
+
+  var primaryPumpModels = {
+    'Busch R5 RA 0025': {
+      flow: function (p) { return p > 100 ? 0.0069 : p > 10 ? 0.005 : 0.0035; }
+    },
+    'Busch R5 RA 0040': {
+      flow: function (p) { return p > 100 ? 0.011 : p > 10 ? 0.008 : 0.005; }
+    },
+    'Busch R5 RA 0063': {
+      flow: function (p) { return p > 100 ? 0.0175 : p > 10 ? 0.013 : 0.008; }
+    },
+    'Busch R5 RA 0100': {
+      flow: function (p) { return p > 100 ? 0.028 : p > 10 ? 0.020 : 0.013; }
+    },
+    'Busch R5 RA 0160': {
+      flow: function (p) { return p > 100 ? 0.044 : p > 10 ? 0.032 : 0.020; }
+    },
+    'Busch R5 RA 0250': {
+      flow: function (p) { return p > 100 ? 0.069 : p > 10 ? 0.050 : 0.035; }
+    },
+    'Busch R5 RA 0300': {
+      flow: function (p) { return p > 100 ? 0.083 : p > 10 ? 0.055 : 0.035; }
+    },
+    'Busch R5 RA 0400': {
+      flow: function (p) { return p > 100 ? 0.11 : p > 10 ? 0.07 : 0.04; }
+    },
+    'Busch R5 RA 0630': {
+      flow: function (p) { return p > 100 ? 0.175 : p > 10 ? 0.12 : 0.07; }
+    },
+    'Busch R5 RA 0700': {
+      flow: function (p) { return p > 100 ? 0.195 : p > 10 ? 0.14 : 0.08; }
+    },
+    'Busch COBRA NC 0300': {
+      flow: function (p) {
+        if (p > 100) return 0.083;
+        if (p > 40)  return 0.075;
+        if (p > 10)  return 0.060;
+        return 0.045;
+      }
+    },
+    'Busch COBRA NC 0400': {
+      flow: function (p) {
+        if (p > 100) return 0.11;
+        if (p > 40)  return 0.10;
+        if (p > 10)  return 0.08;
+        return 0.06;
+      }
+    },
+    'Busch COBRA NC 0450': {
+      flow: function (p) {
+        if (p > 100) return 0.125;
+        if (p > 40)  return 0.115;
+        if (p > 10)  return 0.095;
+        return 0.07;
+      }
+    }
+  };
+
+  var rootsModels = {
+    'Aucune': {
+      enabled: false,
+      gain: function () { return 1; }
+    },
+    'Atlas Copco DRT1000': {
+      enabled: true,
+      gain: function (p) {
+        if (p > 100) return 1;
+        if (p > 40)  return 1 + ((100 - p) / 60) * 1.5;
+        return 2.5;
+      }
+    },
+    'Atlas Copco DRT2000': {
+      enabled: true,
+      gain: function (p) {
+        if (p > 100) return 1;
+        if (p > 40)  return 1 + ((100 - p) / 60) * 2.5;
+        return 3.5;
+      }
+    },
+    'Busch PANDA WV 1000': {
+      enabled: true,
+      gain: function (p) {
+        if (p > 100) return 1;
+        if (p > 40)  return 1 + ((100 - p) / 60) * 1.7;
+        return 2.7;
+      }
+    },
+    'Busch PANDA WV 2000': {
+      enabled: true,
+      gain: function (p) {
+        if (p > 100) return 1;
+        if (p > 40)  return 1 + ((100 - p) / 60) * 2.8;
+        return 3.8;
+      }
+    }
+  };
+
+  /* ============================================================
+     UTILITAIRES DE CALCUL (portés depuis utils/)
+     ============================================================ */
+
+  /* --- toolingVolume.js --- */
+  function calculateToolingVolume(laize, pitch, depth, hasFillers, fillerThickness) {
+    var effPitch = pitch - 20;
+    var surface  = laize * effPitch;
+    var main     = surface * depth;
+    var filler   = hasFillers ? surface * fillerThickness * 0.95 : 0;
+    return (main + filler) / 1e9; /* m³ */
+  }
+
+  /* --- network.js --- */
+  function calculatePipeVolume(length, diameter) {
+    var d = diameter / 1000;
+    return Math.PI * Math.pow(d / 2, 2) * length; /* m³ */
+  }
+
+  /* Pénalités réseau amont (coudes, longueur) */
+  function calculateNetworkPenalty(upstreamLength, upstreamDiameter, bends) {
+    var volume  = calculatePipeVolume(upstreamLength, upstreamDiameter);
+    /* Pénalité coudes : -3 % de débit effectif par coude, min 50 % */
+    var penalty = Math.max(1 + bends * 0.03, 1);
+    return { volume: volume, penalty: penalty };
+  }
+
+  /* ============================================================
+     ETAT GLOBAL DU PLUGIN
+     ============================================================ */
+
+  var STORAGE_KEY = 'muf_calcul_vide_v1';
+  var ATM         = 1013; /* pression atmosphérique en mbar */
+  var debounceTimer = null;
+
+  var defaultState = {
+    laize:              '',
+    pitch:              '',
+    depth:              '',
+    hasFillers:         false,
+    fillerThickness:    '',
+    sourceType:         'network',
+    networkFlow:        '',
+    networkPressure:    '35',
+    pumpModel:          'Busch R5 RA 0250',
+    rootsModel:         'Aucune',
+    distributionType:   'centralized',
+    downstreamDiameter: '32',
+    downstreamLength:   '',
+    upstreamDiameter:   '60',
+    upstreamLength:     '',
+    bends:              '0',
+    valvePosition:      'close',
+    finalPressure:      '80'
+  };
+
+  /* ============================================================
+     REFERENCES DOM
+     ============================================================ */
+
+  var elLaize              = document.getElementById('cv-laize');
+  var elPitch              = document.getElementById('cv-pitch');
+  var elDepth              = document.getElementById('cv-depth');
+  var elHasFillers         = document.getElementById('cv-hasFillers');
+  var elFillerThickness    = document.getElementById('cv-fillerThickness');
+  var elFillerWrap         = document.getElementById('cv-fillerThickness-wrap');
+  var elSourceType         = document.getElementById('cv-sourceType');
+  var elNetworkFields      = document.getElementById('cv-network-fields');
+  var elPumpFields         = document.getElementById('cv-pump-fields');
+  var elNetworkFlow        = document.getElementById('cv-networkFlow');
+  var elNetworkPressure    = document.getElementById('cv-networkPressure');
+  var elPumpModel          = document.getElementById('cv-pumpModel');
+  var elRootsModel         = document.getElementById('cv-rootsModel');
+  var elDistributionType   = document.getElementById('cv-distributionType');
+  var elDownstreamDiameter = document.getElementById('cv-downstreamDiameter');
+  var elDownstreamLength   = document.getElementById('cv-downstreamLength');
+  var elUpstreamDiameter   = document.getElementById('cv-upstreamDiameter');
+  var elUpstreamLength     = document.getElementById('cv-upstreamLength');
+  var elBends              = document.getElementById('cv-bends');
+  var elValvePosition      = document.getElementById('cv-valvePosition');
+  var elFinalPressure      = document.getElementById('cv-finalPressure');
+  var elVolOutillage       = document.getElementById('cv-vol-outillage');
+  var elResultsContent     = document.getElementById('cv-results-content');
+
+  /* ============================================================
+     SAUVEGARDE / RESTAURATION
+     ============================================================ */
+
+  function collectState() {
+    return {
+      laize:              elLaize.value,
+      pitch:              elPitch.value,
+      depth:              elDepth.value,
+      hasFillers:         elHasFillers.checked,
+      fillerThickness:    elFillerThickness.value,
+      sourceType:         elSourceType.value,
+      networkFlow:        elNetworkFlow.value,
+      networkPressure:    elNetworkPressure.value,
+      pumpModel:          elPumpModel.value,
+      rootsModel:         elRootsModel.value,
+      distributionType:   elDistributionType.value,
+      downstreamDiameter: elDownstreamDiameter.value,
+      downstreamLength:   elDownstreamLength.value,
+      upstreamDiameter:   elUpstreamDiameter.value,
+      upstreamLength:     elUpstreamLength.value,
+      bends:              elBends.value,
+      valvePosition:      elValvePosition.value,
+      finalPressure:      elFinalPressure.value
+    };
+  }
+
+  function applyState(st) {
+    elLaize.value              = st.laize              !== undefined ? st.laize              : defaultState.laize;
+    elPitch.value              = st.pitch              !== undefined ? st.pitch              : defaultState.pitch;
+    elDepth.value              = st.depth              !== undefined ? st.depth              : defaultState.depth;
+    elHasFillers.checked       = !!st.hasFillers;
+    elFillerThickness.value    = st.fillerThickness    !== undefined ? st.fillerThickness    : defaultState.fillerThickness;
+    elSourceType.value         = st.sourceType         || defaultState.sourceType;
+    elNetworkFlow.value        = st.networkFlow        !== undefined ? st.networkFlow        : defaultState.networkFlow;
+    elNetworkPressure.value    = st.networkPressure    !== undefined ? st.networkPressure    : defaultState.networkPressure;
+    elPumpModel.value          = st.pumpModel          || defaultState.pumpModel;
+    elRootsModel.value         = st.rootsModel         || defaultState.rootsModel;
+    elDistributionType.value   = st.distributionType   || defaultState.distributionType;
+    elDownstreamDiameter.value = st.downstreamDiameter !== undefined ? st.downstreamDiameter : defaultState.downstreamDiameter;
+    elDownstreamLength.value   = st.downstreamLength   !== undefined ? st.downstreamLength   : defaultState.downstreamLength;
+    elUpstreamDiameter.value   = st.upstreamDiameter   !== undefined ? st.upstreamDiameter   : defaultState.upstreamDiameter;
+    elUpstreamLength.value     = st.upstreamLength     !== undefined ? st.upstreamLength     : defaultState.upstreamLength;
+    elBends.value              = st.bends              !== undefined ? st.bends              : defaultState.bends;
+    elValvePosition.value      = st.valvePosition      || defaultState.valvePosition;
+    elFinalPressure.value      = st.finalPressure      !== undefined ? st.finalPressure      : defaultState.finalPressure;
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(collectState()));
+    } catch (e) { /* ignore quota errors */ }
+  }
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : defaultState;
+    } catch (e) {
+      return defaultState;
+    }
+  }
+
+  function scheduleSave() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(saveState, 800);
+  }
+
+  /* ============================================================
+     LOGIQUE DE VISIBILITE
+     ============================================================ */
+
+  function updateVisibility() {
+    /* Cales */
+    elFillerWrap.style.display = elHasFillers.checked ? '' : 'none';
+
+    /* Source de vide */
+    var isNetwork = elSourceType.value === 'network';
+    elNetworkFields.style.display = isNetwork ? '' : 'none';
+    elPumpFields.style.display    = isNetwork ? 'none' : '';
+  }
+
+  /* ============================================================
+     LOGIQUE DE CALCUL
+     ============================================================ */
+
+  /* Débit de la source en m³/s selon la pression courante p (mbar) */
+  function sourceFlow(p, state) {
+    if (state.sourceType === 'pump') {
+      var pump = primaryPumpModels[state.pumpModel];
+      return pump ? pump.flow(p) : 0;
+    }
+    /* Mode réseau : débit approché par paliers (cohérent avec app.jsx) */
+    var pNet = parseFloat(state.networkPressure);
+    if (!pNet || pNet <= 0) return 0;
+    if (p > 100) return 0.12;
+    if (p > 40)  return 0.10;
+    if (p > 10)  return 0.07;
+    return 0.05;
+  }
+
+  /* Gain du Roots selon la pression courante */
+  function rootsGain(p, rootsModelKey) {
+    var r = rootsModels[rootsModelKey];
+    if (!r || !r.enabled) return 1;
+    return r.gain(p);
+  }
+
+  /* Format mm:ss */
+  function formatTime(seconds) {
+    if (!isFinite(seconds) || seconds < 0) return '—';
+    var m = Math.floor(seconds / 60);
+    var s = Math.round(seconds % 60);
+    return m + 'min ' + (s < 10 ? '0' : '') + s + 's';
+  }
+
+  /* Interprétation textuelle */
+  function interpret(seconds) {
+    if (seconds <= 30)  return { label: 'Excellent',  cls: 'cv-interp-ok' };
+    if (seconds <= 90)  return { label: 'Correct',    cls: 'cv-interp-ok' };
+    if (seconds <= 180) return { label: 'Acceptable', cls: 'cv-interp-warn' };
+    if (seconds <= 360) return { label: 'Attention',  cls: 'cv-interp-warn' };
+    return                     { label: 'Critique',   cls: 'cv-interp-critical' };
+  }
+
+  function compute() {
+    var st = collectState();
+
+    /* --- Volume outillage --- */
+    var laize   = parseFloat(st.laize)   || 0;
+    var pitch   = parseFloat(st.pitch)   || 0;
+    var depth   = parseFloat(st.depth)   || 0;
+    var fillerT = parseFloat(st.fillerThickness) || 0;
+
+    var volOutillage = 0;
+    if (laize > 0 && pitch > 20 && depth > 0) {
+      volOutillage = calculateToolingVolume(laize, pitch, depth, st.hasFillers, fillerT);
+    }
+
+    /* Affichage volume outillage en temps réel */
+    elVolOutillage.textContent = volOutillage > 0
+      ? (volOutillage * 1000).toFixed(3) + ' L'
+      : '—';
+
+    /* --- Volume aval (outillage + tuyau aval si vannes éloignées) --- */
+    var volAval = volOutillage;
+    if (st.valvePosition === 'remote') {
+      var downLen = parseFloat(st.downstreamLength) || 0;
+      var downDia = parseFloat(st.downstreamDiameter) || 32;
+      if (downLen > 0) {
+        volAval += calculatePipeVolume(downLen, downDia);
+      }
+    }
+
+    /* --- Volume et pénalité réseau amont --- */
+    var upLen   = parseFloat(st.upstreamLength)   || 0;
+    var upDia   = parseFloat(st.upstreamDiameter) || 60;
+    var bends   = parseInt(st.bends, 10)          || 0;
+    var netCalc = calculateNetworkPenalty(upLen, upDia, bends);
+    var volAmont  = netCalc.volume;
+    var penalty   = Math.max(netCalc.penalty, 1);
+
+    /* --- Calcul du temps --- */
+    if (volAval <= 0) {
+      renderEmpty();
+      return;
+    }
+
+    var pFinal = parseFloat(st.finalPressure);
+    if (!pFinal || pFinal <= 0) {
+      renderEmpty();
+      return;
+    }
+
+    /* Pression de départ selon la source */
+    var pReseau;
+    if (st.sourceType === 'network') {
+      pReseau = parseFloat(st.networkPressure);
+      if (!pReseau || pReseau <= 0) {
+        renderEmpty();
+        return;
+      }
+    } else {
+      pReseau = ATM;
+    }
+
+    var t     = 0;
+    var steps = 40;
+
+    /* Phase A : descente ATM → pReseau (uniquement si source réseau déjà sous ATM) */
+    if (st.sourceType === 'network' && pReseau < ATM) {
+      var pA   = ATM;
+      var dlogA = (Math.log(ATM) - Math.log(pReseau)) / steps;
+
+      for (var i = 0; i < steps; i++) {
+        var pANext = Math.exp(Math.log(pA) - dlogA);
+        var qA     = sourceFlow(pA, st) / penalty;
+        if (qA > 0) {
+          t += (volAval / qA) * Math.log(pA / pANext) * 3600;
+        }
+        pA = pANext;
+      }
+    }
+
+    /* Phase B : descente pReseau → pFinal (aval + amont, avec Roots) */
+    if (pReseau > pFinal) {
+      var volTotal = volAval + volAmont;
+      var pB       = pReseau;
+      var dlogB    = (Math.log(pReseau) - Math.log(pFinal)) / steps;
+
+      for (var j = 0; j < steps; j++) {
+        var pBNext = Math.exp(Math.log(pB) - dlogB);
+        var qB     = (sourceFlow(pB, st) * rootsGain(pB, st.rootsModel)) / penalty;
+        if (qB > 0) {
+          t += (volTotal / qB) * Math.log(pB / pBNext) * 3600;
+        }
+        pB = pBNext;
+      }
+    }
+
+    if (!isFinite(t)) {
+      renderEmpty();
+      return;
+    }
+
+    renderResults(volAval, volAmont, t, st);
+  }
+
+  /* ============================================================
+     RENDU
+     ============================================================ */
+
+  function renderEmpty() {
+    elResultsContent.innerHTML = '<p class="cv-results-empty">Renseignez les parametres ci-dessus pour obtenir une estimation.</p>';
+  }
+
+  function renderResults(volAval, volAmont, timeSeconds, st) {
+    var tempsFormate = formatTime(timeSeconds);
+    var interp       = interpret(timeSeconds);
+    var nomPompe     = st.sourceType === 'pump' ? st.pumpModel : 'Reseau ' + st.networkPressure + ' mbar';
+
+    var volAvalL  = (volAval * 1000).toFixed(3);
+    var volAmontL = (volAmont * 1000).toFixed(3);
+    var tempsSec  = timeSeconds.toFixed(1);
+
+    elResultsContent.innerHTML =
+      '<div class="cv-results-panel">' +
+        '<h3>Estimation</h3>' +
+        '<div class="cv-result-time">' + tempsFormate + '</div>' +
+        '<div class="cv-interp-center">' +
+          '<span class="cv-result-interp ' + interp.cls + '">' + interp.label + '</span>' +
+        '</div>' +
+        '<div class="cv-result-row">' +
+          '<span class="cv-result-label">Volume aval</span>' +
+          '<span class="cv-result-val">' + volAvalL + ' L</span>' +
+        '</div>' +
+        '<div class="cv-result-row">' +
+          '<span class="cv-result-label">Volume amont</span>' +
+          '<span class="cv-result-val">' + volAmontL + ' L</span>' +
+        '</div>' +
+        '<div class="cv-result-row">' +
+          '<span class="cv-result-label">Temps estimé</span>' +
+          '<span class="cv-result-val">' + tempsSec + ' s</span>' +
+        '</div>' +
+        '<div class="cv-result-row">' +
+          '<span class="cv-result-label">Source</span>' +
+          '<span class="cv-result-val">' + nomPompe + '</span>' +
+        '</div>' +
+        '<div class="cv-result-row">' +
+          '<span class="cv-result-label">Roots</span>' +
+          '<span class="cv-result-val">' + st.rootsModel + '</span>' +
+        '</div>' +
+      '</div>';
+
+    /* Archivage Notion silencieux */
+    if (window.NotionArchive) {
+      try {
+        window.NotionArchive.archiverCalculVide({
+          nomClient:   '',
+          typeMachine: '',
+          reference:   'Calcul-' + new Date().toISOString().slice(0, 10),
+          date:        new Date().toISOString().slice(0, 10),
+          resultat:    'Temps: ' + tempsFormate + ' | Vol aval: ' + volAvalL + 'L | Pompe: ' + nomPompe
+        });
+      } catch (e) { /* silencieux */ }
+    }
+  }
+
+  /* ============================================================
+     EVENEMENTS
+     ============================================================ */
+
+  function onInput() {
+    updateVisibility();
+    compute();
+    scheduleSave();
+  }
+
+  var inputs = [
+    elLaize, elPitch, elDepth, elFillerThickness,
+    elNetworkFlow, elNetworkPressure,
+    elDownstreamDiameter, elDownstreamLength,
+    elUpstreamDiameter, elUpstreamLength,
+    elBends, elFinalPressure
+  ];
+
+  inputs.forEach(function (el) {
+    el.addEventListener('input', onInput);
+  });
+
+  var selects = [
+    elSourceType, elPumpModel, elRootsModel,
+    elDistributionType, elValvePosition
+  ];
+
+  selects.forEach(function (el) {
+    el.addEventListener('change', onInput);
+  });
+
+  elHasFillers.addEventListener('change', onInput);
+
+  /* ============================================================
+     INITIALISATION
+     ============================================================ */
+
+  var savedState = loadState();
+  applyState(savedState);
+  updateVisibility();
+  compute();
+
+})();
+</script>

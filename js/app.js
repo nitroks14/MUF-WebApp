@@ -66,6 +66,16 @@ const PLUGINS = [
                    01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>`,
   },
+  {
+    id:   'calcul-vide',
+    nom:  'Calcul mise sous vide',
+    desc: 'Estimer le temps de mise sous vide d\'un outillage',
+    icone: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+              viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>`,
+  },
   /* Exemple de futurs plugins — décommenter quand ils existent :
   {
     id:   'diagnostic',
