@@ -442,39 +442,39 @@
   var DESC_MAX_LEN  = 120;
 
   /*
-   * TEMPLATE_CONFIG — cartographié depuis xl/worksheets/sheet1.xml du template XLSX
+   * TEMPLATE_CONFIG — cartographié depuis xl/worksheets/sheet1.xml du nouveau template XLSX
    *
-   * Ligne 1 : A1="Client :"(label) | B1:D1=valeur nom client | E1="Code client :"(label) | F1:G1=valeur code client
-   * Ligne 2 : A2="Contact"(label)  | B2:D2=valeur contact    | E2="Mail et/ou fax"(label)| F2:G2=valeur email
-   * Ligne 3 : A3="Adresse"(label)  | B3:G3=valeur adresse
-   * Ligne 4 : A4="Pièces contrat"  | B4=checkbox             | C4="Technicien"(label)   | F4="Type Machine"(label) | G4=valeur type machine
-   * Ligne 5 : A5="Devis"           | B5=checkbox             | C5="Nom :"(label)        | D5:E5=valeur nom tech    | F5="Numéro :"(label)     | G5=valeur numéro machine
-   * Ligne 6 : A6="Commande"        | B6=checkbox             | C6="Prénom :"(label)     | D6:E6=valeur prénom tech | F6="Année :"(label)      | G6=valeur année machine
-   * Ligne 7 : en-têtes tableau pièces (Désignation A7:C7, Référence D7, Quantité E7, N°Plan F7, Repère G7)
-   * Lignes 8-46 : données pièces (startRow=8)
+   * Ligne 1 : A1=titre "Demande d'offre ou commande de pièces de rechange" (fusionné A1:G1)
+   * Ligne 2 : A2="Client :"(label) | B2:D2=valeur nom client | E2="Code client :"(label) | F2:G2=valeur code client
+   * Ligne 3 : A3="Contact"(label)  | B3:D3=valeur contact    | E3="Mail et/ou fax"(label)| F3:G3=valeur email
+   * Ligne 4 : A4="Adresse"(label)  | B4:G4=valeur adresse (pleine largeur)
+   * Ligne 5 : A5="Pièces contrat"  | B5=checkbox             | C5="Technicien"(label)   | F5="Type Machine"(label) | G5=valeur type machine
+   * Ligne 6 : A6="Devis"           | B6=checkbox             | C6="Nom :"(label)        | D6:E6=valeur nom tech    | F6="Numéro :"(label)     | G6=valeur numéro machine
+   * Ligne 7 : A7="Commande"        | B7=checkbox             | C7="Prénom :"(label)     | D7:E7=valeur prénom tech | F7="Année :"(label)      | G7=valeur année machine
+   * Ligne 8 : en-têtes tableau pièces (Désignation A8:C8, Référence D8, Quantité E8, N°Plan F8, Repère G8)
+   * Lignes 9-51 : données pièces (startRow=9, 43 lignes max)
    *
-   * Nota : pas de cellule dédiée pour machineDate ni shortDesc dans le template — ces
-   * champs ne sont pas écrits dans le XLSX (présents dans le formulaire uniquement).
+   * Nota : pas de cellule dédiée pour machineDate ni shortDesc dans le template.
    */
   var TEMPLATE_CONFIG = {
     sheetName: "Feuil1",
     cells: {
-      clientName:       "B1",   // fusionné B1:D1
-      clientNumber:     "F1",   // fusionné F1:G1
-      clientContact:    "B2",   // fusionné B2:D2
-      clientEmail:      "F2",   // fusionné F2:G2 (était F3 — BUG corrigé)
-      clientAddress:    "B3",   // fusionné B3:G3
-      contractPieces:   "B4",   // checkbox Pièces contrat
-      contractDevis:    "B5",   // checkbox Devis
-      contractCommande: "B6",   // checkbox Commande
-      techLastName:     "D5",   // fusionné D5:E5
-      techFirstName:    "D6",   // fusionné D6:E6
-      machineType:      "G4",
-      machineNumber:    "G5",
-      machineYear:      "G6",
+      clientName:       "B2",   // fusionné B2:D2
+      clientNumber:     "F2",   // fusionné F2:G2
+      clientContact:    "B3",   // fusionné B3:D3
+      clientEmail:      "F3",   // fusionné F3:G3
+      clientAddress:    "B4",   // fusionné B4:G4
+      contractPieces:   "B5",   // checkbox Pièces contrat
+      contractDevis:    "B6",   // checkbox Devis
+      contractCommande: "B7",   // checkbox Commande
+      techLastName:     "D6",   // fusionné D6:E6
+      techFirstName:    "D7",   // fusionné D7:E7
+      machineType:      "G5",
+      machineNumber:    "G6",
+      machineYear:      "G7",
     },
     parts: {
-      startRow:  8,             // ligne 7 = en-têtes, données démarrent ligne 8
+      startRow:  9,             // ligne 8 = en-têtes, données démarrent ligne 9
       columns: {
         designation: "A",       // fusionné A:C dans le template
         reference:   "D",
@@ -482,7 +482,7 @@
         plan:        "F",
         repere:      "G",
       },
-      maxRows: 39,              // lignes 8 à 46 = 39 lignes max dans le template
+      maxRows: 43,              // lignes 9 à 51 = 43 lignes max
     },
   };
 
