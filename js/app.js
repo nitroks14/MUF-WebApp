@@ -55,6 +55,17 @@ const PLUGINS = [
                    0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/>
             </svg>`,
   },
+  {
+    id:   'liste-pieces',
+    nom:  'Liste de pièces',
+    desc: 'Générer une fiche de pièces détachées au format Excel',
+    icone: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+              viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0
+                   01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>`,
+  },
   /* Exemple de futurs plugins — décommenter quand ils existent :
   {
     id:   'diagnostic',

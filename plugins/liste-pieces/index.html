@@ -1,0 +1,1117 @@
+<!--
+  Plugin : Liste de pièces
+  Génère une fiche de pièces détachées au format Excel (.xlsx)
+  Architecture : IIFE strict, IDs préfixés lp-, autosave localStorage
+-->
+
+<!-- SheetJS — doit être chargé AVANT le script IIFE -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style>
+  /* ============================================================
+     Styles spécifiques au plugin Liste de pièces
+     ============================================================ */
+
+  /* Tableau des pièces */
+  .lp-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .lp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-sm);
+    min-width: 520px;
+  }
+  .lp-table th {
+    background: var(--color-primary);
+    color: #fff;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .lp-table td {
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+  }
+  .lp-table tr:last-child td {
+    border-bottom: none;
+  }
+  .lp-table tr:nth-child(even) td {
+    background: var(--color-bg-alt, #f8f9fa);
+  }
+  .lp-table input[type="text"],
+  .lp-table input[type="number"] {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm, 4px);
+    font-size: var(--font-size-sm);
+    font-family: inherit;
+    background: var(--color-bg);
+    color: var(--color-text);
+    box-sizing: border-box;
+    min-height: 36px;
+  }
+  .lp-table input[type="text"]:focus,
+  .lp-table input[type="number"]:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -1px;
+  }
+  .lp-col-desig   { min-width: 160px; }
+  .lp-col-ref     { min-width: 110px; }
+  .lp-col-qty     { min-width: 60px; }
+  .lp-col-plan    { min-width: 80px; }
+  .lp-col-repere  { min-width: 80px; }
+  .lp-col-del     { width: 40px; text-align: center; }
+
+  /* Bouton supprimer ligne */
+  .lp-btn-del {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-danger, #e53e3e);
+    padding: 4px;
+    border-radius: var(--radius-sm, 4px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    min-width: 36px;
+  }
+  .lp-btn-del:hover {
+    background: rgba(229, 62, 62, 0.1);
+  }
+
+  /* Checkboxes inline */
+  .lp-check-group {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 6px;
+  }
+  .lp-check-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--font-size-base);
+    color: var(--color-text);
+    cursor: pointer;
+    min-height: 44px;
+    font-weight: normal;
+  }
+  .lp-check-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-primary);
+    flex-shrink: 0;
+  }
+
+  /* Compteur descriptif court */
+  .lp-char-count {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted, #6c757d);
+    text-align: right;
+    margin-top: 2px;
+  }
+  .lp-char-count.lp-near  { color: #f39c12; }
+  .lp-char-count.lp-over  { color: #e53e3e; }
+
+  /* Compteur lignes pièces */
+  .lp-parts-count {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted, #6c757d);
+    margin-left: 8px;
+  }
+
+  /* Barre d'actions export/import */
+  .lp-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 8px;
+  }
+
+  /* Champ invalide */
+  .lp-invalid {
+    border-color: #e53e3e !important;
+    background: rgba(229, 62, 62, 0.05) !important;
+  }
+
+  /* Toast notification */
+  .lp-toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-primary);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: var(--radius-md, 8px);
+    font-size: var(--font-size-sm);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .lp-toast.lp-toast-visible {
+    opacity: 1;
+  }
+  .lp-toast.lp-toast-error {
+    background: #e53e3e;
+  }
+
+  /* Grille 2 colonnes sur tablette+ */
+  .lp-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 16px;
+  }
+  @media (max-width: 540px) {
+    .lp-grid-2 { grid-template-columns: 1fr; }
+  }
+</style>
+
+<!-- Toast de notification -->
+<div class="lp-toast" id="lp-toast" role="status" aria-live="polite"></div>
+
+<!-- ============================================================
+     EN-TÊTE
+     ============================================================ -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h2 class="card-title">Liste de pièces</h2>
+  </div>
+  <div class="card-body">
+    <p class="text-muted">
+      Renseignez les informations client, machine et la liste des pièces pour générer
+      une fiche de demande au format Excel. Les données sont sauvegardées automatiquement.
+    </p>
+    <div class="lp-actions mt-8">
+      <button class="btn btn-primary" id="lp-btnExport" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+             style="vertical-align:middle;margin-right:6px;" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0
+               0l-4-4m4 4V4"/>
+        </svg>
+        Exporter Excel
+      </button>
+      <label class="btn btn-outline" style="cursor:pointer;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+             style="vertical-align:middle;margin-right:6px;" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0
+               0L8 8m4-4v12"/>
+        </svg>
+        Importer Excel
+        <input type="file" id="lp-inputImport" accept=".xlsx,.xls" style="display:none;">
+      </label>
+      <button class="btn btn-outline" id="lp-btnClear" type="button">
+        Réinitialiser
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION 1 — CLIENT / CONTACT
+     ============================================================ -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h3 class="card-title">Client / Contact</h3>
+  </div>
+  <div class="card-body">
+
+    <div class="lp-grid-2">
+      <!-- Client -->
+      <div class="form-group mb-16">
+        <label class="form-label" for="lp-clientName">
+          Client <span aria-hidden="true">*</span>
+        </label>
+        <input id="lp-clientName" class="form-control" type="text"
+               placeholder="Nom de la société" autocomplete="organization">
+      </div>
+
+      <!-- Code client -->
+      <div class="form-group mb-16">
+        <label class="form-label" for="lp-clientNumber">Code client</label>
+        <input id="lp-clientNumber" class="form-control" type="text"
+               placeholder="ex : FR-001234">
+      </div>
+    </div>
+
+    <!-- Contact -->
+    <div class="form-group mb-16">
+      <label class="form-label" for="lp-clientContact">
+        Contact <span aria-hidden="true">*</span>
+      </label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input id="lp-clientContact" class="form-control" type="text"
+               placeholder="Nom du contact" autocomplete="name"
+               style="flex:1;">
+        <button class="btn btn-outline btn-sm" id="lp-btnPickContact" type="button"
+                title="Sélectionner dans les contacts"
+                style="white-space:nowrap;padding:8px 12px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+               viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4
+                 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87
+                 M16 3.13a4 4 0 010 7.75"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mail -->
+    <div class="form-group mb-16">
+      <label class="form-label" for="lp-clientEmail">
+        Mail <span aria-hidden="true">*</span>
+      </label>
+      <input id="lp-clientEmail" class="form-control" type="email"
+             placeholder="contact@societe.fr" autocomplete="email">
+    </div>
+
+    <!-- Adresse -->
+    <div class="form-group mb-16">
+      <label class="form-label" for="lp-clientAddress">Adresse</label>
+      <input id="lp-clientAddress" class="form-control" type="text"
+             placeholder="Adresse de livraison / site" autocomplete="street-address">
+    </div>
+
+    <!-- Checkboxes type demande -->
+    <div class="form-group">
+      <label class="form-label">Type de demande</label>
+      <div class="lp-check-group">
+        <label class="lp-check-label">
+          <input type="checkbox" id="lp-contractPieces">
+          Pièces contrat
+        </label>
+        <label class="lp-check-label">
+          <input type="checkbox" id="lp-contractDevis">
+          Devis
+        </label>
+        <label class="lp-check-label">
+          <input type="checkbox" id="lp-contractCommande">
+          Commande
+        </label>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION 2 — MACHINE / TECHNICIEN
+     ============================================================ -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h3 class="card-title">Machine / Technicien</h3>
+  </div>
+  <div class="card-body">
+
+    <div class="lp-grid-2">
+      <!-- Type machine -->
+      <div class="form-group mb-16">
+        <label class="form-label" for="lp-machineType">
+          Type machine <span aria-hidden="true">*</span>
+        </label>
+        <input id="lp-machineType" class="form-control" type="text"
+               placeholder="ex : R535">
+      </div>
+
+      <!-- Numéro machine -->
+      <div class="form-group mb-16">
+        <label class="form-label" for="lp-machineNumber">
+          Numéro machine <span aria-hidden="true">*</span>
+        </label>
+        <input id="lp-machineNumber" class="form-control" type="text"
+               placeholder="Numéro de série">
+      </div>
+
+      <!-- Année -->
+      <div class="form-group mb-16">
+        <label class="form-label" for="lp-machineYear">Année</label>
+        <input id="lp-machineYear" class="form-control" type="text"
+               placeholder="ex : 2019" inputmode="numeric" maxlength="4">
+      </div>
+
+      <!-- Date intervention -->
+      <div class="form-group mb-16">
+        <label class="form-label" for="lp-machineDate">
+          Date intervention <span aria-hidden="true">*</span>
+        </label>
+        <input id="lp-machineDate" class="form-control" type="date">
+      </div>
+
+      <!-- Nom technicien -->
+      <div class="form-group mb-16">
+        <label class="form-label" for="lp-techLastName">Nom technicien</label>
+        <input id="lp-techLastName" class="form-control" type="text"
+               placeholder="Nom" autocomplete="family-name">
+      </div>
+
+      <!-- Prénom technicien -->
+      <div class="form-group mb-16">
+        <label class="form-label" for="lp-techFirstName">Prénom technicien</label>
+        <input id="lp-techFirstName" class="form-control" type="text"
+               placeholder="Prénom" autocomplete="given-name">
+      </div>
+    </div>
+
+    <!-- Descriptif court -->
+    <div class="form-group">
+      <label class="form-label" for="lp-shortDesc">
+        Descriptif court <span aria-hidden="true">*</span>
+      </label>
+      <input id="lp-shortDesc" class="form-control" type="text"
+             placeholder="Description de l'intervention (max 120 caractères)"
+             maxlength="120">
+      <p class="lp-char-count" id="lp-shortDescCount">0 / 120</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION 3 — LISTE DE PIÈCES
+     ============================================================ -->
+<div class="card mb-24">
+  <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <h3 class="card-title" style="margin:0;">
+      Liste de pièces
+      <span class="lp-parts-count" id="lp-partsCount">0 ligne(s)</span>
+    </h3>
+    <button class="btn btn-outline btn-sm" id="lp-btnAddRow" type="button">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+           viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+           style="vertical-align:middle;margin-right:4px;" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+      </svg>
+      Ajouter une ligne
+    </button>
+  </div>
+  <div class="card-body">
+    <div class="lp-table-wrap">
+      <table class="lp-table" role="grid" aria-label="Liste des pièces">
+        <thead>
+          <tr>
+            <th class="lp-col-desig">Désignation</th>
+            <th class="lp-col-ref">Référence</th>
+            <th class="lp-col-qty">Qté</th>
+            <th class="lp-col-plan">N° Plan</th>
+            <th class="lp-col-repere">Repère</th>
+            <th class="lp-col-del" aria-label="Supprimer"></th>
+          </tr>
+        </thead>
+        <tbody id="lp-partsTbody">
+          <!-- Lignes injectées dynamiquement -->
+        </tbody>
+      </table>
+    </div>
+    <p class="text-muted mt-8" id="lp-partsHint" style="font-size:var(--font-size-sm);">
+      Au moins une ligne est requise pour l'export.
+    </p>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCRIPT IIFE
+     ============================================================ -->
+<script>
+(function () {
+  "use strict";
+
+  /* ----------------------------------------------------------
+     Constantes
+     ---------------------------------------------------------- */
+  var APP_VERSION  = 8;
+  var STORAGE_KEY  = "webapp_pr_form_v" + APP_VERSION;
+  var TEMPLATE_PATH = "./plugins/liste-pieces/assets/Fichier de base liste PR.xlsx";
+  var DESC_MAX_LEN  = 120;
+
+  var TEMPLATE_CONFIG = {
+    sheetName: "Feuil1",
+    cells: {
+      clientName:       "B1",
+      clientContact:    "B2",
+      clientAddress:    "B3",
+      contractPieces:   "B4",
+      contractDevis:    "B5",
+      contractCommande: "B6",
+      clientNumber:     "F1",
+      clientEmail:      "F3",
+      techLastName:     "D5",
+      techFirstName:    "D6",
+      machineType:      "G4",
+      machineNumber:    "G5",
+      machineYear:      "G6",
+    },
+    parts: {
+      startRow:  9,
+      columns: {
+        designation: "A",
+        reference:   "D",
+        quantity:    "E",
+        plan:        "F",
+        repere:      "G",
+      },
+      maxRows: 200,
+    },
+  };
+
+  /* ----------------------------------------------------------
+     Références DOM
+     ---------------------------------------------------------- */
+  var partsTbody    = document.getElementById("lp-partsTbody");
+  var partsCount    = document.getElementById("lp-partsCount");
+  var partsHint     = document.getElementById("lp-partsHint");
+  var shortDesc     = document.getElementById("lp-shortDesc");
+  var shortDescCount = document.getElementById("lp-shortDescCount");
+  var machineDate   = document.getElementById("lp-machineDate");
+  var toast         = document.getElementById("lp-toast");
+
+  /* ----------------------------------------------------------
+     Toast
+     ---------------------------------------------------------- */
+  var toastTimer = null;
+  function showToast(msg, isError) {
+    toast.textContent = msg;
+    toast.className = "lp-toast lp-toast-visible" + (isError ? " lp-toast-error" : "");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      toast.className = "lp-toast";
+    }, 3000);
+  }
+
+  /* ----------------------------------------------------------
+     Utilitaires date
+     ---------------------------------------------------------- */
+  function todayISO() {
+    var d = new Date();
+    var mm = String(d.getMonth() + 1).padStart(2, "0");
+    var dd = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + mm + "-" + dd;
+  }
+
+  function formatDate_DDMMYYYY(isoStr) {
+    if (!isoStr) return "";
+    var parts = isoStr.split("-");
+    if (parts.length !== 3) return isoStr;
+    return parts[2] + "/" + parts[1] + "/" + parts[0];
+  }
+
+  /* ----------------------------------------------------------
+     Utilitaires noms de fichier
+     ---------------------------------------------------------- */
+  function stripDiacritics(str) {
+    return str.normalize("NFD").replace(/[̀-ͯ]/g, "");
+  }
+
+  function sanitizeFilename(str) {
+    return stripDiacritics(str)
+      .replace(/[^a-zA-Z0-9_\-. ]/g, "")
+      .replace(/\s+/g, "_")
+      .slice(0, 60);
+  }
+
+  /* ----------------------------------------------------------
+     Compteur descriptif court
+     ---------------------------------------------------------- */
+  function updateShortDescCounter() {
+    var len = shortDesc.value.length;
+    shortDescCount.textContent = len + " / " + DESC_MAX_LEN;
+    shortDescCount.className = "lp-char-count";
+    if (len >= DESC_MAX_LEN) {
+      shortDescCount.className += " lp-over";
+    } else if (len >= DESC_MAX_LEN * 0.85) {
+      shortDescCount.className += " lp-near";
+    }
+  }
+
+  shortDesc.addEventListener("input", function () {
+    updateShortDescCounter();
+    scheduleAutosave();
+  });
+
+  /* ----------------------------------------------------------
+     Initialisation date
+     ---------------------------------------------------------- */
+  function initDateField() {
+    if (!machineDate.value) {
+      machineDate.value = todayISO();
+    }
+  }
+
+  /* ----------------------------------------------------------
+     Pré-remplissage technicien depuis Parametrage
+     ---------------------------------------------------------- */
+  function prefillTechnicien() {
+    if (!window.Parametrage) return;
+    var nom    = window.Parametrage.get("nom");
+    var prenom = window.Parametrage.get("prenom");
+    var lastEl = document.getElementById("lp-techLastName");
+    var firstEl = document.getElementById("lp-techFirstName");
+    if (nom && !lastEl.value)    lastEl.value  = nom;
+    if (prenom && !firstEl.value) firstEl.value = prenom;
+  }
+
+  /* ----------------------------------------------------------
+     Collecte des données du formulaire
+     ---------------------------------------------------------- */
+  function collectFormData() {
+    var rows = [];
+    partsTbody.querySelectorAll("tr").forEach(function (tr) {
+      rows.push({
+        designation: tr.querySelector(".lp-inp-desig").value.trim(),
+        reference:   tr.querySelector(".lp-inp-ref").value.trim(),
+        quantity:    tr.querySelector(".lp-inp-qty").value.trim(),
+        plan:        tr.querySelector(".lp-inp-plan").value.trim(),
+        repere:      tr.querySelector(".lp-inp-repere").value.trim(),
+      });
+    });
+
+    return {
+      client: {
+        name:     document.getElementById("lp-clientName").value.trim(),
+        number:   document.getElementById("lp-clientNumber").value.trim(),
+        contact:  document.getElementById("lp-clientContact").value.trim(),
+        email:    document.getElementById("lp-clientEmail").value.trim(),
+        address:  document.getElementById("lp-clientAddress").value.trim(),
+        pieces:   document.getElementById("lp-contractPieces").checked,
+        devis:    document.getElementById("lp-contractDevis").checked,
+        commande: document.getElementById("lp-contractCommande").checked,
+      },
+      machine: {
+        type:      document.getElementById("lp-machineType").value.trim(),
+        number:    document.getElementById("lp-machineNumber").value.trim(),
+        year:      document.getElementById("lp-machineYear").value.trim(),
+        date:      document.getElementById("lp-machineDate").value,
+      },
+      tech: {
+        lastName:  document.getElementById("lp-techLastName").value.trim(),
+        firstName: document.getElementById("lp-techFirstName").value.trim(),
+      },
+      shortDesc: shortDesc.value,
+      parts: rows,
+    };
+  }
+
+  /* ----------------------------------------------------------
+     Application des données au formulaire
+     ---------------------------------------------------------- */
+  function applyFormData(data) {
+    if (!data) return;
+
+    if (data.client) {
+      document.getElementById("lp-clientName").value     = data.client.name    || "";
+      document.getElementById("lp-clientNumber").value   = data.client.number  || "";
+      document.getElementById("lp-clientContact").value  = data.client.contact || "";
+      document.getElementById("lp-clientEmail").value    = data.client.email   || "";
+      document.getElementById("lp-clientAddress").value  = data.client.address || "";
+      document.getElementById("lp-contractPieces").checked   = !!data.client.pieces;
+      document.getElementById("lp-contractDevis").checked    = !!data.client.devis;
+      document.getElementById("lp-contractCommande").checked = !!data.client.commande;
+    }
+    if (data.machine) {
+      document.getElementById("lp-machineType").value   = data.machine.type   || "";
+      document.getElementById("lp-machineNumber").value = data.machine.number || "";
+      document.getElementById("lp-machineYear").value   = data.machine.year   || "";
+      document.getElementById("lp-machineDate").value   = data.machine.date   || todayISO();
+    }
+    if (data.tech) {
+      document.getElementById("lp-techLastName").value  = data.tech.lastName  || "";
+      document.getElementById("lp-techFirstName").value = data.tech.firstName || "";
+    }
+    shortDesc.value = data.shortDesc || "";
+    updateShortDescCounter();
+
+    if (data.parts && data.parts.length > 0) {
+      rebuildPartsFromData(data.parts);
+    }
+  }
+
+  /* ----------------------------------------------------------
+     Autosave localStorage
+     ---------------------------------------------------------- */
+  var autosaveTimer = null;
+  function scheduleAutosave() {
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(saveToLocal, 800);
+  }
+
+  function saveToLocal() {
+    try {
+      var data = collectFormData();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.warn("[LP] Autosave echoue :", e);
+    }
+  }
+
+  function loadFromLocal() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {
+      console.warn("[LP] Lecture localStorage echouee :", e);
+    }
+    return null;
+  }
+
+  /* ----------------------------------------------------------
+     Tableau des pièces — manipulation de lignes
+     ---------------------------------------------------------- */
+  function createRowEl(data) {
+    var tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td class=\"lp-col-desig\"><input type=\"text\" class=\"lp-inp-desig\" placeholder=\"Désignation\" aria-label=\"Désignation\"></td>" +
+      "<td class=\"lp-col-ref\"><input type=\"text\" class=\"lp-inp-ref\" placeholder=\"Référence\" aria-label=\"Référence\"></td>" +
+      "<td class=\"lp-col-qty\"><input type=\"number\" class=\"lp-inp-qty\" placeholder=\"1\" min=\"0\" step=\"1\" inputmode=\"numeric\" aria-label=\"Quantité\" style=\"max-width:60px;\"></td>" +
+      "<td class=\"lp-col-plan\"><input type=\"text\" class=\"lp-inp-plan\" placeholder=\"N° Plan\" aria-label=\"N° Plan\"></td>" +
+      "<td class=\"lp-col-repere\"><input type=\"text\" class=\"lp-inp-repere\" placeholder=\"Repère\" aria-label=\"Repère\"></td>" +
+      "<td class=\"lp-col-del\">" +
+        "<button type=\"button\" class=\"lp-btn-del\" title=\"Supprimer la ligne\" aria-label=\"Supprimer la ligne\">" +
+          "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\">" +
+            "<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16\"/>" +
+          "</svg>" +
+        "</button>" +
+      "</td>";
+
+    if (data) {
+      tr.querySelector(".lp-inp-desig").value  = data.designation || "";
+      tr.querySelector(".lp-inp-ref").value    = data.reference   || "";
+      tr.querySelector(".lp-inp-qty").value    = data.quantity    || "";
+      tr.querySelector(".lp-inp-plan").value   = data.plan        || "";
+      tr.querySelector(".lp-inp-repere").value = data.repere      || "";
+    }
+
+    attachRowEvents(tr);
+    return tr;
+  }
+
+  function attachRowEvents(tr) {
+    /* Supprimer la ligne */
+    tr.querySelector(".lp-btn-del").addEventListener("click", function () {
+      tr.remove();
+      updatePartsCount();
+      scheduleAutosave();
+    });
+
+    /* Autosave sur modification de n'importe quel champ de la ligne */
+    tr.querySelectorAll("input").forEach(function (inp) {
+      inp.addEventListener("input", scheduleAutosave);
+    });
+  }
+
+  function addPartRow(data) {
+    var tr = createRowEl(data);
+    partsTbody.appendChild(tr);
+    updatePartsCount();
+    return tr;
+  }
+
+  function rebuildPartsFromData(partsArray) {
+    partsTbody.innerHTML = "";
+    partsArray.forEach(function (p) {
+      addPartRow(p);
+    });
+    updatePartsCount();
+  }
+
+  function updatePartsCount() {
+    var n = partsTbody.querySelectorAll("tr").length;
+    partsCount.textContent = n + " ligne" + (n > 1 ? "s" : "");
+    partsHint.style.display = n > 0 ? "none" : "";
+  }
+
+  document.getElementById("lp-btnAddRow").addEventListener("click", function () {
+    var tr = addPartRow(null);
+    /* Focus le premier champ de la nouvelle ligne */
+    var inp = tr.querySelector("input");
+    if (inp) inp.focus();
+    scheduleAutosave();
+  });
+
+  /* ----------------------------------------------------------
+     Validation
+     ---------------------------------------------------------- */
+  function clearValidation() {
+    document.querySelectorAll(".lp-invalid").forEach(function (el) {
+      el.classList.remove("lp-invalid");
+    });
+  }
+
+  function validateForm() {
+    clearValidation();
+    var errors = [];
+
+    function require(id, label) {
+      var el = document.getElementById(id);
+      if (!el || !el.value.trim()) {
+        if (el) el.classList.add("lp-invalid");
+        errors.push(label + " est requis.");
+      }
+    }
+
+    require("lp-clientName",    "Le nom du client");
+    require("lp-clientContact", "Le contact");
+    require("lp-clientEmail",   "L'email");
+    require("lp-machineType",   "Le type de machine");
+    require("lp-machineNumber", "Le numéro de machine");
+    require("lp-shortDesc",     "Le descriptif court");
+    require("lp-machineDate",   "La date d'intervention");
+
+    /* Email basique */
+    var emailEl = document.getElementById("lp-clientEmail");
+    if (emailEl && emailEl.value.trim() && !emailEl.value.includes("@")) {
+      emailEl.classList.add("lp-invalid");
+      errors.push("L'email semble invalide.");
+    }
+
+    /* Au moins 1 ligne de pièce */
+    var rows = partsTbody.querySelectorAll("tr");
+    if (rows.length === 0) {
+      errors.push("Ajoutez au moins une ligne de pièce.");
+    }
+
+    return errors;
+  }
+
+  /* ----------------------------------------------------------
+     Nom du fichier d'export
+     ---------------------------------------------------------- */
+  function buildExportFilename(data) {
+    var client  = sanitizeFilename(data.client.name  || "client");
+    var machine = sanitizeFilename(data.machine.type || "machine");
+    var date    = formatDate_DDMMYYYY(data.machine.date || todayISO()).replace(/\//g, "-");
+    return "ListePR_" + client + "_" + machine + "_" + date + ".xlsx";
+  }
+
+  /* ----------------------------------------------------------
+     SheetJS — clonage du workbook template
+     ---------------------------------------------------------- */
+  var _templateWorkbook = null;
+
+  function ensureTemplateLoaded() {
+    if (_templateWorkbook) return Promise.resolve(_templateWorkbook);
+    return fetch(TEMPLATE_PATH)
+      .then(function (r) {
+        if (!r.ok) throw new Error("Template HTTP " + r.status);
+        return r.arrayBuffer();
+      })
+      .then(function (buf) {
+        _templateWorkbook = XLSX.read(buf, { type: "array" });
+        return _templateWorkbook;
+      });
+  }
+
+  function cloneWorkbook(wb) {
+    /* Sérialise en binaire puis re-parse — copie profonde */
+    var bin = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    return XLSX.read(bin, { type: "array" });
+  }
+
+  function getTargetSheet(wb) {
+    var name = TEMPLATE_CONFIG.sheetName;
+    if (!wb.Sheets[name]) {
+      /* Fallback : première feuille */
+      name = wb.SheetNames[0];
+    }
+    return wb.Sheets[name];
+  }
+
+  function writeCell(sheet, addr, value) {
+    if (!sheet[addr]) sheet[addr] = {};
+    if (typeof value === "boolean") {
+      sheet[addr].t = "b";
+      sheet[addr].v = value;
+    } else {
+      sheet[addr].t = "s";
+      sheet[addr].v = String(value || "");
+    }
+  }
+
+  function writePartsToSheet(sheet, parts) {
+    var cfg   = TEMPLATE_CONFIG.parts;
+    var cols  = cfg.columns;
+    var limit = Math.min(parts.length, cfg.maxRows);
+
+    for (var i = 0; i < limit; i++) {
+      var row  = cfg.startRow + i;
+      var part = parts[i];
+      writeCell(sheet, cols.designation + row, part.designation);
+      writeCell(sheet, cols.reference   + row, part.reference);
+      writeCell(sheet, cols.quantity    + row, part.quantity);
+      writeCell(sheet, cols.plan        + row, part.plan);
+      writeCell(sheet, cols.repere      + row, part.repere);
+    }
+  }
+
+  /* ----------------------------------------------------------
+     Export Excel
+     ---------------------------------------------------------- */
+  function exportToExcel() {
+    var errors = validateForm();
+    if (errors.length > 0) {
+      showToast(errors[0], true);
+      /* Scroll vers le premier champ invalide */
+      var first = document.querySelector(".lp-invalid");
+      if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
+    var data = collectFormData();
+    var btnExport = document.getElementById("lp-btnExport");
+    btnExport.disabled = true;
+    btnExport.textContent = "Export en cours…";
+
+    ensureTemplateLoaded()
+      .then(function (wb) {
+        var clone  = cloneWorkbook(wb);
+        var sheet  = getTargetSheet(clone);
+        var cells  = TEMPLATE_CONFIG.cells;
+
+        /* Métadonnées client */
+        writeCell(sheet, cells.clientName,       data.client.name);
+        writeCell(sheet, cells.clientContact,    data.client.contact);
+        writeCell(sheet, cells.clientAddress,    data.client.address);
+        writeCell(sheet, cells.contractPieces,   data.client.pieces);
+        writeCell(sheet, cells.contractDevis,    data.client.devis);
+        writeCell(sheet, cells.contractCommande, data.client.commande);
+        writeCell(sheet, cells.clientNumber,     data.client.number);
+        writeCell(sheet, cells.clientEmail,      data.client.email);
+
+        /* Technicien */
+        writeCell(sheet, cells.techLastName,  data.tech.lastName);
+        writeCell(sheet, cells.techFirstName, data.tech.firstName);
+
+        /* Machine */
+        writeCell(sheet, cells.machineType,   data.machine.type);
+        writeCell(sheet, cells.machineNumber, data.machine.number);
+        writeCell(sheet, cells.machineYear,   data.machine.year);
+
+        /* Pièces */
+        writePartsToSheet(sheet, data.parts);
+
+        /* Téléchargement */
+        var filename = buildExportFilename(data);
+        XLSX.writeFile(clone, filename);
+
+        showToast("Export réussi : " + filename);
+
+        /* Archivage Notion silencieux */
+        if (window.NotionArchive) {
+          try {
+            window.NotionArchive.archiverListePieces({
+              nomClient:   data.client.name,
+              typeMachine: data.machine.type,
+              reference:   buildExportFilename(data).replace(".xlsx", ""),
+              date:        data.machine.date || todayISO(),
+              contenu:     data.parts.map(function (p) {
+                return p.reference + " x" + p.quantity;
+              }).join(", "),
+            });
+          } catch (e) {
+            console.warn("[LP] NotionArchive echoue :", e);
+          }
+        }
+      })
+      .catch(function (err) {
+        console.error("[LP] Erreur export :", err);
+        showToast("Erreur lors de l'export. Vérifiez le fichier template.", true);
+      })
+      .finally(function () {
+        btnExport.disabled = false;
+        btnExport.innerHTML =
+          "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" stroke-width=\"2\" style=\"vertical-align:middle;margin-right:6px;\" aria-hidden=\"true\">" +
+            "<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4\"/>" +
+          "</svg>Exporter Excel";
+      });
+  }
+
+  document.getElementById("lp-btnExport").addEventListener("click", exportToExcel);
+
+  /* ----------------------------------------------------------
+     Import Excel
+     ---------------------------------------------------------- */
+  function importFromExcel(file) {
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      try {
+        var wb    = XLSX.read(e.target.result, { type: "array" });
+        var sheet = getTargetSheet(wb);
+        var cells = TEMPLATE_CONFIG.cells;
+
+        function readCell(addr) {
+          var c = sheet[addr];
+          if (!c) return "";
+          if (c.t === "b") return c.v;
+          return c.v !== undefined ? String(c.v) : "";
+        }
+
+        var data = {
+          client: {
+            name:     readCell(cells.clientName),
+            number:   readCell(cells.clientNumber),
+            contact:  readCell(cells.clientContact),
+            email:    readCell(cells.clientEmail),
+            address:  readCell(cells.clientAddress),
+            pieces:   readCell(cells.contractPieces)   === true || readCell(cells.contractPieces)   === "TRUE",
+            devis:    readCell(cells.contractDevis)    === true || readCell(cells.contractDevis)    === "TRUE",
+            commande: readCell(cells.contractCommande) === true || readCell(cells.contractCommande) === "TRUE",
+          },
+          machine: {
+            type:   readCell(cells.machineType),
+            number: readCell(cells.machineNumber),
+            year:   readCell(cells.machineYear),
+            date:   todayISO(),
+          },
+          tech: {
+            lastName:  readCell(cells.techLastName),
+            firstName: readCell(cells.techFirstName),
+          },
+          shortDesc: "",
+          parts: [],
+        };
+
+        /* Lire les lignes de pièces */
+        var cfg  = TEMPLATE_CONFIG.parts;
+        var cols = cfg.columns;
+        for (var i = 0; i < cfg.maxRows; i++) {
+          var row   = cfg.startRow + i;
+          var desig = readCell(cols.designation + row);
+          var ref   = readCell(cols.reference   + row);
+          var qty   = readCell(cols.quantity     + row);
+          var plan  = readCell(cols.plan         + row);
+          var rep   = readCell(cols.repere       + row);
+          if (!desig && !ref && !qty && !plan && !rep) break;
+          data.parts.push({ designation: desig, reference: ref, quantity: qty, plan: plan, repere: rep });
+        }
+
+        applyFormData(data);
+        saveToLocal();
+        showToast("Import réussi (" + data.parts.length + " ligne(s))");
+      } catch (err) {
+        console.error("[LP] Erreur import :", err);
+        showToast("Impossible de lire le fichier Excel.", true);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  document.getElementById("lp-inputImport").addEventListener("change", function (e) {
+    importFromExcel(e.target.files[0]);
+    /* Réinitialise l'input pour permettre de réimporter le même fichier */
+    e.target.value = "";
+  });
+
+  /* ----------------------------------------------------------
+     Contact Picker API
+     ---------------------------------------------------------- */
+  function pickContact() {
+    if (!navigator.contacts || !navigator.contacts.select) {
+      showToast("Contact Picker non supporté sur cet appareil.", true);
+      return;
+    }
+    navigator.contacts.select(["name", "email"], { multiple: false })
+      .then(function (results) {
+        if (!results || results.length === 0) return;
+        var c = results[0];
+        var contactEl = document.getElementById("lp-clientContact");
+        var emailEl   = document.getElementById("lp-clientEmail");
+        if (c.name  && c.name.length > 0)  contactEl.value = c.name[0];
+        if (c.email && c.email.length > 0)  emailEl.value  = c.email[0];
+        scheduleAutosave();
+      })
+      .catch(function (err) {
+        console.warn("[LP] Contact Picker annulé ou erreur :", err);
+      });
+  }
+
+  document.getElementById("lp-btnPickContact").addEventListener("click", pickContact);
+
+  /* ----------------------------------------------------------
+     Réinitialisation
+     ---------------------------------------------------------- */
+  function clearFormKeepStructure() {
+    if (!confirm("Réinitialiser le formulaire ? Les données non exportées seront perdues.")) return;
+    document.getElementById("lp-clientName").value    = "";
+    document.getElementById("lp-clientNumber").value  = "";
+    document.getElementById("lp-clientContact").value = "";
+    document.getElementById("lp-clientEmail").value   = "";
+    document.getElementById("lp-clientAddress").value = "";
+    document.getElementById("lp-contractPieces").checked   = false;
+    document.getElementById("lp-contractDevis").checked    = false;
+    document.getElementById("lp-contractCommande").checked = false;
+    document.getElementById("lp-machineType").value   = "";
+    document.getElementById("lp-machineNumber").value = "";
+    document.getElementById("lp-machineYear").value   = "";
+    document.getElementById("lp-machineDate").value   = todayISO();
+    document.getElementById("lp-techLastName").value  = "";
+    document.getElementById("lp-techFirstName").value = "";
+    shortDesc.value = "";
+    updateShortDescCounter();
+    partsTbody.innerHTML = "";
+    updatePartsCount();
+    clearValidation();
+    localStorage.removeItem(STORAGE_KEY);
+    prefillTechnicien();
+    showToast("Formulaire réinitialisé.");
+  }
+
+  document.getElementById("lp-btnClear").addEventListener("click", clearFormKeepStructure);
+
+  /* ----------------------------------------------------------
+     Autosave sur tous les champs sauf tableau (géré par attachRowEvents)
+     ---------------------------------------------------------- */
+  var allFields = [
+    "lp-clientName", "lp-clientNumber", "lp-clientContact", "lp-clientEmail",
+    "lp-clientAddress", "lp-contractPieces", "lp-contractDevis", "lp-contractCommande",
+    "lp-machineType", "lp-machineNumber", "lp-machineYear", "lp-machineDate",
+    "lp-techLastName", "lp-techFirstName",
+  ];
+  allFields.forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) {
+      var evtName = (el.type === "checkbox") ? "change" : "input";
+      el.addEventListener(evtName, scheduleAutosave);
+    }
+  });
+
+  /* ----------------------------------------------------------
+     Initialisation au chargement
+     ---------------------------------------------------------- */
+  (function init() {
+    /* 1. Charger depuis localStorage */
+    var saved = loadFromLocal();
+
+    if (saved) {
+      applyFormData(saved);
+    } else {
+      /* Pas de sauvegarde : valeurs par défaut */
+      initDateField();
+      /* Ligne vide initiale */
+      addPartRow(null);
+    }
+
+    /* 2. Pré-remplir technicien depuis Parametrage (écrase si vide) */
+    prefillTechnicien();
+
+    /* 3. Mettre à jour le compteur */
+    updateShortDescCounter();
+    updatePartsCount();
+  })();
+
+})();
+</script>
