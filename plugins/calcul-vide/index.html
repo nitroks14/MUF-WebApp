@@ -622,16 +622,24 @@
     var tubeLen = parseFloat(st.outillageTubesLength)   || 0;
     var tube4vol = 4 * pipeVol(tubeLen, tubeDia);
 
+    /*
+     * Les 4 tuyaux outillage sont TOUJOURS présents côté aval (entre vanne et outillage).
+     * Ce qui change entre les schémas : la présence du vide EN AMONT de la vanne
+     * (déjà sous vide via le réseau continu, ou à pression atmosphérique).
+     * → On inclut systématiquement tube4vol dans le volume à pomper.
+     */
     switch (st.machineType) {
       case 'centralized_vanne':
-        /* Vanne au distributeur → 4 tuyaux + circuit interne + outillage */
+        /* Vanne au distributeur — amont : source seule sous vide */
         return tube4vol + CIRCUIT_INTERNE_VOL + toolingVol;
       case 'remote_vanne':
+        /* Vanne proche outillage — amont : source + distributeur sous vide en continu */
+        return tube4vol + CIRCUIT_INTERNE_VOL + toolingVol;
       case 'bol_remote':
-        /* Vanne proche outillage → circuit interne + outillage seulement */
-        return CIRCUIT_INTERNE_VOL + toolingVol;
+        /* Vanne proche outillage — amont : source + bol + répartiteur sous vide en continu */
+        return tube4vol + CIRCUIT_INTERNE_VOL + toolingVol;
       case 'bol_only':
-        /* Vanne au bol → tube3 + 4 tuyaux + circuit interne + outillage */
+        /* Vanne au bol — amont : source seule ; tuyau3 + 4 tuyaux à pomper en plus */
         var t3d = parseFloat(st.tube3Diameter) || 60;
         var t3l = parseFloat(st.tube3Length)   || 0;
         return pipeVol(t3l, t3d) + tube4vol + CIRCUIT_INTERNE_VOL + toolingVol;
@@ -825,16 +833,15 @@
     var hasBol = (elMachineType.value === 'bol_remote' || elMachineType.value === 'bol_only');
     elTube3Wrap.style.display = hasBol ? 'block' : 'none';
 
-    /* Longueur tuyaux outillage : visible si vanne centralisée ou bol seul */
-    var needsOutillageLen = (elMachineType.value === 'centralized_vanne' || elMachineType.value === 'bol_only');
-    elOutillageLenWrap.style.display = needsOutillageLen ? 'block' : 'none';
+    /* Longueur tuyaux outillage : toujours visible (4 tuyaux présents dans tous les schémas) */
+    elOutillageLenWrap.style.display = 'block';
 
-    /* Description machine */
+    /* Description machine — indique ce qui est déjà sous vide (amont vanne) */
     var descs = {
-      centralized_vanne: 'Source → Tuyau1 → [Root] → Distributeur → VANNE → 4×tuyaux → Outillage',
-      remote_vanne:      'Source → Tuyau1 → [Root] → Distributeur → 4×tuyaux → VANNE → Outillage',
-      bol_remote:        'Source → Tuyau1 → [Root] → Bol décanteur → Tuyau3 → Répartiteur → 4×tuyaux → VANNE → Outillage',
-      bol_only:          'Source → Tuyau1 → [Root] → Bol décanteur (VANNE) → Tuyau3 → Répartiteur → 4×tuyaux → Outillage'
+      centralized_vanne: 'Vide continu jusqu\'à la vanne du distributeur. Aval : 4×tuyaux + circuit interne + outillage à pomper.',
+      remote_vanne:      'Vide continu jusqu\'aux vannes déportées (distributeur + 4×tuyaux toujours sous vide). Aval : 4×tuyaux + circuit interne + outillage à pomper.',
+      bol_remote:        'Vide continu jusqu\'aux vannes déportées (bol + répartiteur + 4×tuyaux sous vide). Aval : 4×tuyaux + circuit interne + outillage à pomper.',
+      bol_only:          'Vide continu jusqu\'à la vanne du bol. Aval : tuyau 3 + 4×tuyaux + circuit interne + outillage à pomper.'
     };
     elMachineTypeDesc.textContent = descs[elMachineType.value] || '—';
   }
