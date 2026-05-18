@@ -349,7 +349,7 @@
     <div class="cv-field">
       <label for="cv-machineType">Type de machine</label>
       <select id="cv-machineType" class="form-control">
-        <option value="centralized_vanne">Vannes centralisées (distributeur de vide)</option>
+        <option value="centralized_vanne">Vannes centralisées (répartiteur côté source)</option>
         <option value="remote_vanne">Vannes déportées (proches de l'outillage)</option>
         <option value="bol_remote">Bol décanteur + vannes déportées</option>
         <option value="bol_only">Bol décanteur seul (sans vanne déportée)</option>
@@ -380,7 +380,7 @@
       <input id="cv-sourceTubeLength" type="number" step="any" min="0" placeholder="ex : 5" class="form-control">
     </div>
 
-    <!-- 2nd tuyau source (60mm fixe, entre Roots et distributeur) — visible si Roots présent -->
+    <!-- 2nd tuyau source (60mm fixe, entre Roots et répartiteur) — visible si Roots présent -->
     <div id="cv-tube2-wrap" style="display:none;">
       <div class="cv-field">
         <label for="cv-sourceTube2Length">Longueur 2ème tuyau source — DN60 fixe (m)</label>
@@ -423,8 +423,8 @@
     </div>
 
     <div class="cv-result-box">
-      Circuit interne outillage (fixe) :
-      <strong>DN22 × 25 cm × 4 = 0.38 L</strong>
+      Répartiteur (fixe) : <strong>DN70 × 10 cm = 0.38 L</strong><br>
+      Circuit interne outillage (fixe) : <strong>DN22 × 25 cm × 4 = 0.38 L</strong>
     </div>
 
   </div>
@@ -643,10 +643,10 @@
         /* Vanne à l'entrée outillage → 4 tuyaux côté AMONT (pré-évacués via bol+répartiteur) */
         return CIRCUIT_INTERNE_VOL + toolingVol;
       case 'bol_only':
-        /* Vanne au bol → Tuyau3 + 4 tuyaux côté AVAL → tout à pomper */
+        /* Vanne au bol → Tuyau3 + Répartiteur + 4 tuyaux côté AVAL → tout à pomper */
         var t3d = parseFloat(st.tube3Diameter) || 60;
         var t3l = parseFloat(st.tube3Length)   || 0;
-        return pipeVol(t3l, t3d) + tube4vol + CIRCUIT_INTERNE_VOL + toolingVol;
+        return pipeVol(t3l, t3d) + REPARTITEUR_VOL + tube4vol + CIRCUIT_INTERNE_VOL + toolingVol;
       default:
         return tube4vol + CIRCUIT_INTERNE_VOL + toolingVol;
     }
@@ -662,7 +662,11 @@
       var len2 = parseFloat(st.sourceTube2Length) || 0;
       vol += pipeVol(len2, 60);
     }
-    /* Schémas vannes déportées : les 4 tuyaux outillage sont côté amont (pré-évacués) */
+    /* Répartiteur : côté amont pour schémas 1-2-3 (bol_only : il est aval) */
+    if (st.machineType !== 'bol_only') {
+      vol += REPARTITEUR_VOL;
+    }
+    /* Schémas vannes déportées : les 4 tuyaux outillage sont aussi côté amont (pré-évacués) */
     if (st.machineType === 'remote_vanne' || st.machineType === 'bol_remote') {
       var outDia = parseFloat(st.outillageTubesDiameter) || 32;
       var outLen = parseFloat(st.outillageTubesLength)   || 0;
@@ -677,7 +681,12 @@
 
   var STORAGE_KEY = 'muf_calcul_vide_v2';
   var ATM               = 1013; /* pression atmosphérique en mbar */
-  var CIRCUIT_INTERNE_VOL = 4 * Math.PI * Math.pow(0.011, 2) * 0.25; /* m³ : 4 × DN22 × 25cm */
+
+  /* Volumes fixes (constantes machine) */
+  /* Répartiteur : DN70 × 100mm. Perturbation flux DN60 → 4 raccords. Toujours présent. */
+  var REPARTITEUR_VOL     = Math.PI * Math.pow(0.035, 2) * 0.10; /* ≈ 0.000385 m³ = 0.385 L */
+  /* Circuit interne outillage : 4 tubes DN22 × 250mm soudés dans le plateau. Fixe. */
+  var CIRCUIT_INTERNE_VOL = 4 * Math.PI * Math.pow(0.011, 2) * 0.25; /* ≈ 0.000380 m³ = 0.380 L */
   var debounceTimer     = null;
 
   var defaultState = {
@@ -846,12 +855,12 @@
     /* Longueur tuyaux outillage : toujours visible (4 tuyaux présents dans tous les schémas) */
     elOutillageLenWrap.style.display = 'block';
 
-    /* Description machine — position vanne et volumes amont/aval */
+    /* Description machine — chaîne complète avec [VANNE] et répartiteur positionnés */
     var descs = {
-      centralized_vanne: 'Distributeur → [VANNE] → 4×tuyaux → circuit interne → outillage. Amont sous vide : source. Aval à pomper : 4×tuyaux + circuit + outillage.',
-      remote_vanne:      'Distributeur → 4×tuyaux → [VANNE] → circuit interne → outillage. Amont sous vide : source + distributeur + 4×tuyaux. Aval à pomper : circuit + outillage.',
-      bol_remote:        'Bol → tuyau3 → répartiteur → 4×tuyaux → [VANNE] → circuit interne → outillage. Amont sous vide : source + bol + répartiteur + 4×tuyaux. Aval à pomper : circuit + outillage.',
-      bol_only:          'Bol [VANNE] → tuyau3 → 4×tuyaux → circuit interne → outillage. Amont sous vide : source. Aval à pomper : tuyau3 + 4×tuyaux + circuit + outillage.'
+      centralized_vanne: 'Source → Tuyau1 → [Root] → Tuyau2 → Répartiteur → [VANNE] → 4×tuyaux → Circuit → Outillage | Amont (sous vide) : source + répartiteur | Aval (à pomper) : 4×tuyaux + circuit + outillage',
+      remote_vanne:      'Source → Tuyau1 → [Root] → Tuyau2 → Répartiteur → 4×tuyaux → [VANNE] → Circuit → Outillage | Amont (sous vide) : source + répartiteur + 4×tuyaux | Aval (à pomper) : circuit + outillage',
+      bol_remote:        'Source → Tuyau1 → [Root] → Tuyau2 → Bol → Tuyau3 → Répartiteur → 4×tuyaux → [VANNE] → Circuit → Outillage | Amont (sous vide) : source + bol + répartiteur + 4×tuyaux | Aval (à pomper) : circuit + outillage',
+      bol_only:          'Source → Tuyau1 → [Root] → Tuyau2 → Bol [VANNE] → Tuyau3 → Répartiteur → 4×tuyaux → Circuit → Outillage | Amont (sous vide) : source | Aval (à pomper) : tuyau3 + répartiteur + 4×tuyaux + circuit + outillage'
     };
     elMachineTypeDesc.textContent = descs[elMachineType.value] || '—';
   }
