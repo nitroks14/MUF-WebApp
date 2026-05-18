@@ -415,8 +415,13 @@
       </div>
     </div>
 
+    <div class="cv-field">
+      <label for="cv-elbowCount">Coudes 90° DN60 supplémentaires (amont répartiteur)</label>
+      <input id="cv-elbowCount" type="number" step="1" min="0" placeholder="ex : 2" class="form-control" value="0">
+    </div>
+
     <div class="cv-result-box">
-      Répartiteur (fixe) : <strong>DN70 × 10 cm = 0.38 L</strong><br>
+      Répartiteur (fixe) : <strong>DN70 × 10 cm = 0.38 L + 1 coude DN60 90° fixe</strong><br>
       Circuit interne outillage (fixe) : <strong>DN22 × 25 cm × 4 = 0.38 L</strong>
     </div>
 
@@ -604,6 +609,14 @@
   }
 
   /* --- network.js --- */
+  /* Pénalité coudes DN60 : 1 coude fixe au répartiteur + coudes supplémentaires amont.
+   * Chaque coude 90° DN60 ≈ 1.5 m de tuyau équivalent → réduction débit ~5%.
+   * Retourne un facteur diviseur (> 1). */
+  function calculateElbowPenalty(nAdditional) {
+    var total = 1 + (nAdditional || 0); /* coude fixe répartiteur + extras */
+    return 1 + total * 0.05;
+  }
+
   function pipeVol(lengthM, diamMm) {
     var r = (diamMm / 1000) / 2;
     return Math.PI * r * r * lengthM;
@@ -701,6 +714,7 @@
     tube3Length:           '',
     outillageTubesDiameter:'32',
     outillageTubesLength:  '',
+    elbowCount:            '0',
     finalPressure:         '80'
   };
 
@@ -731,6 +745,7 @@
   var elTube3Length            = document.getElementById('cv-tube3Length');
   var elOutillageTubesDiameter = document.getElementById('cv-outillageTubesDiameter');
   var elOutillageTubesLength   = document.getElementById('cv-outillageTubesLength');
+  var elElbowCount             = document.getElementById('cv-elbowCount');
   var elTube2Wrap              = document.getElementById('cv-tube2-wrap');
   var elTube3Wrap              = document.getElementById('cv-tube3-wrap');
   var elOutillageLenWrap       = document.getElementById('cv-outillageTubesLength-wrap');
@@ -762,6 +777,7 @@
       tube3Length:            elTube3Length.value,
       outillageTubesDiameter: elOutillageTubesDiameter.value,
       outillageTubesLength:   elOutillageTubesLength.value,
+      elbowCount:             elElbowCount.value,
       finalPressure:          elFinalPressure.value
     };
   }
@@ -783,6 +799,7 @@
     elTube3Length.value              = st.tube3Length            !== undefined ? st.tube3Length            : defaultState.tube3Length;
     elOutillageTubesDiameter.value   = st.outillageTubesDiameter || defaultState.outillageTubesDiameter;
     elOutillageTubesLength.value     = st.outillageTubesLength   !== undefined ? st.outillageTubesLength   : defaultState.outillageTubesLength;
+    elElbowCount.value               = st.elbowCount             !== undefined ? st.elbowCount             : defaultState.elbowCount;
     elFinalPressure.value            = st.finalPressure          !== undefined ? st.finalPressure          : defaultState.finalPressure;
 
     /* Restaurer le type de source (checkbox) */
@@ -955,74 +972,75 @@
     /* --- Volume aval et amont --- */
     var volAval  = calculateDownstreamVolume(st, volOutillage);
     var volAmont = calculateUpstreamVolume(st);
-    var penalty  = 1; /* résistance hydraulique simplifiée — modèle futur */
+
+    /* Pénalité coudes (répartiteur fixe + supplémentaires) */
+    var elbows  = parseInt(st.elbowCount, 10) || 0;
+    var penalty = calculateElbowPenalty(elbows);
 
     /* --- Calcul du temps --- */
-    /* On exige au moins un volume outillage valide (laize/pitch/depth renseignés) */
-    if (volOutillage <= 0) {
-      renderEmpty();
-      return;
-    }
+    if (volOutillage <= 0) { renderEmpty(); return; }
 
     var pFinal = parseFloat(st.finalPressure);
-    if (!pFinal || pFinal <= 0) {
-      renderEmpty();
-      return;
-    }
+    if (!pFinal || pFinal <= 0) { renderEmpty(); return; }
 
-    /* Pression de départ selon la source */
-    var pReseau;
+    var t       = 0;
+    var steps   = 40;
+    var P_eq    = ATM; /* pression après équilibrage (utilisée pour le résultat affiché) */
+    var volTotal = volAval + volAmont;
+
+    /* ---- MODE RÉSEAU ----
+     * Grand réservoir → équilibrage négligeable.
+     * Le réseau maintient pReseau en permanence ; on pompe uniquement V_aval
+     * de ATM jusqu'à pFinal (intégration continue, pas de saut de pression). */
     if (st.sourceType === 'network') {
-      pReseau = parseFloat(st.networkPressure);
-      if (!pReseau || pReseau <= 0) {
-        renderEmpty();
+      var pReseau = parseFloat(st.networkPressure);
+      if (!pReseau || pReseau <= 0) { renderEmpty(); return; }
+      if (pReseau >= pFinal) {
+        /* Réseau trop faible pour atteindre pFinal : afficher un avertissement */
+        elResultsContent.innerHTML =
+          '<p class="cv-results-empty" style="color:#e53e3e;">⚠️ La pression réseau (' + pReseau +
+          ' mbar) est supérieure ou égale à la cible (' + pFinal + ' mbar). Le réseau ne peut pas atteindre cet objectif.</p>';
         return;
       }
-    } else {
-      pReseau = ATM;
-    }
-
-    var t     = 0;
-    var steps = 40;
-
-    /* Phase A : descente ATM → pReseau (uniquement si source réseau déjà sous ATM) */
-    /* Bug 1 corrigé : suppression du × 3600 (débits en m³/s → temps déjà en secondes) */
-    if (st.sourceType === 'network' && pReseau < ATM) {
+      /* Intégration V_aval de ATM → pFinal */
       var pA    = ATM;
-      var dlogA = (Math.log(ATM) - Math.log(pReseau)) / steps;
-
+      var dlogA = (Math.log(ATM) - Math.log(pFinal)) / steps;
       for (var i = 0; i < steps; i++) {
         var pANext = Math.exp(Math.log(pA) - dlogA);
         var qA     = sourceFlow(pA, st) / penalty;
-        if (qA > 0) {
-          t += (volAval / qA) * Math.log(pA / pANext);
-        }
+        if (qA > 0) t += (volAval / qA) * Math.log(pA / pANext);
         pA = pANext;
       }
+      P_eq = ATM; /* pas d'équilibrage significatif pour le réseau */
     }
 
-    /* Phase B : descente pReseau → pFinal (aval + amont, avec Roots) */
-    if (pReseau > pFinal) {
-      var volTotal = volAval + volAmont;
-      var pB       = pReseau;
-      var dlogB    = (Math.log(pReseau) - Math.log(pFinal)) / steps;
-
-      for (var j = 0; j < steps; j++) {
-        var pBNext = Math.exp(Math.log(pB) - dlogB);
-        var qB     = (sourceFlow(pB, st) * rootsGain(pB, st.rootsModel)) / penalty;
-        if (qB > 0) {
-          t += (volTotal / qB) * Math.log(pB / pBNext);
+    /* ---- MODE POMPE ----
+     * Effet d'équilibrage PRONONCÉ : la pompe a vidé le circuit amont
+     * jusqu'à sa pression ultime (~5 mbar). À l'ouverture des vannes,
+     * le gaz du circuit aval (ATM) se répartit dans V_total.
+     *   P_eq = (ATM × V_aval + P_ult × V_amont) / V_total
+     * La pompe tire ensuite V_total de P_eq vers pFinal. */
+    if (st.sourceType === 'pump') {
+      var P_ULT = 5; /* mbar — pression ultime approximative pompe à palettes en régime établi */
+      P_eq = volTotal > 0 ? (ATM * volAval + P_ULT * volAmont) / volTotal : ATM;
+      if (P_eq <= pFinal) {
+        /* L'équilibrage seul suffit à atteindre la cible — temps quasi nul */
+        t = 0.05;
+      } else {
+        var pB    = P_eq;
+        var dlogB = (Math.log(P_eq) - Math.log(pFinal)) / steps;
+        for (var j = 0; j < steps; j++) {
+          var pBNext = Math.exp(Math.log(pB) - dlogB);
+          var qB     = (sourceFlow(pB, st) * rootsGain(pB, st.rootsModel)) / penalty;
+          if (qB > 0) t += (volTotal / qB) * Math.log(pB / pBNext);
+          pB = pBNext;
         }
-        pB = pBNext;
       }
     }
 
-    if (!isFinite(t)) {
-      renderEmpty();
-      return;
-    }
+    if (!isFinite(t)) { renderEmpty(); return; }
 
-    renderResults(volAval, volAmont, t, penalty, st);
+    renderResults(volAval, volAmont, t, penalty, st, P_eq);
   }
 
   /* ============================================================
@@ -1033,10 +1051,10 @@
     elResultsContent.innerHTML = '<p class="cv-results-empty">Renseignez les parametres ci-dessus pour obtenir une estimation.</p>';
   }
 
-  function renderResults(volAval, volAmont, timeSeconds, penalty, st) {
+  function renderResults(volAval, volAmont, timeSeconds, penalty, st, P_eq) {
     var tempsFormate = formatTime(timeSeconds);
     var interp       = interpret(timeSeconds);
-    var nomPompe     = st.sourceType === 'pump' ? st.pumpModel : 'Reseau ' + st.networkPressure + ' mbar';
+    var nomPompe     = st.sourceType === 'pump' ? st.pumpModel : 'Réseau ' + st.networkPressure + ' mbar';
 
     var volAvalL  = (volAval * 1000).toFixed(3);
     var volAmontL = (volAmont * 1000).toFixed(3);
@@ -1077,6 +1095,12 @@
           '<span class="cv-result-label">Roots</span>' +
           '<span class="cv-result-val">' + st.rootsModel + '</span>' +
         '</div>' +
+        (st.sourceType === 'pump' && P_eq !== undefined
+          ? '<div class="cv-result-row">' +
+              '<span class="cv-result-label">Pression équilibrage (ouverture vannes)</span>' +
+              '<span class="cv-result-val">' + P_eq.toFixed(0) + ' mbar</span>' +
+            '</div>'
+          : '') +
         facteurHtml +
       '</div>';
 
@@ -1115,7 +1139,7 @@
     elLaize, elPitch, elDepth, elFillerThickness,
     elNetworkPressure,
     elSourceTubeLength, elSourceTube2Length,
-    elTube3Length, elOutillageTubesLength,
+    elTube3Length, elOutillageTubesLength, elElbowCount,
     elFinalPressure
   ];
 
