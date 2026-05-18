@@ -623,23 +623,27 @@
     var tube4vol = 4 * pipeVol(tubeLen, tubeDia);
 
     /*
-     * Les 4 tuyaux outillage sont TOUJOURS présents côté aval (entre vanne et outillage).
-     * Ce qui change entre les schémas : la présence du vide EN AMONT de la vanne
-     * (déjà sous vide via le réseau continu, ou à pression atmosphérique).
-     * → On inclut systématiquement tube4vol dans le volume à pomper.
+     * Position des vannes par schéma :
+     *   centralized_vanne : Source → Tuyau1 → [Root] → Distributeur → VANNE → 4×tuyaux → Circuit → Outillage
+     *   remote_vanne      : Source → Tuyau1 → [Root] → Distributeur → 4×tuyaux → VANNE → Circuit → Outillage
+     *   bol_remote        : Source → Tuyau1 → [Root] → Bol → Tuyau3 → Répartiteur → 4×tuyaux → VANNE → Circuit → Outillage
+     *   bol_only          : Source → Tuyau1 → [Root] → Bol (VANNE) → Tuyau3 → 4×tuyaux → Circuit → Outillage
+     *
+     * Volume AVAL (à pomper) = tout ce qui est APRÈS la première vanne, à pression atmosphérique.
+     * Volume AMONT = tout ce qui est AVANT la vanne, déjà sous vide en continu.
      */
     switch (st.machineType) {
       case 'centralized_vanne':
-        /* Vanne au distributeur — amont : source seule sous vide */
+        /* Vanne au distributeur → 4 tuyaux côté AVAL → à pomper */
         return tube4vol + CIRCUIT_INTERNE_VOL + toolingVol;
       case 'remote_vanne':
-        /* Vanne proche outillage — amont : source + distributeur sous vide en continu */
-        return tube4vol + CIRCUIT_INTERNE_VOL + toolingVol;
+        /* Vanne à l'entrée outillage → 4 tuyaux côté AMONT (pré-évacués) → seul circuit+outillage à pomper */
+        return CIRCUIT_INTERNE_VOL + toolingVol;
       case 'bol_remote':
-        /* Vanne proche outillage — amont : source + bol + répartiteur sous vide en continu */
-        return tube4vol + CIRCUIT_INTERNE_VOL + toolingVol;
+        /* Vanne à l'entrée outillage → 4 tuyaux côté AMONT (pré-évacués via bol+répartiteur) */
+        return CIRCUIT_INTERNE_VOL + toolingVol;
       case 'bol_only':
-        /* Vanne au bol — amont : source seule ; tuyau3 + 4 tuyaux à pomper en plus */
+        /* Vanne au bol → Tuyau3 + 4 tuyaux côté AVAL → tout à pomper */
         var t3d = parseFloat(st.tube3Diameter) || 60;
         var t3l = parseFloat(st.tube3Length)   || 0;
         return pipeVol(t3l, t3d) + tube4vol + CIRCUIT_INTERNE_VOL + toolingVol;
@@ -648,7 +652,7 @@
     }
   }
 
-  /* Volume amont (pré-évacué, déjà sous vide — contribue au volume total du réseau) */
+  /* Volume amont (pré-évacué, déjà sous vide — réservoir utile pour la descente en pression) */
   function calculateUpstreamVolume(st) {
     var dia1 = parseFloat(st.sourceTubeDiameter) || 60;
     var len1 = parseFloat(st.sourceTubeLength)   || 0;
@@ -657,6 +661,12 @@
     if (roots && roots.enabled) {
       var len2 = parseFloat(st.sourceTube2Length) || 0;
       vol += pipeVol(len2, 60);
+    }
+    /* Schémas vannes déportées : les 4 tuyaux outillage sont côté amont (pré-évacués) */
+    if (st.machineType === 'remote_vanne' || st.machineType === 'bol_remote') {
+      var outDia = parseFloat(st.outillageTubesDiameter) || 32;
+      var outLen = parseFloat(st.outillageTubesLength)   || 0;
+      vol += 4 * pipeVol(outLen, outDia);
     }
     return vol;
   }
@@ -836,12 +846,12 @@
     /* Longueur tuyaux outillage : toujours visible (4 tuyaux présents dans tous les schémas) */
     elOutillageLenWrap.style.display = 'block';
 
-    /* Description machine — indique ce qui est déjà sous vide (amont vanne) */
+    /* Description machine — position vanne et volumes amont/aval */
     var descs = {
-      centralized_vanne: 'Vide continu jusqu\'à la vanne du distributeur. Aval : 4×tuyaux + circuit interne + outillage à pomper.',
-      remote_vanne:      'Vide continu jusqu\'aux vannes déportées (distributeur + 4×tuyaux toujours sous vide). Aval : 4×tuyaux + circuit interne + outillage à pomper.',
-      bol_remote:        'Vide continu jusqu\'aux vannes déportées (bol + répartiteur + 4×tuyaux sous vide). Aval : 4×tuyaux + circuit interne + outillage à pomper.',
-      bol_only:          'Vide continu jusqu\'à la vanne du bol. Aval : tuyau 3 + 4×tuyaux + circuit interne + outillage à pomper.'
+      centralized_vanne: 'Distributeur → [VANNE] → 4×tuyaux → circuit interne → outillage. Amont sous vide : source. Aval à pomper : 4×tuyaux + circuit + outillage.',
+      remote_vanne:      'Distributeur → 4×tuyaux → [VANNE] → circuit interne → outillage. Amont sous vide : source + distributeur + 4×tuyaux. Aval à pomper : circuit + outillage.',
+      bol_remote:        'Bol → tuyau3 → répartiteur → 4×tuyaux → [VANNE] → circuit interne → outillage. Amont sous vide : source + bol + répartiteur + 4×tuyaux. Aval à pomper : circuit + outillage.',
+      bol_only:          'Bol [VANNE] → tuyau3 → 4×tuyaux → circuit interne → outillage. Amont sous vide : source. Aval à pomper : tuyau3 + 4×tuyaux + circuit + outillage.'
     };
     elMachineTypeDesc.textContent = descs[elMachineType.value] || '—';
   }
