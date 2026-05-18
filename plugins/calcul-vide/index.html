@@ -168,7 +168,7 @@
     font-style: italic;
   }
 
-  #cv-fillerThickness-wrap { display: none; }
+  #cv-fillerThickness-wrap { display: none; } /* caché par défaut, affiché via JS avec display:block */
 
   .cv-toggle-group {
     display: flex;
@@ -245,21 +245,19 @@
   </div>
   <div class="card-body">
 
-    <div class="cv-field">
-      <label>Type de source</label>
-      <div class="cv-toggle-group" id="cv-sourceType-group">
-        <button type="button" class="cv-toggle-btn cv-toggle-active" data-value="network" id="cv-sourceType-network">Réseau</button>
-        <button type="button" class="cv-toggle-btn" data-value="pump" id="cv-sourceType-pump">Pompe</button>
-      </div>
-      <input type="hidden" id="cv-sourceType" value="network">
+    <div class="cv-checkbox-row">
+      <input type="checkbox" id="cv-usesPump">
+      <label for="cv-usesPump">Pompe de vide</label>
     </div>
+    <input type="hidden" id="cv-sourceType" value="network">
 
     <div id="cv-network-fields">
       <div class="cv-field">
-        <label>Importance du réseau</label>
+        <label>Débit du réseau de vide</label>
         <div class="cv-toggle-group" id="cv-networkImportance-group">
-          <button type="button" class="cv-toggle-btn cv-toggle-active" data-value="low" id="cv-networkImportance-low">Faible</button>
-          <button type="button" class="cv-toggle-btn" data-value="high" id="cv-networkImportance-high">Important</button>
+          <button type="button" class="cv-toggle-btn cv-toggle-active" data-value="low"    id="cv-networkImportance-low">Faible</button>
+          <button type="button" class="cv-toggle-btn"                  data-value="medium" id="cv-networkImportance-medium">Modéré</button>
+          <button type="button" class="cv-toggle-btn"                  data-value="high"   id="cv-networkImportance-high">Élevé</button>
         </div>
         <input type="hidden" id="cv-networkImportance" value="low">
       </div>
@@ -625,6 +623,7 @@
   var elHasFillers           = document.getElementById('cv-hasFillers');
   var elFillerThickness      = document.getElementById('cv-fillerThickness');
   var elFillerWrap           = document.getElementById('cv-fillerThickness-wrap');
+  var elUsesPump             = document.getElementById('cv-usesPump');
   var elSourceType           = document.getElementById('cv-sourceType');
   var elNetworkFields        = document.getElementById('cv-network-fields');
   var elPumpFields           = document.getElementById('cv-pump-fields');
@@ -690,12 +689,10 @@
     elValvePosition.value        = st.valvePosition      || defaultState.valvePosition;
     elFinalPressure.value        = st.finalPressure      !== undefined ? st.finalPressure      : defaultState.finalPressure;
 
-    /* Restaurer le type de source (toggle boutons) */
+    /* Restaurer le type de source (checkbox) */
     var srcVal = st.sourceType || defaultState.sourceType;
     elSourceType.value = srcVal;
-    document.querySelectorAll('#cv-sourceType-group .cv-toggle-btn').forEach(function (b) {
-      b.classList.toggle('cv-toggle-active', b.dataset.value === srcVal);
-    });
+    elUsesPump.checked = (srcVal === 'pump');
 
     /* Restaurer importance réseau (toggle boutons) */
     var impVal = st.networkImportance || defaultState.networkImportance;
@@ -733,8 +730,8 @@
      ============================================================ */
 
   function updateVisibility() {
-    /* Cales */
-    elFillerWrap.style.display = elHasFillers.checked ? '' : 'none';
+    /* Cales — 'block' explicite pour l'emporter sur la règle CSS display:none */
+    elFillerWrap.style.display = elHasFillers.checked ? 'block' : 'none';
 
     /* Source de vide */
     var isNetwork = elSourceType.value === 'network';
@@ -748,8 +745,10 @@
 
   /* Débit réseau modélisé selon importance + diamètre arrivée */
   function networkFlow(p, networkImportance, inletDiameter) {
-    /* Débit de base selon importance du réseau */
-    var baseQ = networkImportance === 'high' ? 0.10 : 0.05; /* m³/s */
+    /* Débit de base selon le débit du réseau (Faible / Modéré / Élevé) */
+    var baseQ = networkImportance === 'high'   ? 0.10
+              : networkImportance === 'medium' ? 0.075
+              :                                  0.05; /* m³/s */
 
     /* Facteur diamètre arrivée (restriction physique) */
     var dFactor;
@@ -1020,16 +1019,10 @@
     scheduleSave();
   }
 
-  /* Boutons toggle source type */
-  document.querySelectorAll('#cv-sourceType-group .cv-toggle-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      document.querySelectorAll('#cv-sourceType-group .cv-toggle-btn').forEach(function (b) {
-        b.classList.remove('cv-toggle-active');
-      });
-      btn.classList.add('cv-toggle-active');
-      elSourceType.value = btn.dataset.value;
-      onInput();
-    });
+  /* Case à cocher source de vide */
+  elUsesPump.addEventListener('change', function () {
+    elSourceType.value = elUsesPump.checked ? 'pump' : 'network';
+    onInput();
   });
 
   /* Boutons toggle importance réseau */
