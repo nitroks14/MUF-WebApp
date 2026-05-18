@@ -339,53 +339,94 @@
   </div>
 </div>
 
-<!-- Section Configuration réseau -->
+<!-- Section Configuration machine -->
 <div class="card mb-24">
   <div class="card-header">
-    <h2 class="card-title cv-section-title">4 — Configuration réseau</h2>
+    <h2 class="card-title cv-section-title">4 — Configuration machine</h2>
   </div>
   <div class="card-body">
 
     <div class="cv-field">
-      <label for="cv-distributionType">Type de distribution</label>
-      <select id="cv-distributionType" class="form-control">
-        <option value="centralized">Centralisée</option>
-        <option value="decentralized">Décentralisée</option>
+      <label for="cv-machineType">Type de machine</label>
+      <select id="cv-machineType" class="form-control">
+        <option value="centralized_vanne">Vannes centralisées (distributeur de vide)</option>
+        <option value="remote_vanne">Vannes déportées (proches de l'outillage)</option>
+        <option value="bol_remote">Bol décanteur + vannes déportées</option>
+        <option value="bol_only">Bol décanteur seul (sans vanne déportée)</option>
       </select>
     </div>
 
     <div class="cv-field">
-      <label for="cv-downstreamDiameter">Diamètre tuyau aval (mm)</label>
-      <input id="cv-downstreamDiameter" type="number" step="any" min="0" placeholder="ex : 32" class="form-control" value="32">
+      <label>Description</label>
+      <div class="cv-result-box" id="cv-machineType-desc" style="font-style:italic;">—</div>
     </div>
 
     <div class="cv-field">
-      <label for="cv-downstreamLength">Longueur tuyau aval (m)</label>
-      <input id="cv-downstreamLength" type="number" step="any" min="0" placeholder="ex : 5" class="form-control">
-    </div>
-
-    <div class="cv-field">
-      <label for="cv-upstreamDiameter">Diamètre tuyau amont (mm)</label>
-      <input id="cv-upstreamDiameter" type="number" step="any" min="0" placeholder="ex : 60" class="form-control" value="60">
-    </div>
-
-    <div class="cv-field">
-      <label for="cv-upstreamLength">Longueur tuyau amont (m)</label>
-      <input id="cv-upstreamLength" type="number" step="any" min="0" placeholder="ex : 10" class="form-control">
-    </div>
-
-    <div class="cv-field">
-      <label for="cv-bends">Nombre de coudes</label>
-      <input id="cv-bends" type="number" step="1" min="0" placeholder="ex : 4" class="form-control" value="0">
-    </div>
-
-    <div class="cv-field">
-      <label for="cv-valvePosition">Position des vannes</label>
-      <select id="cv-valvePosition" class="form-control">
-        <option value="close">Proches outillage</option>
-        <option value="remote">Eloignees outillage</option>
+      <label for="cv-sourceTubeDiameter">Diamètre tuyau source — Tuyau 1 (mm)</label>
+      <select id="cv-sourceTubeDiameter" class="form-control">
+        <option value="40">DN40</option>
+        <option value="50">DN50</option>
+        <option value="60" selected>DN60</option>
+        <option value="80">DN80</option>
+        <option value="100">DN100</option>
+        <option value="125">DN125</option>
+        <option value="160">DN160</option>
+        <option value="200">DN200</option>
       </select>
     </div>
+
+    <div class="cv-field">
+      <label for="cv-sourceTubeLength">Longueur tuyau source — Tuyau 1 (m)</label>
+      <input id="cv-sourceTubeLength" type="number" step="any" min="0" placeholder="ex : 5" class="form-control">
+    </div>
+
+    <!-- 2nd tuyau source (60mm fixe, entre Roots et distributeur) — visible si Roots présent -->
+    <div id="cv-tube2-wrap" style="display:none;">
+      <div class="cv-field">
+        <label for="cv-sourceTube2Length">Longueur 2ème tuyau source — DN60 fixe (m)</label>
+        <input id="cv-sourceTube2Length" type="number" step="any" min="0" placeholder="ex : 3" class="form-control">
+      </div>
+    </div>
+
+    <!-- 3ème tuyau (bol → répartiteur) — visible si bol présent -->
+    <div id="cv-tube3-wrap" style="display:none;">
+      <div class="cv-field">
+        <label for="cv-tube3Diameter">Diamètre 3ème tuyau — Bol → Répartiteur (mm)</label>
+        <select id="cv-tube3Diameter" class="form-control">
+          <option value="40">DN40</option>
+          <option value="50">DN50</option>
+          <option value="60" selected>DN60</option>
+          <option value="80">DN80</option>
+        </select>
+      </div>
+      <div class="cv-field">
+        <label for="cv-tube3Length">Longueur 3ème tuyau (m)</label>
+        <input id="cv-tube3Length" type="number" step="any" min="0" placeholder="ex : 2" class="form-control">
+      </div>
+    </div>
+
+    <!-- Tuyaux outillage -->
+    <div class="cv-field">
+      <label for="cv-outillageTubesDiameter">Diamètre tuyaux outillage ×4 (mm)</label>
+      <select id="cv-outillageTubesDiameter" class="form-control">
+        <option value="22">DN22</option>
+        <option value="32" selected>DN32</option>
+      </select>
+    </div>
+
+    <!-- Longueur tuyaux outillage — visible seulement si vanne centralisée ou bol seul -->
+    <div id="cv-outillageTubesLength-wrap" style="display:none;">
+      <div class="cv-field">
+        <label for="cv-outillageTubesLength">Longueur tuyaux outillage (m)</label>
+        <input id="cv-outillageTubesLength" type="number" step="any" min="0" placeholder="ex : 1.5" class="form-control">
+      </div>
+    </div>
+
+    <div class="cv-result-box">
+      Circuit interne outillage (fixe) :
+      <strong>DN22 × 25 cm × 4 = 0.38 L</strong>
+    </div>
+
   </div>
 </div>
 
@@ -570,26 +611,56 @@
   }
 
   /* --- network.js --- */
-  function calculatePipeVolume(length, diameter) {
-    var d = diameter / 1000;
-    return Math.PI * Math.pow(d / 2, 2) * length; /* m³ */
+  function pipeVol(lengthM, diamMm) {
+    var r = (diamMm / 1000) / 2;
+    return Math.PI * r * r * lengthM;
   }
 
-  /* Pénalités réseau amont (coudes, longueur) */
-  function calculateNetworkPenalty(upstreamLength, upstreamDiameter, bends) {
-    var volume  = calculatePipeVolume(upstreamLength, upstreamDiameter);
-    /* Pénalité coudes : -3 % de débit effectif par coude, min 50 % */
-    var penalty = Math.max(1 + bends * 0.03, 1);
-    return { volume: volume, penalty: penalty };
+  /* Volume aval (à pomper à chaque cycle) selon le type de machine */
+  function calculateDownstreamVolume(st, toolingVol) {
+    var tubeDia = parseFloat(st.outillageTubesDiameter) || 32;
+    var tubeLen = parseFloat(st.outillageTubesLength)   || 0;
+    var tube4vol = 4 * pipeVol(tubeLen, tubeDia);
+
+    switch (st.machineType) {
+      case 'centralized_vanne':
+        /* Vanne au distributeur → 4 tuyaux + circuit interne + outillage */
+        return tube4vol + CIRCUIT_INTERNE_VOL + toolingVol;
+      case 'remote_vanne':
+      case 'bol_remote':
+        /* Vanne proche outillage → circuit interne + outillage seulement */
+        return CIRCUIT_INTERNE_VOL + toolingVol;
+      case 'bol_only':
+        /* Vanne au bol → tube3 + 4 tuyaux + circuit interne + outillage */
+        var t3d = parseFloat(st.tube3Diameter) || 60;
+        var t3l = parseFloat(st.tube3Length)   || 0;
+        return pipeVol(t3l, t3d) + tube4vol + CIRCUIT_INTERNE_VOL + toolingVol;
+      default:
+        return tube4vol + CIRCUIT_INTERNE_VOL + toolingVol;
+    }
+  }
+
+  /* Volume amont (pré-évacué, déjà sous vide — contribue au volume total du réseau) */
+  function calculateUpstreamVolume(st) {
+    var dia1 = parseFloat(st.sourceTubeDiameter) || 60;
+    var len1 = parseFloat(st.sourceTubeLength)   || 0;
+    var vol  = pipeVol(len1, dia1);
+    var roots = rootsModels[st.rootsModel];
+    if (roots && roots.enabled) {
+      var len2 = parseFloat(st.sourceTube2Length) || 0;
+      vol += pipeVol(len2, 60);
+    }
+    return vol;
   }
 
   /* ============================================================
      ETAT GLOBAL DU PLUGIN
      ============================================================ */
 
-  var STORAGE_KEY = 'muf_calcul_vide_v1';
-  var ATM         = 1013; /* pression atmosphérique en mbar */
-  var debounceTimer = null;
+  var STORAGE_KEY = 'muf_calcul_vide_v2';
+  var ATM               = 1013; /* pression atmosphérique en mbar */
+  var CIRCUIT_INTERNE_VOL = 4 * Math.PI * Math.pow(0.011, 2) * 0.25; /* m³ : 4 × DN22 × 25cm */
+  var debounceTimer     = null;
 
   var defaultState = {
     laize:                '',
@@ -602,15 +673,16 @@
     networkInletDiameter: '32',
     networkPressure:      '35',
     pumpModel:            'Busch R5 RA 0250',
-    rootsModel:           'Aucune',
-    distributionType:     'centralized',
-    downstreamDiameter:   '32',
-    downstreamLength:     '',
-    upstreamDiameter:     '60',
-    upstreamLength:       '',
-    bends:                '0',
-    valvePosition:        'close',
-    finalPressure:        '80'
+    rootsModel:            'Aucune',
+    machineType:           'centralized_vanne',
+    sourceTubeDiameter:    '60',
+    sourceTubeLength:      '',
+    sourceTube2Length:     '',
+    tube3Diameter:         '60',
+    tube3Length:           '',
+    outillageTubesDiameter:'32',
+    outillageTubesLength:  '',
+    finalPressure:         '80'
   };
 
   /* ============================================================
@@ -631,15 +703,20 @@
   var elNetworkInletDiameter = document.getElementById('cv-networkInletDiameter');
   var elNetworkPressure      = document.getElementById('cv-networkPressure');
   var elPumpModel            = document.getElementById('cv-pumpModel');
-  var elRootsModel           = document.getElementById('cv-rootsModel');
-  var elDistributionType     = document.getElementById('cv-distributionType');
-  var elDownstreamDiameter   = document.getElementById('cv-downstreamDiameter');
-  var elDownstreamLength     = document.getElementById('cv-downstreamLength');
-  var elUpstreamDiameter     = document.getElementById('cv-upstreamDiameter');
-  var elUpstreamLength       = document.getElementById('cv-upstreamLength');
-  var elBends                = document.getElementById('cv-bends');
-  var elValvePosition        = document.getElementById('cv-valvePosition');
-  var elFinalPressure        = document.getElementById('cv-finalPressure');
+  var elRootsModel             = document.getElementById('cv-rootsModel');
+  var elMachineType            = document.getElementById('cv-machineType');
+  var elMachineTypeDesc        = document.getElementById('cv-machineType-desc');
+  var elSourceTubeDiameter     = document.getElementById('cv-sourceTubeDiameter');
+  var elSourceTubeLength       = document.getElementById('cv-sourceTubeLength');
+  var elSourceTube2Length      = document.getElementById('cv-sourceTube2Length');
+  var elTube3Diameter          = document.getElementById('cv-tube3Diameter');
+  var elTube3Length            = document.getElementById('cv-tube3Length');
+  var elOutillageTubesDiameter = document.getElementById('cv-outillageTubesDiameter');
+  var elOutillageTubesLength   = document.getElementById('cv-outillageTubesLength');
+  var elTube2Wrap              = document.getElementById('cv-tube2-wrap');
+  var elTube3Wrap              = document.getElementById('cv-tube3-wrap');
+  var elOutillageLenWrap       = document.getElementById('cv-outillageTubesLength-wrap');
+  var elFinalPressure          = document.getElementById('cv-finalPressure');
   var elVolOutillage         = document.getElementById('cv-vol-outillage');
   var elResultsContent       = document.getElementById('cv-results-content');
 
@@ -659,15 +736,16 @@
       networkInletDiameter: elNetworkInletDiameter.value,
       networkPressure:      elNetworkPressure.value,
       pumpModel:            elPumpModel.value,
-      rootsModel:           elRootsModel.value,
-      distributionType:     elDistributionType.value,
-      downstreamDiameter:   elDownstreamDiameter.value,
-      downstreamLength:     elDownstreamLength.value,
-      upstreamDiameter:     elUpstreamDiameter.value,
-      upstreamLength:       elUpstreamLength.value,
-      bends:                elBends.value,
-      valvePosition:        elValvePosition.value,
-      finalPressure:        elFinalPressure.value
+      rootsModel:             elRootsModel.value,
+      machineType:            elMachineType.value,
+      sourceTubeDiameter:     elSourceTubeDiameter.value,
+      sourceTubeLength:       elSourceTubeLength.value,
+      sourceTube2Length:      elSourceTube2Length.value,
+      tube3Diameter:          elTube3Diameter.value,
+      tube3Length:            elTube3Length.value,
+      outillageTubesDiameter: elOutillageTubesDiameter.value,
+      outillageTubesLength:   elOutillageTubesLength.value,
+      finalPressure:          elFinalPressure.value
     };
   }
 
@@ -678,16 +756,17 @@
     elHasFillers.checked         = !!st.hasFillers;
     elFillerThickness.value      = st.fillerThickness    !== undefined ? st.fillerThickness    : defaultState.fillerThickness;
     elNetworkPressure.value      = st.networkPressure    !== undefined ? st.networkPressure    : defaultState.networkPressure;
-    elPumpModel.value            = st.pumpModel          || defaultState.pumpModel;
-    elRootsModel.value           = st.rootsModel         || defaultState.rootsModel;
-    elDistributionType.value     = st.distributionType   || defaultState.distributionType;
-    elDownstreamDiameter.value   = st.downstreamDiameter !== undefined ? st.downstreamDiameter : defaultState.downstreamDiameter;
-    elDownstreamLength.value     = st.downstreamLength   !== undefined ? st.downstreamLength   : defaultState.downstreamLength;
-    elUpstreamDiameter.value     = st.upstreamDiameter   !== undefined ? st.upstreamDiameter   : defaultState.upstreamDiameter;
-    elUpstreamLength.value       = st.upstreamLength     !== undefined ? st.upstreamLength     : defaultState.upstreamLength;
-    elBends.value                = st.bends              !== undefined ? st.bends              : defaultState.bends;
-    elValvePosition.value        = st.valvePosition      || defaultState.valvePosition;
-    elFinalPressure.value        = st.finalPressure      !== undefined ? st.finalPressure      : defaultState.finalPressure;
+    elPumpModel.value                = st.pumpModel              || defaultState.pumpModel;
+    elRootsModel.value               = st.rootsModel             || defaultState.rootsModel;
+    elMachineType.value              = st.machineType            || defaultState.machineType;
+    elSourceTubeDiameter.value       = st.sourceTubeDiameter     || defaultState.sourceTubeDiameter;
+    elSourceTubeLength.value         = st.sourceTubeLength       !== undefined ? st.sourceTubeLength       : defaultState.sourceTubeLength;
+    elSourceTube2Length.value        = st.sourceTube2Length      !== undefined ? st.sourceTube2Length      : defaultState.sourceTube2Length;
+    elTube3Diameter.value            = st.tube3Diameter          || defaultState.tube3Diameter;
+    elTube3Length.value              = st.tube3Length            !== undefined ? st.tube3Length            : defaultState.tube3Length;
+    elOutillageTubesDiameter.value   = st.outillageTubesDiameter || defaultState.outillageTubesDiameter;
+    elOutillageTubesLength.value     = st.outillageTubesLength   !== undefined ? st.outillageTubesLength   : defaultState.outillageTubesLength;
+    elFinalPressure.value            = st.finalPressure          !== undefined ? st.finalPressure          : defaultState.finalPressure;
 
     /* Restaurer le type de source (checkbox) */
     var srcVal = st.sourceType || defaultState.sourceType;
@@ -737,6 +816,27 @@
     var isNetwork = elSourceType.value === 'network';
     elNetworkFields.style.display = isNetwork ? '' : 'none';
     elPumpFields.style.display    = isNetwork ? 'none' : '';
+
+    /* 2ème tuyau : visible si Roots présent */
+    var hasRoots = elRootsModel.value !== 'Aucune';
+    elTube2Wrap.style.display = hasRoots ? 'block' : 'none';
+
+    /* 3ème tuyau : visible si bol décanteur */
+    var hasBol = (elMachineType.value === 'bol_remote' || elMachineType.value === 'bol_only');
+    elTube3Wrap.style.display = hasBol ? 'block' : 'none';
+
+    /* Longueur tuyaux outillage : visible si vanne centralisée ou bol seul */
+    var needsOutillageLen = (elMachineType.value === 'centralized_vanne' || elMachineType.value === 'bol_only');
+    elOutillageLenWrap.style.display = needsOutillageLen ? 'block' : 'none';
+
+    /* Description machine */
+    var descs = {
+      centralized_vanne: 'Source → Tuyau1 → [Root] → Distributeur → VANNE → 4×tuyaux → Outillage',
+      remote_vanne:      'Source → Tuyau1 → [Root] → Distributeur → 4×tuyaux → VANNE → Outillage',
+      bol_remote:        'Source → Tuyau1 → [Root] → Bol décanteur → Tuyau3 → Répartiteur → 4×tuyaux → VANNE → Outillage',
+      bol_only:          'Source → Tuyau1 → [Root] → Bol décanteur (VANNE) → Tuyau3 → Répartiteur → 4×tuyaux → Outillage'
+    };
+    elMachineTypeDesc.textContent = descs[elMachineType.value] || '—';
   }
 
   /* ============================================================
@@ -855,26 +955,14 @@
       ? (volOutillage * 1000).toFixed(3) + ' L'
       : '—';
 
-    /* --- Volume aval (outillage + tuyau aval si vannes éloignées) --- */
-    var volAval = volOutillage;
-    if (st.valvePosition === 'remote') {
-      var downLen = parseFloat(st.downstreamLength) || 0;
-      var downDia = parseFloat(st.downstreamDiameter) || 32;
-      if (downLen > 0) {
-        volAval += calculatePipeVolume(downLen, downDia);
-      }
-    }
-
-    /* --- Volume et pénalité réseau amont --- */
-    var upLen   = parseFloat(st.upstreamLength)   || 0;
-    var upDia   = parseFloat(st.upstreamDiameter) || 60;
-    var bends   = parseInt(st.bends, 10)          || 0;
-    var netCalc = calculateNetworkPenalty(upLen, upDia, bends);
-    var volAmont  = netCalc.volume;
-    var penalty   = Math.max(netCalc.penalty, 1);
+    /* --- Volume aval et amont --- */
+    var volAval  = calculateDownstreamVolume(st, volOutillage);
+    var volAmont = calculateUpstreamVolume(st);
+    var penalty  = 1; /* résistance hydraulique simplifiée — modèle futur */
 
     /* --- Calcul du temps --- */
-    if (volAval <= 0) {
+    /* On exige au moins un volume outillage valide (laize/pitch/depth renseignés) */
+    if (volOutillage <= 0) {
       renderEmpty();
       return;
     }
@@ -1040,9 +1128,9 @@
   var inputs = [
     elLaize, elPitch, elDepth, elFillerThickness,
     elNetworkPressure,
-    elDownstreamDiameter, elDownstreamLength,
-    elUpstreamDiameter, elUpstreamLength,
-    elBends, elFinalPressure
+    elSourceTubeLength, elSourceTube2Length,
+    elTube3Length, elOutillageTubesLength,
+    elFinalPressure
   ];
 
   inputs.forEach(function (el) {
@@ -1051,7 +1139,7 @@
 
   var selects = [
     elNetworkInletDiameter, elPumpModel, elRootsModel,
-    elDistributionType, elValvePosition
+    elMachineType, elSourceTubeDiameter, elTube3Diameter, elOutillageTubesDiameter
   ];
 
   selects.forEach(function (el) {
