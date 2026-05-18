@@ -253,22 +253,15 @@
 
     <div id="cv-network-fields">
       <div class="cv-field">
-        <label>Débit du réseau de vide</label>
-        <div class="cv-toggle-group" id="cv-networkImportance-group">
-          <button type="button" class="cv-toggle-btn cv-toggle-active" data-value="low"    id="cv-networkImportance-low">Faible</button>
-          <button type="button" class="cv-toggle-btn"                  data-value="medium" id="cv-networkImportance-medium">Modéré</button>
-          <button type="button" class="cv-toggle-btn"                  data-value="high"   id="cv-networkImportance-high">Élevé</button>
-        </div>
-        <input type="hidden" id="cv-networkImportance" value="low">
-      </div>
-      <div class="cv-field">
         <label for="cv-networkInletDiameter">Diamètre arrivée vide (mm)</label>
         <select id="cv-networkInletDiameter" class="form-control">
-          <option value="16">DN16</option>
-          <option value="22">DN22</option>
-          <option value="32" selected>DN32</option>
           <option value="40">DN40</option>
-          <option value="50">DN50</option>
+          <option value="50" selected>DN50</option>
+          <option value="60">DN60</option>
+          <option value="80">DN80</option>
+          <option value="100">DN100</option>
+          <option value="150">DN150</option>
+          <option value="200">DN200</option>
         </select>
       </div>
       <div class="cv-field">
@@ -696,8 +689,7 @@
     hasFillers:           false,
     fillerThickness:      '',
     sourceType:           'network',
-    networkImportance:    'low',
-    networkInletDiameter: '32',
+    networkInletDiameter: '50',
     networkPressure:      '35',
     pumpModel:            'Busch R5 RA 0250',
     rootsModel:            'Aucune',
@@ -726,7 +718,6 @@
   var elSourceType           = document.getElementById('cv-sourceType');
   var elNetworkFields        = document.getElementById('cv-network-fields');
   var elPumpFields           = document.getElementById('cv-pump-fields');
-  var elNetworkImportance    = document.getElementById('cv-networkImportance');
   var elNetworkInletDiameter = document.getElementById('cv-networkInletDiameter');
   var elNetworkPressure      = document.getElementById('cv-networkPressure');
   var elPumpModel            = document.getElementById('cv-pumpModel');
@@ -759,7 +750,6 @@
       hasFillers:           elHasFillers.checked,
       fillerThickness:      elFillerThickness.value,
       sourceType:           elSourceType.value,
-      networkImportance:    elNetworkImportance.value,
       networkInletDiameter: elNetworkInletDiameter.value,
       networkPressure:      elNetworkPressure.value,
       pumpModel:            elPumpModel.value,
@@ -799,13 +789,6 @@
     var srcVal = st.sourceType || defaultState.sourceType;
     elSourceType.value = srcVal;
     elUsesPump.checked = (srcVal === 'pump');
-
-    /* Restaurer importance réseau (toggle boutons) */
-    var impVal = st.networkImportance || defaultState.networkImportance;
-    elNetworkImportance.value = impVal;
-    document.querySelectorAll('#cv-networkImportance-group .cv-toggle-btn').forEach(function (b) {
-      b.classList.toggle('cv-toggle-active', b.dataset.value === impVal);
-    });
 
     /* Restaurer diamètre arrivée */
     elNetworkInletDiameter.value = st.networkInletDiameter !== undefined ? st.networkInletDiameter : defaultState.networkInletDiameter;
@@ -869,25 +852,14 @@
      LOGIQUE DE CALCUL
      ============================================================ */
 
-  /* Débit réseau modélisé selon importance + diamètre arrivée */
-  function networkFlow(p, networkImportance, inletDiameter) {
-    /* Débit de base selon le débit du réseau (Faible / Modéré / Élevé) */
-    var baseQ = networkImportance === 'high'   ? 0.10
-              : networkImportance === 'medium' ? 0.075
-              :                                  0.05; /* m³/s */
-
-    /* Facteur diamètre arrivée (restriction physique) */
-    var dFactor;
-    if (inletDiameter <= 16)      dFactor = 0.35;
-    else if (inletDiameter <= 22) dFactor = 0.55;
-    else if (inletDiameter <= 32) dFactor = 0.75;
-    else if (inletDiameter <= 40) dFactor = 0.90;
-    else                          dFactor = 1.0;  /* DN50+ */
-
-    /* Légère chute de débit avec la pression (réseau soutenu) */
-    var pFactor = p > 100 ? 1.0 : p > 40 ? 0.9 : 0.8;
-
-    return baseQ * dFactor * pFactor;
+  /* Débit réseau modélisé par le diamètre d'arrivée (loi de continuité, d²)
+   * Référence DN50 ≈ 0.060 m³/s (réseau vide industriel standard).
+   * Facteur pression : légère chute à basse pression (pertes de charge accrues). */
+  function networkFlow(p, inletDiameter) {
+    var Q_REF_DN50 = 0.060; /* m³/s — débit de référence pour DN50 */
+    var dFactor = Math.pow(inletDiameter / 50, 2); /* proportionnel à l'aire de section */
+    var pFactor = p > 100 ? 1.0 : p > 40 ? 0.90 : 0.80;
+    return Q_REF_DN50 * dFactor * pFactor;
   }
 
   /* Débit de la source en m³/s selon la pression courante p (mbar) */
@@ -896,10 +868,9 @@
       var pump = primaryPumpModels[state.pumpModel];
       return pump ? pump.flow(p) : 0;
     }
-    /* Mode réseau */
-    var imp = state.networkImportance || 'low';
-    var dia = parseFloat(state.networkInletDiameter) || 32;
-    return networkFlow(p, imp, dia);
+    /* Mode réseau — débit uniquement fonction du diamètre d'arrivée */
+    var dia = parseFloat(state.networkInletDiameter) || 50;
+    return networkFlow(p, dia);
   }
 
   /* Gain du Roots selon la pression courante */
@@ -1139,17 +1110,6 @@
     onInput();
   });
 
-  /* Boutons toggle importance réseau */
-  document.querySelectorAll('#cv-networkImportance-group .cv-toggle-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      document.querySelectorAll('#cv-networkImportance-group .cv-toggle-btn').forEach(function (b) {
-        b.classList.remove('cv-toggle-active');
-      });
-      btn.classList.add('cv-toggle-active');
-      elNetworkImportance.value = btn.dataset.value;
-      onInput();
-    });
-  });
 
   var inputs = [
     elLaize, elPitch, elDepth, elFillerThickness,
