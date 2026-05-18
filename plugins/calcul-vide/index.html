@@ -169,6 +169,34 @@
   }
 
   #cv-fillerThickness-wrap { display: none; }
+
+  .cv-toggle-group {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--color-primary, #003A70);
+    border-radius: var(--radius-sm, 6px);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .cv-toggle-btn {
+    flex: 1;
+    padding: 9px 0;
+    background: var(--color-bg, #fff);
+    color: var(--color-primary, #003A70);
+    border: none;
+    font-size: var(--font-size-sm, 13px);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    font-family: inherit;
+  }
+  .cv-toggle-btn + .cv-toggle-btn {
+    border-left: 1px solid var(--color-primary, #003A70);
+  }
+  .cv-toggle-btn.cv-toggle-active {
+    background: var(--color-primary, #003A70);
+    color: #fff;
+  }
 </style>
 
 <!-- Section Outillage -->
@@ -199,7 +227,7 @@
     </div>
 
     <div id="cv-fillerThickness-wrap" class="cv-field">
-      <label for="cv-fillerThickness">Épaisseur des cales (mm)</label>
+      <label for="cv-fillerThickness">Hauteur des cales (mm)</label>
       <input id="cv-fillerThickness" type="number" step="any" min="0" placeholder="ex : 20" class="form-control">
     </div>
 
@@ -218,17 +246,32 @@
   <div class="card-body">
 
     <div class="cv-field">
-      <label for="cv-sourceType">Type de source</label>
-      <select id="cv-sourceType" class="form-control">
-        <option value="network">Réseau</option>
-        <option value="pump">Pompe</option>
-      </select>
+      <label>Type de source</label>
+      <div class="cv-toggle-group" id="cv-sourceType-group">
+        <button type="button" class="cv-toggle-btn cv-toggle-active" data-value="network" id="cv-sourceType-network">Réseau</button>
+        <button type="button" class="cv-toggle-btn" data-value="pump" id="cv-sourceType-pump">Pompe</button>
+      </div>
+      <input type="hidden" id="cv-sourceType" value="network">
     </div>
 
     <div id="cv-network-fields">
       <div class="cv-field">
-        <label for="cv-networkFlow">Débit réseau (m³/h)</label>
-        <input id="cv-networkFlow" type="number" step="any" min="0" placeholder="ex : 432" class="form-control">
+        <label>Importance du réseau</label>
+        <div class="cv-toggle-group" id="cv-networkImportance-group">
+          <button type="button" class="cv-toggle-btn cv-toggle-active" data-value="low" id="cv-networkImportance-low">Faible</button>
+          <button type="button" class="cv-toggle-btn" data-value="high" id="cv-networkImportance-high">Important</button>
+        </div>
+        <input type="hidden" id="cv-networkImportance" value="low">
+      </div>
+      <div class="cv-field">
+        <label for="cv-networkInletDiameter">Diamètre arrivée vide (mm)</label>
+        <select id="cv-networkInletDiameter" class="form-control">
+          <option value="16">DN16</option>
+          <option value="22">DN22</option>
+          <option value="32" selected>DN32</option>
+          <option value="40">DN40</option>
+          <option value="50">DN50</option>
+        </select>
       </div>
       <div class="cv-field">
         <label for="cv-networkPressure">Pression réseau (mbar abs)</label>
@@ -240,19 +283,39 @@
       <div class="cv-field">
         <label for="cv-pumpModel">Modèle de pompe</label>
         <select id="cv-pumpModel" class="form-control">
-          <option value="Busch R5 RA 0025">Busch R5 RA 0025</option>
-          <option value="Busch R5 RA 0040">Busch R5 RA 0040</option>
-          <option value="Busch R5 RA 0063">Busch R5 RA 0063</option>
-          <option value="Busch R5 RA 0100">Busch R5 RA 0100</option>
-          <option value="Busch R5 RA 0160">Busch R5 RA 0160</option>
-          <option value="Busch R5 RA 0250" selected>Busch R5 RA 0250</option>
-          <option value="Busch R5 RA 0300">Busch R5 RA 0300</option>
-          <option value="Busch R5 RA 0400">Busch R5 RA 0400</option>
-          <option value="Busch R5 RA 0630">Busch R5 RA 0630</option>
-          <option value="Busch R5 RA 0700">Busch R5 RA 0700</option>
-          <option value="Busch COBRA NC 0300">Busch COBRA NC 0300</option>
-          <option value="Busch COBRA NC 0400">Busch COBRA NC 0400</option>
-          <option value="Busch COBRA NC 0450">Busch COBRA NC 0450</option>
+          <optgroup label="Busch R5 (palettes huile)">
+            <option value="Busch R5 RA 0025">Busch R5 RA 0025</option>
+            <option value="Busch R5 RA 0040">Busch R5 RA 0040</option>
+            <option value="Busch R5 RA 0063">Busch R5 RA 0063</option>
+            <option value="Busch R5 RA 0100">Busch R5 RA 0100</option>
+            <option value="Busch R5 RA 0160">Busch R5 RA 0160</option>
+            <option value="Busch R5 RA 0250" selected>Busch R5 RA 0250</option>
+            <option value="Busch R5 RA 0300">Busch R5 RA 0300</option>
+            <option value="Busch R5 RA 0400">Busch R5 RA 0400</option>
+            <option value="Busch R5 RA 0630">Busch R5 RA 0630</option>
+            <option value="Busch R5 RA 0700">Busch R5 RA 0700</option>
+          </optgroup>
+          <optgroup label="Busch COBRA (sèche)">
+            <option value="Busch COBRA NC 0300">Busch COBRA NC 0300</option>
+            <option value="Busch COBRA NC 0400">Busch COBRA NC 0400</option>
+            <option value="Busch COBRA NC 0450">Busch COBRA NC 0450</option>
+          </optgroup>
+          <optgroup label="Edwards GV (palettes)">
+            <option value="Edwards GV80">Edwards GV80</option>
+            <option value="Edwards GV160">Edwards GV160</option>
+            <option value="Edwards GV250">Edwards GV250</option>
+            <option value="Edwards GV600">Edwards GV600</option>
+            <option value="Edwards GV1000">Edwards GV1000</option>
+            <option value="Edwards GV2000">Edwards GV2000</option>
+          </optgroup>
+          <optgroup label="Becker KDT / VTLF (palettes)">
+            <option value="Becker KDT 100">Becker KDT 100</option>
+            <option value="Becker KDT 300">Becker KDT 300</option>
+            <option value="Becker VTLF 250">Becker VTLF 250</option>
+            <option value="Becker VTLF 400">Becker VTLF 400</option>
+            <option value="Becker VTLF 1000">Becker VTLF 1000</option>
+            <option value="Becker VTLF 2000">Becker VTLF 2000</option>
+          </optgroup>
         </select>
       </div>
     </div>
@@ -415,6 +478,44 @@
         if (p > 10)  return 0.095;
         return 0.07;
       }
+    },
+    /* Edwards GV (pompes à palettes rotatives) */
+    'Edwards GV80': {
+      flow: function (p) { return p > 100 ? 0.022 : p > 10 ? 0.018 : 0.011; }
+    },
+    'Edwards GV160': {
+      flow: function (p) { return p > 100 ? 0.044 : p > 10 ? 0.036 : 0.022; }
+    },
+    'Edwards GV250': {
+      flow: function (p) { return p > 100 ? 0.069 : p > 10 ? 0.056 : 0.034; }
+    },
+    'Edwards GV600': {
+      flow: function (p) { return p > 100 ? 0.167 : p > 10 ? 0.136 : 0.083; }
+    },
+    'Edwards GV1000': {
+      flow: function (p) { return p > 100 ? 0.278 : p > 10 ? 0.222 : 0.139; }
+    },
+    'Edwards GV2000': {
+      flow: function (p) { return p > 100 ? 0.556 : p > 10 ? 0.444 : 0.278; }
+    },
+    /* Becker KDT / VTLF (pompes à palettes rotatives) */
+    'Becker KDT 100': {
+      flow: function (p) { return p > 100 ? 0.028 : p > 10 ? 0.022 : 0.014; }
+    },
+    'Becker KDT 300': {
+      flow: function (p) { return p > 100 ? 0.083 : p > 10 ? 0.067 : 0.042; }
+    },
+    'Becker VTLF 250': {
+      flow: function (p) { return p > 100 ? 0.069 : p > 10 ? 0.056 : 0.035; }
+    },
+    'Becker VTLF 400': {
+      flow: function (p) { return p > 100 ? 0.111 : p > 10 ? 0.089 : 0.056; }
+    },
+    'Becker VTLF 1000': {
+      flow: function (p) { return p > 100 ? 0.278 : p > 10 ? 0.222 : 0.139; }
+    },
+    'Becker VTLF 2000': {
+      flow: function (p) { return p > 100 ? 0.556 : p > 10 ? 0.444 : 0.278; }
     }
   };
 
@@ -462,12 +563,12 @@
      ============================================================ */
 
   /* --- toolingVolume.js --- */
+  /* Bug 2 corrigé : les cales réduisent le volume (soustraction) */
   function calculateToolingVolume(laize, pitch, depth, hasFillers, fillerThickness) {
-    var effPitch = pitch - 20;
+    var effPitch = pitch - 20; /* soustraction cadre outillage */
     var surface  = laize * effPitch;
-    var main     = surface * depth;
-    var filler   = hasFillers ? surface * fillerThickness * 0.95 : 0;
-    return (main + filler) / 1e9; /* m³ */
+    var effDepth = hasFillers ? Math.max(depth - fillerThickness, 0) : depth;
+    return (surface * effDepth) / 1e9; /* m³ */
   }
 
   /* --- network.js --- */
@@ -493,53 +594,55 @@
   var debounceTimer = null;
 
   var defaultState = {
-    laize:              '',
-    pitch:              '',
-    depth:              '',
-    hasFillers:         false,
-    fillerThickness:    '',
-    sourceType:         'network',
-    networkFlow:        '',
-    networkPressure:    '35',
-    pumpModel:          'Busch R5 RA 0250',
-    rootsModel:         'Aucune',
-    distributionType:   'centralized',
-    downstreamDiameter: '32',
-    downstreamLength:   '',
-    upstreamDiameter:   '60',
-    upstreamLength:     '',
-    bends:              '0',
-    valvePosition:      'close',
-    finalPressure:      '80'
+    laize:                '',
+    pitch:                '',
+    depth:                '',
+    hasFillers:           false,
+    fillerThickness:      '',
+    sourceType:           'network',
+    networkImportance:    'low',
+    networkInletDiameter: '32',
+    networkPressure:      '35',
+    pumpModel:            'Busch R5 RA 0250',
+    rootsModel:           'Aucune',
+    distributionType:     'centralized',
+    downstreamDiameter:   '32',
+    downstreamLength:     '',
+    upstreamDiameter:     '60',
+    upstreamLength:       '',
+    bends:                '0',
+    valvePosition:        'close',
+    finalPressure:        '80'
   };
 
   /* ============================================================
      REFERENCES DOM
      ============================================================ */
 
-  var elLaize              = document.getElementById('cv-laize');
-  var elPitch              = document.getElementById('cv-pitch');
-  var elDepth              = document.getElementById('cv-depth');
-  var elHasFillers         = document.getElementById('cv-hasFillers');
-  var elFillerThickness    = document.getElementById('cv-fillerThickness');
-  var elFillerWrap         = document.getElementById('cv-fillerThickness-wrap');
-  var elSourceType         = document.getElementById('cv-sourceType');
-  var elNetworkFields      = document.getElementById('cv-network-fields');
-  var elPumpFields         = document.getElementById('cv-pump-fields');
-  var elNetworkFlow        = document.getElementById('cv-networkFlow');
-  var elNetworkPressure    = document.getElementById('cv-networkPressure');
-  var elPumpModel          = document.getElementById('cv-pumpModel');
-  var elRootsModel         = document.getElementById('cv-rootsModel');
-  var elDistributionType   = document.getElementById('cv-distributionType');
-  var elDownstreamDiameter = document.getElementById('cv-downstreamDiameter');
-  var elDownstreamLength   = document.getElementById('cv-downstreamLength');
-  var elUpstreamDiameter   = document.getElementById('cv-upstreamDiameter');
-  var elUpstreamLength     = document.getElementById('cv-upstreamLength');
-  var elBends              = document.getElementById('cv-bends');
-  var elValvePosition      = document.getElementById('cv-valvePosition');
-  var elFinalPressure      = document.getElementById('cv-finalPressure');
-  var elVolOutillage       = document.getElementById('cv-vol-outillage');
-  var elResultsContent     = document.getElementById('cv-results-content');
+  var elLaize                = document.getElementById('cv-laize');
+  var elPitch                = document.getElementById('cv-pitch');
+  var elDepth                = document.getElementById('cv-depth');
+  var elHasFillers           = document.getElementById('cv-hasFillers');
+  var elFillerThickness      = document.getElementById('cv-fillerThickness');
+  var elFillerWrap           = document.getElementById('cv-fillerThickness-wrap');
+  var elSourceType           = document.getElementById('cv-sourceType');
+  var elNetworkFields        = document.getElementById('cv-network-fields');
+  var elPumpFields           = document.getElementById('cv-pump-fields');
+  var elNetworkImportance    = document.getElementById('cv-networkImportance');
+  var elNetworkInletDiameter = document.getElementById('cv-networkInletDiameter');
+  var elNetworkPressure      = document.getElementById('cv-networkPressure');
+  var elPumpModel            = document.getElementById('cv-pumpModel');
+  var elRootsModel           = document.getElementById('cv-rootsModel');
+  var elDistributionType     = document.getElementById('cv-distributionType');
+  var elDownstreamDiameter   = document.getElementById('cv-downstreamDiameter');
+  var elDownstreamLength     = document.getElementById('cv-downstreamLength');
+  var elUpstreamDiameter     = document.getElementById('cv-upstreamDiameter');
+  var elUpstreamLength       = document.getElementById('cv-upstreamLength');
+  var elBends                = document.getElementById('cv-bends');
+  var elValvePosition        = document.getElementById('cv-valvePosition');
+  var elFinalPressure        = document.getElementById('cv-finalPressure');
+  var elVolOutillage         = document.getElementById('cv-vol-outillage');
+  var elResultsContent       = document.getElementById('cv-results-content');
 
   /* ============================================================
      SAUVEGARDE / RESTAURATION
@@ -547,46 +650,62 @@
 
   function collectState() {
     return {
-      laize:              elLaize.value,
-      pitch:              elPitch.value,
-      depth:              elDepth.value,
-      hasFillers:         elHasFillers.checked,
-      fillerThickness:    elFillerThickness.value,
-      sourceType:         elSourceType.value,
-      networkFlow:        elNetworkFlow.value,
-      networkPressure:    elNetworkPressure.value,
-      pumpModel:          elPumpModel.value,
-      rootsModel:         elRootsModel.value,
-      distributionType:   elDistributionType.value,
-      downstreamDiameter: elDownstreamDiameter.value,
-      downstreamLength:   elDownstreamLength.value,
-      upstreamDiameter:   elUpstreamDiameter.value,
-      upstreamLength:     elUpstreamLength.value,
-      bends:              elBends.value,
-      valvePosition:      elValvePosition.value,
-      finalPressure:      elFinalPressure.value
+      laize:                elLaize.value,
+      pitch:                elPitch.value,
+      depth:                elDepth.value,
+      hasFillers:           elHasFillers.checked,
+      fillerThickness:      elFillerThickness.value,
+      sourceType:           elSourceType.value,
+      networkImportance:    elNetworkImportance.value,
+      networkInletDiameter: elNetworkInletDiameter.value,
+      networkPressure:      elNetworkPressure.value,
+      pumpModel:            elPumpModel.value,
+      rootsModel:           elRootsModel.value,
+      distributionType:     elDistributionType.value,
+      downstreamDiameter:   elDownstreamDiameter.value,
+      downstreamLength:     elDownstreamLength.value,
+      upstreamDiameter:     elUpstreamDiameter.value,
+      upstreamLength:       elUpstreamLength.value,
+      bends:                elBends.value,
+      valvePosition:        elValvePosition.value,
+      finalPressure:        elFinalPressure.value
     };
   }
 
   function applyState(st) {
-    elLaize.value              = st.laize              !== undefined ? st.laize              : defaultState.laize;
-    elPitch.value              = st.pitch              !== undefined ? st.pitch              : defaultState.pitch;
-    elDepth.value              = st.depth              !== undefined ? st.depth              : defaultState.depth;
-    elHasFillers.checked       = !!st.hasFillers;
-    elFillerThickness.value    = st.fillerThickness    !== undefined ? st.fillerThickness    : defaultState.fillerThickness;
-    elSourceType.value         = st.sourceType         || defaultState.sourceType;
-    elNetworkFlow.value        = st.networkFlow        !== undefined ? st.networkFlow        : defaultState.networkFlow;
-    elNetworkPressure.value    = st.networkPressure    !== undefined ? st.networkPressure    : defaultState.networkPressure;
-    elPumpModel.value          = st.pumpModel          || defaultState.pumpModel;
-    elRootsModel.value         = st.rootsModel         || defaultState.rootsModel;
-    elDistributionType.value   = st.distributionType   || defaultState.distributionType;
-    elDownstreamDiameter.value = st.downstreamDiameter !== undefined ? st.downstreamDiameter : defaultState.downstreamDiameter;
-    elDownstreamLength.value   = st.downstreamLength   !== undefined ? st.downstreamLength   : defaultState.downstreamLength;
-    elUpstreamDiameter.value   = st.upstreamDiameter   !== undefined ? st.upstreamDiameter   : defaultState.upstreamDiameter;
-    elUpstreamLength.value     = st.upstreamLength     !== undefined ? st.upstreamLength     : defaultState.upstreamLength;
-    elBends.value              = st.bends              !== undefined ? st.bends              : defaultState.bends;
-    elValvePosition.value      = st.valvePosition      || defaultState.valvePosition;
-    elFinalPressure.value      = st.finalPressure      !== undefined ? st.finalPressure      : defaultState.finalPressure;
+    elLaize.value                = st.laize              !== undefined ? st.laize              : defaultState.laize;
+    elPitch.value                = st.pitch              !== undefined ? st.pitch              : defaultState.pitch;
+    elDepth.value                = st.depth              !== undefined ? st.depth              : defaultState.depth;
+    elHasFillers.checked         = !!st.hasFillers;
+    elFillerThickness.value      = st.fillerThickness    !== undefined ? st.fillerThickness    : defaultState.fillerThickness;
+    elNetworkPressure.value      = st.networkPressure    !== undefined ? st.networkPressure    : defaultState.networkPressure;
+    elPumpModel.value            = st.pumpModel          || defaultState.pumpModel;
+    elRootsModel.value           = st.rootsModel         || defaultState.rootsModel;
+    elDistributionType.value     = st.distributionType   || defaultState.distributionType;
+    elDownstreamDiameter.value   = st.downstreamDiameter !== undefined ? st.downstreamDiameter : defaultState.downstreamDiameter;
+    elDownstreamLength.value     = st.downstreamLength   !== undefined ? st.downstreamLength   : defaultState.downstreamLength;
+    elUpstreamDiameter.value     = st.upstreamDiameter   !== undefined ? st.upstreamDiameter   : defaultState.upstreamDiameter;
+    elUpstreamLength.value       = st.upstreamLength     !== undefined ? st.upstreamLength     : defaultState.upstreamLength;
+    elBends.value                = st.bends              !== undefined ? st.bends              : defaultState.bends;
+    elValvePosition.value        = st.valvePosition      || defaultState.valvePosition;
+    elFinalPressure.value        = st.finalPressure      !== undefined ? st.finalPressure      : defaultState.finalPressure;
+
+    /* Restaurer le type de source (toggle boutons) */
+    var srcVal = st.sourceType || defaultState.sourceType;
+    elSourceType.value = srcVal;
+    document.querySelectorAll('#cv-sourceType-group .cv-toggle-btn').forEach(function (b) {
+      b.classList.toggle('cv-toggle-active', b.dataset.value === srcVal);
+    });
+
+    /* Restaurer importance réseau (toggle boutons) */
+    var impVal = st.networkImportance || defaultState.networkImportance;
+    elNetworkImportance.value = impVal;
+    document.querySelectorAll('#cv-networkImportance-group .cv-toggle-btn').forEach(function (b) {
+      b.classList.toggle('cv-toggle-active', b.dataset.value === impVal);
+    });
+
+    /* Restaurer diamètre arrivée */
+    elNetworkInletDiameter.value = st.networkInletDiameter !== undefined ? st.networkInletDiameter : defaultState.networkInletDiameter;
   }
 
   function saveState() {
@@ -627,19 +746,35 @@
      LOGIQUE DE CALCUL
      ============================================================ */
 
+  /* Débit réseau modélisé selon importance + diamètre arrivée */
+  function networkFlow(p, networkImportance, inletDiameter) {
+    /* Débit de base selon importance du réseau */
+    var baseQ = networkImportance === 'high' ? 0.10 : 0.05; /* m³/s */
+
+    /* Facteur diamètre arrivée (restriction physique) */
+    var dFactor;
+    if (inletDiameter <= 16)      dFactor = 0.35;
+    else if (inletDiameter <= 22) dFactor = 0.55;
+    else if (inletDiameter <= 32) dFactor = 0.75;
+    else if (inletDiameter <= 40) dFactor = 0.90;
+    else                          dFactor = 1.0;  /* DN50+ */
+
+    /* Légère chute de débit avec la pression (réseau soutenu) */
+    var pFactor = p > 100 ? 1.0 : p > 40 ? 0.9 : 0.8;
+
+    return baseQ * dFactor * pFactor;
+  }
+
   /* Débit de la source en m³/s selon la pression courante p (mbar) */
   function sourceFlow(p, state) {
     if (state.sourceType === 'pump') {
       var pump = primaryPumpModels[state.pumpModel];
       return pump ? pump.flow(p) : 0;
     }
-    /* Mode réseau : débit approché par paliers (cohérent avec app.jsx) */
-    var pNet = parseFloat(state.networkPressure);
-    if (!pNet || pNet <= 0) return 0;
-    if (p > 100) return 0.12;
-    if (p > 40)  return 0.10;
-    if (p > 10)  return 0.07;
-    return 0.05;
+    /* Mode réseau */
+    var imp = state.networkImportance || 'low';
+    var dia = parseFloat(state.networkInletDiameter) || 32;
+    return networkFlow(p, imp, dia);
   }
 
   /* Gain du Roots selon la pression courante */
@@ -657,13 +792,49 @@
     return m + 'min ' + (s < 10 ? '0' : '') + s + 's';
   }
 
-  /* Interprétation textuelle */
+  /* Bug 3 corrigé : interprétation alignée sur le référentiel terrain */
   function interpret(seconds) {
-    if (seconds <= 30)  return { label: 'Excellent',  cls: 'cv-interp-ok' };
-    if (seconds <= 90)  return { label: 'Correct',    cls: 'cv-interp-ok' };
-    if (seconds <= 180) return { label: 'Acceptable', cls: 'cv-interp-warn' };
-    if (seconds <= 360) return { label: 'Attention',  cls: 'cv-interp-warn' };
-    return                     { label: 'Critique',   cls: 'cv-interp-critical' };
+    if (seconds < 1.0) return { label: 'Très bon',  cls: 'cv-interp-ok' };
+    if (seconds < 2.0) return { label: 'Correct',   cls: 'cv-interp-ok' };
+    if (seconds < 3.0) return { label: 'Limite',    cls: 'cv-interp-warn' };
+    return                    { label: 'Mauvais',   cls: 'cv-interp-critical' };
+  }
+
+  /* Diagnostic du facteur limitant */
+  function identifierFacteurLimitant(volAval, volAmont, timeSeconds, penalty, st) {
+    var facteurs = [];
+
+    /* Facteur 1 : volume outillage */
+    var volAvalL = volAval * 1000;
+    if (volAvalL > 15 && timeSeconds > 1.5) {
+      facteurs.push({ poids: volAvalL, msg: 'Volume outillage élevé (' + volAvalL.toFixed(1) + ' L)' });
+    }
+
+    /* Facteur 2 : réseau amont restrictif */
+    if (penalty > 1.2) {
+      facteurs.push({ poids: (penalty - 1) * 50, msg: 'Réseau amont restrictif (coudes / diamètre)' });
+    }
+
+    /* Facteur 3 : pompe sous-dimensionnée */
+    if (st.sourceType === 'pump') {
+      var pump = primaryPumpModels[st.pumpModel];
+      var qNom = pump ? pump.flow(500) : 0; /* débit nominal à haute pression */
+      var qNomM3h = qNom * 3600;
+      if (qNomM3h < 100 && timeSeconds > 1.5) {
+        facteurs.push({ poids: 100 - qNomM3h, msg: 'Débit pompe limité (' + qNomM3h.toFixed(0) + ' m³/h)' });
+      }
+    }
+
+    /* Facteur 4 : Roots absent alors que temps > 1.5s */
+    if (st.rootsModel === 'Aucune' && timeSeconds > 1.5) {
+      facteurs.push({ poids: 30, msg: 'Amplificateur Roots absent' });
+    }
+
+    if (facteurs.length === 0) return null;
+
+    /* Retourner le facteur avec le plus grand poids */
+    facteurs.sort(function (a, b) { return b.poids - a.poids; });
+    return facteurs[0].msg;
   }
 
   function compute() {
@@ -731,15 +902,16 @@
     var steps = 40;
 
     /* Phase A : descente ATM → pReseau (uniquement si source réseau déjà sous ATM) */
+    /* Bug 1 corrigé : suppression du × 3600 (débits en m³/s → temps déjà en secondes) */
     if (st.sourceType === 'network' && pReseau < ATM) {
-      var pA   = ATM;
+      var pA    = ATM;
       var dlogA = (Math.log(ATM) - Math.log(pReseau)) / steps;
 
       for (var i = 0; i < steps; i++) {
         var pANext = Math.exp(Math.log(pA) - dlogA);
         var qA     = sourceFlow(pA, st) / penalty;
         if (qA > 0) {
-          t += (volAval / qA) * Math.log(pA / pANext) * 3600;
+          t += (volAval / qA) * Math.log(pA / pANext);
         }
         pA = pANext;
       }
@@ -755,7 +927,7 @@
         var pBNext = Math.exp(Math.log(pB) - dlogB);
         var qB     = (sourceFlow(pB, st) * rootsGain(pB, st.rootsModel)) / penalty;
         if (qB > 0) {
-          t += (volTotal / qB) * Math.log(pB / pBNext) * 3600;
+          t += (volTotal / qB) * Math.log(pB / pBNext);
         }
         pB = pBNext;
       }
@@ -766,7 +938,7 @@
       return;
     }
 
-    renderResults(volAval, volAmont, t, st);
+    renderResults(volAval, volAmont, t, penalty, st);
   }
 
   /* ============================================================
@@ -777,7 +949,7 @@
     elResultsContent.innerHTML = '<p class="cv-results-empty">Renseignez les parametres ci-dessus pour obtenir une estimation.</p>';
   }
 
-  function renderResults(volAval, volAmont, timeSeconds, st) {
+  function renderResults(volAval, volAmont, timeSeconds, penalty, st) {
     var tempsFormate = formatTime(timeSeconds);
     var interp       = interpret(timeSeconds);
     var nomPompe     = st.sourceType === 'pump' ? st.pumpModel : 'Reseau ' + st.networkPressure + ' mbar';
@@ -785,6 +957,14 @@
     var volAvalL  = (volAval * 1000).toFixed(3);
     var volAmontL = (volAmont * 1000).toFixed(3);
     var tempsSec  = timeSeconds.toFixed(1);
+
+    var facteur = identifierFacteurLimitant(volAval, volAmont, timeSeconds, penalty, st);
+    var facteurHtml = facteur
+      ? '<div class="cv-result-row">' +
+          '<span class="cv-result-label">Facteur limitant</span>' +
+          '<span class="cv-result-val" style="font-size:12px;text-align:right;max-width:55%;">' + facteur + '</span>' +
+        '</div>'
+      : '';
 
     elResultsContent.innerHTML =
       '<div class="cv-results-panel">' +
@@ -813,6 +993,7 @@
           '<span class="cv-result-label">Roots</span>' +
           '<span class="cv-result-val">' + st.rootsModel + '</span>' +
         '</div>' +
+        facteurHtml +
       '</div>';
 
     /* Archivage Notion silencieux */
@@ -839,9 +1020,33 @@
     scheduleSave();
   }
 
+  /* Boutons toggle source type */
+  document.querySelectorAll('#cv-sourceType-group .cv-toggle-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('#cv-sourceType-group .cv-toggle-btn').forEach(function (b) {
+        b.classList.remove('cv-toggle-active');
+      });
+      btn.classList.add('cv-toggle-active');
+      elSourceType.value = btn.dataset.value;
+      onInput();
+    });
+  });
+
+  /* Boutons toggle importance réseau */
+  document.querySelectorAll('#cv-networkImportance-group .cv-toggle-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('#cv-networkImportance-group .cv-toggle-btn').forEach(function (b) {
+        b.classList.remove('cv-toggle-active');
+      });
+      btn.classList.add('cv-toggle-active');
+      elNetworkImportance.value = btn.dataset.value;
+      onInput();
+    });
+  });
+
   var inputs = [
     elLaize, elPitch, elDepth, elFillerThickness,
-    elNetworkFlow, elNetworkPressure,
+    elNetworkPressure,
     elDownstreamDiameter, elDownstreamLength,
     elUpstreamDiameter, elUpstreamLength,
     elBends, elFinalPressure
@@ -852,7 +1057,7 @@
   });
 
   var selects = [
-    elSourceType, elPumpModel, elRootsModel,
+    elNetworkInletDiameter, elPumpModel, elRootsModel,
     elDistributionType, elValvePosition
   ];
 
