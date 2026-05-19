@@ -1,0 +1,1250 @@
+<!--
+  Plugin : Rapport d'intervention
+  Plugin 5 — MUF-WebApp
+  Structure IIFE + localStorage + archivage Notion (window.NotionArchive)
+  Compatible Safari iOS (pas de modules ES6, pas de fetch sans polyfill)
+-->
+
+<style>
+  /* ============================================================
+     Styles spécifiques au plugin Rapport d'intervention
+     Utilise exclusivement les variables CSS de main.css
+     ============================================================ */
+
+  /* En-tête du rapport */
+  .ri-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  @media (min-width: 600px) {
+    .ri-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (min-width: 900px) {
+    .ri-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  }
+
+  /* Accordion sections */
+  .ri-section {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  .ri-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background-color: var(--color-bg);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    font-family: inherit;
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    color: var(--color-text);
+    transition: background-color var(--transition);
+    min-height: 52px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ri-section-header:hover {
+    background-color: var(--color-border);
+  }
+  .ri-section-header.ri-open {
+    background-color: var(--color-primary);
+    color: var(--color-white);
+  }
+
+  .ri-section-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+  }
+
+  .ri-section-badge {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background-color: rgba(255,255,255,0.2);
+    color: inherit;
+    white-space: nowrap;
+    min-width: 36px;
+    text-align: center;
+  }
+  .ri-section-header:not(.ri-open) .ri-section-badge {
+    background-color: var(--color-primary);
+    color: var(--color-white);
+  }
+
+  .ri-section-chevron {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    transition: transform 0.2s ease;
+  }
+  .ri-section-header.ri-open .ri-section-chevron {
+    transform: rotate(180deg);
+  }
+
+  .ri-section-body {
+    display: none;
+    padding: 16px;
+    background-color: var(--color-white);
+    border-top: 1px solid var(--color-border);
+  }
+  .ri-section-body.ri-open {
+    display: block;
+  }
+
+  /* Items checkbox */
+  .ri-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--color-border);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ri-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .ri-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--color-primary);
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .ri-item label {
+    font-size: var(--font-size-base);
+    color: var(--color-text);
+    font-weight: normal;
+    cursor: pointer;
+    line-height: 1.4;
+    flex: 1;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  .ri-item input[type="checkbox"]:checked + label {
+    color: var(--color-text-muted);
+    text-decoration: line-through;
+  }
+
+  /* Barre de progression section */
+  .ri-progress-bar {
+    width: 100%;
+    height: 4px;
+    background-color: var(--color-border);
+    border-radius: 2px;
+    margin-top: 12px;
+    overflow: hidden;
+  }
+  .ri-progress-fill {
+    height: 100%;
+    background-color: var(--color-primary);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+
+  /* Récapitulatif */
+  .ri-recap {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  @media (min-width: 600px) {
+    .ri-recap { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  .ri-recap-item {
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    text-align: center;
+  }
+  .ri-recap-item .ri-recap-val {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    display: block;
+  }
+  .ri-recap-item .ri-recap-label {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    display: block;
+    margin-top: 2px;
+  }
+
+  /* Boutons actions */
+  .ri-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 4px;
+  }
+  @media (max-width: 599px) {
+    .ri-actions { flex-direction: column; }
+    .ri-actions .btn { width: 100%; }
+  }
+
+  /* Statut d'archivage */
+  .ri-archive-status {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    font-style: italic;
+    margin-top: 8px;
+  }
+  .ri-archive-status.ri-ok {
+    color: #2F855A;
+    font-style: normal;
+  }
+  .ri-archive-status.ri-err {
+    color: #E53E3E;
+    font-style: normal;
+  }
+
+  /* Badge état statut */
+  .ri-statut-wrap {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .ri-statut-wrap label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--font-size-base);
+    font-weight: normal;
+    color: var(--color-text);
+    cursor: pointer;
+    min-height: 44px;
+  }
+  .ri-statut-wrap input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-primary);
+  }
+
+  /* Champ invalide */
+  .form-control.ri-invalid {
+    border-color: #E53E3E;
+    box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.15);
+  }
+
+  /* Séparateur de section formulaire */
+  .ri-form-sep {
+    margin-top: 16px;
+  }
+</style>
+
+<!-- ============================================================
+     EN-TÊTE DU PLUGIN
+     ============================================================ -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h2 class="card-title">Rapport d'intervention</h2>
+    <span class="badge badge-secondary" id="ri-badge-statut">En cours</span>
+  </div>
+  <div class="card-body">
+    <p class="text-muted text-sm">
+      Remplissez les sections au fur et à mesure de l'intervention.
+      Le rapport est sauvegardé automatiquement sur cet appareil.
+    </p>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION 1 — EN-TÊTE DU RAPPORT
+     ============================================================ -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h3 class="card-title">Informations intervention</h3>
+  </div>
+  <div class="card-body">
+
+    <!-- Ligne 1 : Technicien + Date -->
+    <div class="ri-grid ri-grid-3">
+      <div class="form-group">
+        <label class="form-label" for="ri-technicien">Technicien</label>
+        <input class="form-control" id="ri-technicien" type="text"
+               placeholder="Prénom Nom" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="ri-date">Date</label>
+        <input class="form-control" id="ri-date" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="ri-type-intervention">Type d'intervention <span aria-hidden="true">*</span></label>
+        <select class="form-control" id="ri-type-intervention">
+          <option value="Préventif">Préventif</option>
+          <option value="Correctif">Correctif</option>
+          <option value="Mise en service">Mise en service</option>
+          <option value="Formation">Formation</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Ligne 2 : Client + Machine -->
+    <div class="ri-grid ri-form-sep">
+      <div class="form-group">
+        <label class="form-label" for="ri-client">Client <span aria-hidden="true">*</span></label>
+        <input class="form-control" id="ri-client" type="text"
+               placeholder="Nom de l'entreprise" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="ri-machine">Référence machine <span aria-hidden="true">*</span></label>
+        <input class="form-control" id="ri-machine" type="text"
+               placeholder="Ex. R230 924" autocomplete="off">
+      </div>
+    </div>
+
+    <!-- Statut -->
+    <div class="form-group ri-form-sep">
+      <label class="form-label">Statut du rapport</label>
+      <div class="ri-statut-wrap">
+        <label>
+          <input type="radio" name="ri-statut" value="En cours" checked> En cours
+        </label>
+        <label>
+          <input type="radio" name="ri-statut" value="Terminé"> Terminé
+        </label>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION 2 — CHECKLISTS (ACCORDION)
+     ============================================================ -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h3 class="card-title">Checklists</h3>
+    <div class="ri-recap" id="ri-recap" style="margin:0; display:grid; grid-template-columns:repeat(4,1fr); gap:6px; font-size:0.75rem;">
+      <!-- Alimenté dynamiquement -->
+    </div>
+  </div>
+  <div class="card-body" style="padding-top:0;">
+
+    <!-- Section : Sécurité & accueil -->
+    <div class="ri-section" id="ri-sec-securite">
+      <button class="ri-section-header" type="button"
+              data-section="securite" aria-expanded="false">
+        <span class="ri-section-title-wrap">
+          <span>Sécurité &amp; accueil</span>
+          <span class="ri-section-badge" id="ri-badge-securite">0/5</span>
+        </span>
+        <svg class="ri-section-chevron" xmlns="http://www.w3.org/2000/svg"
+             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </button>
+      <div class="ri-section-body" id="ri-body-securite">
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-s1" data-section="securite">
+          <label for="ri-cb-s1">EPI vérifiés (chaussures, lunettes, gants…)</label>
+        </div>
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-s2" data-section="securite">
+          <label for="ri-cb-s2">Consignes de sécurité du site prises en compte</label>
+        </div>
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-s3" data-section="securite">
+          <label for="ri-cb-s3">Zone de travail balisée</label>
+        </div>
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-s4" data-section="securite">
+          <label for="ri-cb-s4">Machine déconsignée / consignée selon besoin</label>
+        </div>
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-s5" data-section="securite">
+          <label for="ri-cb-s5">Accès autorisé par le responsable site</label>
+        </div>
+        <div class="ri-progress-bar">
+          <div class="ri-progress-fill" id="ri-prog-securite" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section : Diagnostic initial -->
+    <div class="ri-section" id="ri-sec-diagnostic">
+      <button class="ri-section-header" type="button"
+              data-section="diagnostic" aria-expanded="false">
+        <span class="ri-section-title-wrap">
+          <span>Diagnostic initial</span>
+          <span class="ri-section-badge" id="ri-badge-diagnostic">0/5</span>
+        </span>
+        <svg class="ri-section-chevron" xmlns="http://www.w3.org/2000/svg"
+             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </button>
+      <div class="ri-section-body" id="ri-body-diagnostic">
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-d1" data-section="diagnostic">
+          <label for="ri-cb-d1">Historique machine consulté</label>
+        </div>
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-d2" data-section="diagnostic">
+          <label for="ri-cb-d2">Pannes précédentes identifiées</label>
+        </div>
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-d3" data-section="diagnostic">
+          <label for="ri-cb-d3">Mesures relevées (pression, température, débits…)</label>
+        </div>
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-d4" data-section="diagnostic">
+          <label for="ri-cb-d4">Photos prises avant intervention</label>
+        </div>
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-d5" data-section="diagnostic">
+          <label for="ri-cb-d5">Client informé du diagnostic et des travaux prévus</label>
+        </div>
+        <div class="ri-progress-bar">
+          <div class="ri-progress-fill" id="ri-prog-diagnostic" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section : Travaux réalisés -->
+    <div class="ri-section" id="ri-sec-travaux">
+      <button class="ri-section-header" type="button"
+              data-section="travaux" aria-expanded="false">
+        <span class="ri-section-title-wrap">
+          <span>Travaux réalisés</span>
+          <span class="ri-section-badge" id="ri-badge-travaux">0/6</span>
+        </span>
+        <svg class="ri-section-chevron" xmlns="http://www.w3.org/2000/svg"
+             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </button>
+      <div class="ri-section-body" id="ri-body-travaux">
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-t1" data-section="travaux">
+          <label for="ri-cb-t1">Pièces remplacées (référencées dans les commentaires)</label>
+        </div>
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-t2" data-section="travaux">
+          <label for="ri-cb-t2">Réglages effectués et consignés</label>
+        </div>
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-t3" data-section="travaux">
+          <label for="ri-cb-t3">Nettoyage de la zone d'intervention réalisé</label>
+        </div>
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-t4" data-section="travaux">
+          <label for="ri-cb-t4">Tests fonctionnels OK</label>
+        </div>
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-t5" data-section="travaux">
+          <label for="ri-cb-t5">Valeurs nominales rétablies et vérifiées</label>
+        </div>
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-t6" data-section="travaux">
+          <label for="ri-cb-t6">Documentation technique mise à jour</label>
+        </div>
+        <div class="ri-progress-bar">
+          <div class="ri-progress-fill" id="ri-prog-travaux" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section : Clôture -->
+    <div class="ri-section" id="ri-sec-cloture">
+      <button class="ri-section-header" type="button"
+              data-section="cloture" aria-expanded="false">
+        <span class="ri-section-title-wrap">
+          <span>Clôture</span>
+          <span class="ri-section-badge" id="ri-badge-cloture">0/4</span>
+        </span>
+        <svg class="ri-section-chevron" xmlns="http://www.w3.org/2000/svg"
+             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </button>
+      <div class="ri-section-body" id="ri-body-cloture">
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-c1" data-section="cloture">
+          <label for="ri-cb-c1">Machine remise en production</label>
+        </div>
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-c2" data-section="cloture">
+          <label for="ri-cb-c2">Validation client (signature ou accord oral consigné)</label>
+        </div>
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-c3" data-section="cloture">
+          <label for="ri-cb-c3">Rapport signé ou transmis au client</label>
+        </div>
+        <div class="ri-item">
+          <input type="checkbox" id="ri-cb-c4" data-section="cloture">
+          <label for="ri-cb-c4">Pièces défectueuses retournées / mises en attente retour</label>
+        </div>
+        <div class="ri-progress-bar">
+          <div class="ri-progress-fill" id="ri-prog-cloture" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION 3 — COMMENTAIRES LIBRES
+     ============================================================ -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h3 class="card-title">Observations &amp; suite à donner</h3>
+  </div>
+  <div class="card-body">
+    <div class="form-group">
+      <label class="form-label" for="ri-commentaires">
+        Observations, pièces commandées, recommandations, suite à donner…
+      </label>
+      <textarea class="form-control" id="ri-commentaires"
+                rows="5"
+                placeholder="Décrire les observations, les pièces commandées (références, quantités), les actions à planifier…"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION 4 — ACTIONS
+     ============================================================ -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h3 class="card-title">Actions</h3>
+  </div>
+  <div class="card-body">
+
+    <div class="ri-actions">
+      <button class="btn btn-primary" id="ri-btn-pdf" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        Exporter en PDF
+      </button>
+
+      <button class="btn btn-secondary" id="ri-btn-archiver" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0
+               002-2V8m-9 4h4"/>
+        </svg>
+        Archiver dans Notion
+      </button>
+
+      <button class="btn btn-outline btn-sm" id="ri-btn-nouveau" type="button">
+        Nouveau rapport
+      </button>
+    </div>
+
+    <p class="ri-archive-status" id="ri-archive-status"></p>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     LOGIQUE DU PLUGIN
+     ============================================================ -->
+<script>
+(function () {
+  'use strict';
+
+  /* ----------------------------------------------------------
+     Configuration des sections et items
+     ---------------------------------------------------------- */
+  var SECTIONS = [
+    {
+      id:     'securite',
+      titre:  'Sécurité & accueil',
+      items:  [
+        'EPI vérifiés (chaussures, lunettes, gants…)',
+        'Consignes de sécurité du site prises en compte',
+        'Zone de travail balisée',
+        'Machine déconsignée / consignée selon besoin',
+        'Accès autorisé par le responsable site',
+      ],
+      cbs: ['ri-cb-s1','ri-cb-s2','ri-cb-s3','ri-cb-s4','ri-cb-s5'],
+    },
+    {
+      id:     'diagnostic',
+      titre:  'Diagnostic initial',
+      items:  [
+        'Historique machine consulté',
+        'Pannes précédentes identifiées',
+        'Mesures relevées (pression, température, débits…)',
+        'Photos prises avant intervention',
+        'Client informé du diagnostic et des travaux prévus',
+      ],
+      cbs: ['ri-cb-d1','ri-cb-d2','ri-cb-d3','ri-cb-d4','ri-cb-d5'],
+    },
+    {
+      id:     'travaux',
+      titre:  'Travaux réalisés',
+      items:  [
+        'Pièces remplacées (référencées dans les commentaires)',
+        'Réglages effectués et consignés',
+        'Nettoyage de la zone d\'intervention réalisé',
+        'Tests fonctionnels OK',
+        'Valeurs nominales rétablies et vérifiées',
+        'Documentation technique mise à jour',
+      ],
+      cbs: ['ri-cb-t1','ri-cb-t2','ri-cb-t3','ri-cb-t4','ri-cb-t5','ri-cb-t6'],
+    },
+    {
+      id:     'cloture',
+      titre:  'Clôture',
+      items:  [
+        'Machine remise en production',
+        'Validation client (signature ou accord oral consigné)',
+        'Rapport signé ou transmis au client',
+        'Pièces défectueuses retournées / mises en attente retour',
+      ],
+      cbs: ['ri-cb-c1','ri-cb-c2','ri-cb-c3','ri-cb-c4'],
+    },
+  ];
+
+  var CLE_LS   = 'muf_rapport_v1';
+  var timerSave = null;
+
+  /* ----------------------------------------------------------
+     Helpers DOM
+     ---------------------------------------------------------- */
+  function el(id) { return document.getElementById(id); }
+
+  /* ----------------------------------------------------------
+     Récupération des données du formulaire
+     ---------------------------------------------------------- */
+  function lireDonnees() {
+    var checkboxes = {};
+    SECTIONS.forEach(function (sec) {
+      sec.cbs.forEach(function (cbId) {
+        var cb = el(cbId);
+        if (cb) checkboxes[cbId] = cb.checked;
+      });
+    });
+
+    var statutRadio = document.querySelector('input[name="ri-statut"]:checked');
+
+    return {
+      technicien:       el('ri-technicien')       ? el('ri-technicien').value       : '',
+      date:             el('ri-date')             ? el('ri-date').value             : '',
+      client:           el('ri-client')           ? el('ri-client').value           : '',
+      machine:          el('ri-machine')          ? el('ri-machine').value          : '',
+      typeIntervention: el('ri-type-intervention') ? el('ri-type-intervention').value : 'Correctif',
+      statut:           statutRadio ? statutRadio.value : 'En cours',
+      commentaires:     el('ri-commentaires')     ? el('ri-commentaires').value     : '',
+      checkboxes:       checkboxes,
+    };
+  }
+
+  /* ----------------------------------------------------------
+     Restauration des données dans le formulaire
+     ---------------------------------------------------------- */
+  function appliquerDonnees(data) {
+    if (!data) return;
+
+    if (data.technicien !== undefined && el('ri-technicien')) {
+      el('ri-technicien').value = data.technicien;
+    }
+    if (data.date !== undefined && el('ri-date')) {
+      el('ri-date').value = data.date;
+    }
+    if (data.client !== undefined && el('ri-client')) {
+      el('ri-client').value = data.client;
+    }
+    if (data.machine !== undefined && el('ri-machine')) {
+      el('ri-machine').value = data.machine;
+    }
+    if (data.typeIntervention !== undefined && el('ri-type-intervention')) {
+      el('ri-type-intervention').value = data.typeIntervention;
+    }
+    if (data.statut !== undefined) {
+      var radios = document.querySelectorAll('input[name="ri-statut"]');
+      radios.forEach(function (r) {
+        r.checked = (r.value === data.statut);
+      });
+    }
+    if (data.commentaires !== undefined && el('ri-commentaires')) {
+      el('ri-commentaires').value = data.commentaires;
+    }
+    if (data.checkboxes) {
+      Object.keys(data.checkboxes).forEach(function (cbId) {
+        var cb = el(cbId);
+        if (cb) cb.checked = !!data.checkboxes[cbId];
+      });
+    }
+
+    majToutesSections();
+    majBadgeStatut(data.statut);
+  }
+
+  /* ----------------------------------------------------------
+     Sauvegarde localStorage (debounce 500ms)
+     ---------------------------------------------------------- */
+  function sauvegarder() {
+    clearTimeout(timerSave);
+    timerSave = setTimeout(function () {
+      try {
+        var data = lireDonnees();
+        localStorage.setItem(CLE_LS, JSON.stringify(data));
+      } catch (e) {
+        console.warn('[RapportIntervention] Impossible de sauvegarder :', e);
+      }
+    }, 500);
+  }
+
+  function chargerDepuisLS() {
+    try {
+      var brut = localStorage.getItem(CLE_LS);
+      if (!brut) return null;
+      return JSON.parse(brut);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /* ----------------------------------------------------------
+     Pré-remplissage depuis window.Parametrage
+     ---------------------------------------------------------- */
+  function preremplirDepuisParametrage() {
+    if (!window.Parametrage) return;
+
+    var prenom = window.Parametrage.get('prenom') || '';
+    var nom    = window.Parametrage.get('nom')    || '';
+    var tech   = [prenom, nom].filter(Boolean).join(' ');
+
+    if (tech && el('ri-technicien') && !el('ri-technicien').value) {
+      el('ri-technicien').value = tech;
+    }
+  }
+
+  /* ----------------------------------------------------------
+     Date du jour par défaut
+     ---------------------------------------------------------- */
+  function initialiserDate() {
+    var champDate = el('ri-date');
+    if (!champDate || champDate.value) return;
+    var now = new Date();
+    var annee = now.getFullYear();
+    var mois  = String(now.getMonth() + 1).padStart(2, '0');
+    var jour  = String(now.getDate()).padStart(2, '0');
+    champDate.value = annee + '-' + mois + '-' + jour;
+  }
+
+  /* ----------------------------------------------------------
+     Mise à jour d'une section (badge + barre de progression)
+     ---------------------------------------------------------- */
+  function majSection(secId) {
+    var sec = null;
+    SECTIONS.forEach(function (s) { if (s.id === secId) sec = s; });
+    if (!sec) return;
+
+    var total  = sec.cbs.length;
+    var coches = 0;
+    sec.cbs.forEach(function (cbId) {
+      var cb = el(cbId);
+      if (cb && cb.checked) coches++;
+    });
+
+    var badge = el('ri-badge-' + secId);
+    if (badge) badge.textContent = coches + '/' + total;
+
+    var prog = el('ri-prog-' + secId);
+    if (prog) prog.style.width = (total > 0 ? Math.round((coches / total) * 100) : 0) + '%';
+  }
+
+  function majToutesSections() {
+    SECTIONS.forEach(function (s) { majSection(s.id); });
+    majRecap();
+  }
+
+  /* ----------------------------------------------------------
+     Récapitulatif global (header card)
+     ---------------------------------------------------------- */
+  function majRecap() {
+    var recap = el('ri-recap');
+    if (!recap) return;
+
+    var html = '';
+    SECTIONS.forEach(function (sec) {
+      var total  = sec.cbs.length;
+      var coches = 0;
+      sec.cbs.forEach(function (cbId) {
+        var cb = el(cbId);
+        if (cb && cb.checked) coches++;
+      });
+      var abbr = sec.titre.split(' ')[0]; /* premier mot comme abréviation */
+      html += '<div style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:6px;padding:6px 8px;text-align:center;">' +
+              '<span style="font-size:1rem;font-weight:700;color:var(--color-primary);">' + coches + '/' + total + '</span>' +
+              '<br><span style="font-size:0.7rem;color:var(--color-text-muted);">' + abbr + '</span>' +
+              '</div>';
+    });
+    recap.innerHTML = html;
+  }
+
+  /* ----------------------------------------------------------
+     Badge statut en-tête plugin
+     ---------------------------------------------------------- */
+  function majBadgeStatut(statut) {
+    var badge = el('ri-badge-statut');
+    if (!badge) return;
+    badge.textContent = statut || 'En cours';
+    if (statut === 'Terminé') {
+      badge.className = 'badge badge-success';
+    } else {
+      badge.className = 'badge badge-secondary';
+    }
+  }
+
+  /* ----------------------------------------------------------
+     Accordion — toggle section
+     ---------------------------------------------------------- */
+  function toggleSection(secId) {
+    var header = document.querySelector('.ri-section-header[data-section="' + secId + '"]');
+    var body   = el('ri-body-' + secId);
+    if (!header || !body) return;
+
+    var estOuvert = body.classList.contains('ri-open');
+    header.classList.toggle('ri-open', !estOuvert);
+    body.classList.toggle('ri-open', !estOuvert);
+    header.setAttribute('aria-expanded', String(!estOuvert));
+  }
+
+  /* ----------------------------------------------------------
+     Validation minimale avant PDF
+     ---------------------------------------------------------- */
+  function valider() {
+    var champClient  = el('ri-client');
+    var champMachine = el('ri-machine');
+    var erreurs = [];
+
+    [champClient, champMachine].forEach(function (champ) {
+      if (champ) champ.classList.remove('ri-invalid');
+    });
+
+    if (champClient && !champClient.value.trim()) {
+      champClient.classList.add('ri-invalid');
+      erreurs.push('Client');
+    }
+    if (champMachine && !champMachine.value.trim()) {
+      champMachine.classList.add('ri-invalid');
+      erreurs.push('Référence machine');
+    }
+    return erreurs;
+  }
+
+  /* ----------------------------------------------------------
+     Formatage de la date pour le nom de fichier : YYYYMMDD
+     ---------------------------------------------------------- */
+  function dateVersNomFichier(dateStr) {
+    if (!dateStr) {
+      var now = new Date();
+      return String(now.getFullYear()) +
+             String(now.getMonth() + 1).padStart(2, '0') +
+             String(now.getDate()).padStart(2, '0');
+    }
+    return dateStr.replace(/-/g, '');
+  }
+
+  /* ----------------------------------------------------------
+     Formatage de la date pour l'affichage : DD/MM/YYYY
+     ---------------------------------------------------------- */
+  function dateVersAffichage(dateStr) {
+    if (!dateStr) return '';
+    var parts = dateStr.split('-');
+    if (parts.length === 3) return parts[2] + '/' + parts[1] + '/' + parts[0];
+    return dateStr;
+  }
+
+  /* ----------------------------------------------------------
+     Export PDF (jsPDF chargé en lazy)
+     ---------------------------------------------------------- */
+  function exporterPDF() {
+    var erreurs = valider();
+    if (erreurs.length > 0) {
+      alert('Merci de renseigner les champs obligatoires :\n\n• ' + erreurs.join('\n• '));
+      var premier = document.querySelector('.ri-invalid');
+      if (premier) premier.focus();
+      return;
+    }
+
+    var btnPDF = el('ri-btn-pdf');
+    if (btnPDF) btnPDF.disabled = true;
+
+    function genererPDF(jsPDF) {
+      var data = lireDonnees();
+      var doc  = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      var margeG  = 15;
+      var margeD  = 195;
+      var largeur = margeD - margeG;
+      var y       = 15;
+
+      /* En-tête Multivac */
+      doc.setFillColor(0, 58, 112); /* #003A70 */
+      doc.rect(0, 0, 210, 28, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('MULTIVAC France', margeG, 12);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text("Rapport d'intervention", margeG, 20);
+
+      /* Date en haut à droite */
+      doc.setFontSize(9);
+      doc.text(dateVersAffichage(data.date), margeD, 12, { align: 'right' });
+
+      y = 36;
+      doc.setTextColor(51, 51, 51); /* #333333 */
+
+      /* Bloc informations intervention */
+      doc.setFillColor(245, 245, 245); /* #F5F5F5 */
+      doc.rect(margeG, y - 5, largeur, 36, 'F');
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Technicien :', margeG + 2, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(data.technicien || '—', margeG + 30, y);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('Type :', margeG + 95, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(data.typeIntervention || '—', margeG + 110, y);
+
+      y += 7;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Client :', margeG + 2, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(data.client || '—', margeG + 30, y);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('Machine :', margeG + 95, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(data.machine || '—', margeG + 115, y);
+
+      y += 7;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Date :', margeG + 2, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(dateVersAffichage(data.date) || '—', margeG + 30, y);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('Statut :', margeG + 95, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(data.statut || '—', margeG + 115, y);
+
+      y += 14;
+
+      /* Checklists */
+      SECTIONS.forEach(function (sec) {
+        var total  = sec.cbs.length;
+        var coches = 0;
+        sec.cbs.forEach(function (cbId) {
+          var cb = el(cbId);
+          if (cb && cb.checked) coches++;
+        });
+
+        /* En-tête de section */
+        doc.setFillColor(0, 58, 112);
+        doc.rect(margeG, y - 4, largeur, 8, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text(sec.titre, margeG + 2, y);
+        doc.text(coches + '/' + total, margeD - 2, y, { align: 'right' });
+
+        y += 7;
+        doc.setTextColor(51, 51, 51);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+
+        sec.cbs.forEach(function (cbId, idx) {
+          var cb    = el(cbId);
+          var coche = cb && cb.checked;
+          var sym   = coche ? '[X]' : '[ ]';
+          var texte = sec.items[idx] || '';
+
+          /* Saut de page si nécessaire */
+          if (y > 265) {
+            doc.addPage();
+            y = 20;
+          }
+
+          doc.setTextColor(coche ? 120 : 51, coche ? 120 : 51, coche ? 120 : 51);
+          doc.text(sym, margeG + 2, y);
+          doc.text(texte, margeG + 12, y);
+          y += 6;
+        });
+
+        y += 4;
+
+        if (y > 265) {
+          doc.addPage();
+          y = 20;
+        }
+      });
+
+      /* Commentaires */
+      if (data.commentaires && data.commentaires.trim()) {
+        if (y > 220) {
+          doc.addPage();
+          y = 20;
+        }
+
+        doc.setFillColor(0, 58, 112);
+        doc.rect(margeG, y - 4, largeur, 8, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Observations & suite à donner', margeG + 2, y);
+
+        y += 7;
+        doc.setTextColor(51, 51, 51);
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', 'normal');
+
+        var lignes = doc.splitTextToSize(data.commentaires, largeur - 4);
+        lignes.forEach(function (ligne) {
+          if (y > 265) { doc.addPage(); y = 20; }
+          doc.text(ligne, margeG + 2, y);
+          y += 5.5;
+        });
+      }
+
+      /* Pied de page sur chaque page */
+      var nbPages = doc.getNumberOfPages();
+      for (var i = 1; i <= nbPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(7);
+        doc.setTextColor(150, 150, 150);
+        doc.text(
+          'MUF-WebApp — Multivac France   |   Page ' + i + '/' + nbPages,
+          105, 290, { align: 'center' }
+        );
+      }
+
+      /* Nom du fichier : rapport_YYYYMMDD_client.pdf */
+      var clientSlug = (data.client || 'client')
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, '')
+        .slice(0, 30);
+      var nomFichier = 'rapport_' + dateVersNomFichier(data.date) + '_' + clientSlug + '.pdf';
+      doc.save(nomFichier);
+
+      /* Archivage Notion après PDF */
+      archiverDansNotion(data);
+    }
+
+    /* Chargement lazy de jsPDF */
+    if (window.jspdf && window.jspdf.jsPDF) {
+      try {
+        genererPDF(window.jspdf.jsPDF);
+      } catch (e) {
+        console.error('[RapportIntervention] Erreur génération PDF :', e);
+      } finally {
+        if (btnPDF) btnPDF.disabled = false;
+      }
+    } else {
+      var script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      script.onload = function () {
+        try {
+          var jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+          if (!jsPDF) throw new Error('jsPDF non trouvé après chargement');
+          genererPDF(jsPDF);
+        } catch (e) {
+          console.error('[RapportIntervention] Erreur génération PDF :', e);
+          alert("Erreur lors de la génération du PDF. Vérifiez votre connexion et réessayez.");
+        } finally {
+          if (btnPDF) btnPDF.disabled = false;
+        }
+      };
+      script.onerror = function () {
+        alert("Impossible de charger jsPDF. Vérifiez votre connexion internet.");
+        if (btnPDF) btnPDF.disabled = false;
+      };
+      document.body.appendChild(script);
+    }
+  }
+
+  /* ----------------------------------------------------------
+     Archivage Notion
+     ---------------------------------------------------------- */
+  function archiverDansNotion(data) {
+    if (!window.NotionArchive) return;
+
+    var total  = 0;
+    var coches = 0;
+    SECTIONS.forEach(function (sec) {
+      total += sec.cbs.length;
+      sec.cbs.forEach(function (cbId) {
+        var cb = el(cbId);
+        if (cb && cb.checked) coches++;
+      });
+    });
+
+    var payload = {
+      nomClient:        data.client        || '',
+      typeMachine:      data.machine       || '',
+      date:             data.date          || '',
+      typeIntervention: data.typeIntervention || '',
+      technicien:       data.technicien    || '',
+      statut:           data.statut        || 'En cours',
+      reference:        [data.client, data.machine, data.date].filter(Boolean).join(' — '),
+      nbCoches:         coches,
+      nbTotal:          total,
+      commentaires:     data.commentaires  || '',
+    };
+
+    var statusEl = el('ri-archive-status');
+
+    window.NotionArchive.archiverRapport(payload);
+
+    if (statusEl) {
+      if (navigator.onLine && (window.Parametrage && window.Parametrage.get('notion_token'))) {
+        statusEl.textContent = 'Archivage Notion en cours…';
+        statusEl.className   = 'ri-archive-status';
+        setTimeout(function () {
+          statusEl.textContent = 'Archivé dans Notion.';
+          statusEl.className   = 'ri-archive-status ri-ok';
+        }, 2500);
+      } else {
+        statusEl.textContent = 'Offline ou token absent — archivage mis en file d\'attente.';
+        statusEl.className   = 'ri-archive-status ri-err';
+      }
+    }
+  }
+
+  /* ----------------------------------------------------------
+     Nouveau rapport (reset)
+     ---------------------------------------------------------- */
+  function nouveauRapport() {
+    if (!confirm('Créer un nouveau rapport ? Le rapport actuel sera effacé de cet appareil.')) return;
+
+    /* Réinitialiser les champs */
+    if (el('ri-technicien'))       el('ri-technicien').value = '';
+    if (el('ri-date'))             el('ri-date').value = '';
+    if (el('ri-client'))           el('ri-client').value = '';
+    if (el('ri-machine'))          el('ri-machine').value = '';
+    if (el('ri-type-intervention')) el('ri-type-intervention').value = 'Correctif';
+    if (el('ri-commentaires'))     el('ri-commentaires').value = '';
+
+    var radioEnCours = document.querySelector('input[name="ri-statut"][value="En cours"]');
+    if (radioEnCours) radioEnCours.checked = true;
+
+    SECTIONS.forEach(function (sec) {
+      sec.cbs.forEach(function (cbId) {
+        var cb = el(cbId);
+        if (cb) cb.checked = false;
+      });
+    });
+
+    /* Supprimer les indicateurs d'erreur */
+    document.querySelectorAll('.ri-invalid').forEach(function (e) {
+      e.classList.remove('ri-invalid');
+    });
+
+    var statusEl = el('ri-archive-status');
+    if (statusEl) statusEl.textContent = '';
+
+    majToutesSections();
+    majBadgeStatut('En cours');
+
+    /* Supprimer le localStorage */
+    try { localStorage.removeItem(CLE_LS); } catch (e) {}
+
+    /* Ré-initialiser depuis Parametrage + date */
+    preremplirDepuisParametrage();
+    initialiserDate();
+  }
+
+  /* ----------------------------------------------------------
+     Branchement des événements
+     ---------------------------------------------------------- */
+
+  /* Accordion */
+  document.querySelectorAll('.ri-section-header').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var secId = btn.getAttribute('data-section');
+      toggleSection(secId);
+    });
+  });
+
+  /* Checkboxes */
+  SECTIONS.forEach(function (sec) {
+    sec.cbs.forEach(function (cbId) {
+      var cb = el(cbId);
+      if (!cb) return;
+      cb.addEventListener('change', function () {
+        majSection(sec.id);
+        majRecap();
+        sauvegarder();
+      });
+    });
+  });
+
+  /* Champs texte / select / radio */
+  var champsTexte = [
+    'ri-technicien', 'ri-date', 'ri-client', 'ri-machine',
+    'ri-type-intervention', 'ri-commentaires',
+  ];
+  champsTexte.forEach(function (id) {
+    var champ = el(id);
+    if (!champ) return;
+    champ.addEventListener('input', sauvegarder);
+    champ.addEventListener('change', sauvegarder);
+  });
+
+  document.querySelectorAll('input[name="ri-statut"]').forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      majBadgeStatut(radio.value);
+      sauvegarder();
+    });
+  });
+
+  /* Boutons */
+  var btnPDF      = el('ri-btn-pdf');
+  var btnArchiver = el('ri-btn-archiver');
+  var btnNouveau  = el('ri-btn-nouveau');
+
+  if (btnPDF)      btnPDF.addEventListener('click', exporterPDF);
+  if (btnArchiver) btnArchiver.addEventListener('click', function () {
+    archiverDansNotion(lireDonnees());
+  });
+  if (btnNouveau)  btnNouveau.addEventListener('click', nouveauRapport);
+
+  /* ----------------------------------------------------------
+     Initialisation
+     ---------------------------------------------------------- */
+  var donneesSauvegardees = chargerDepuisLS();
+  if (donneesSauvegardees) {
+    appliquerDonnees(donneesSauvegardees);
+  } else {
+    preremplirDepuisParametrage();
+    initialiserDate();
+    majToutesSections();
+  }
+
+})();
+</script>
