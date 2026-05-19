@@ -291,22 +291,6 @@
             <option value="Busch COBRA NC 0400">Busch COBRA NC 0400</option>
             <option value="Busch COBRA NC 0450">Busch COBRA NC 0450</option>
           </optgroup>
-          <optgroup label="Edwards GV (palettes)">
-            <option value="Edwards GV80">Edwards GV80</option>
-            <option value="Edwards GV160">Edwards GV160</option>
-            <option value="Edwards GV250">Edwards GV250</option>
-            <option value="Edwards GV600">Edwards GV600</option>
-            <option value="Edwards GV1000">Edwards GV1000</option>
-            <option value="Edwards GV2000">Edwards GV2000</option>
-          </optgroup>
-          <optgroup label="Becker KDT / VTLF (palettes)">
-            <option value="Becker KDT 100">Becker KDT 100</option>
-            <option value="Becker KDT 300">Becker KDT 300</option>
-            <option value="Becker VTLF 250">Becker VTLF 250</option>
-            <option value="Becker VTLF 400">Becker VTLF 400</option>
-            <option value="Becker VTLF 1000">Becker VTLF 1000</option>
-            <option value="Becker VTLF 2000">Becker VTLF 2000</option>
-          </optgroup>
         </select>
       </div>
     </div>
@@ -323,11 +307,40 @@
       <label for="cv-rootsModel">Modèle Roots</label>
       <select id="cv-rootsModel" class="form-control">
         <option value="Aucune">Aucune</option>
-        <option value="Atlas Copco DRT1000">Atlas Copco DRT1000</option>
-        <option value="Atlas Copco DRT2000">Atlas Copco DRT2000</option>
-        <option value="Busch PANDA WV 1000">Busch PANDA WV 1000</option>
-        <option value="Busch PANDA WV 2000">Busch PANDA WV 2000</option>
+        <optgroup label="Busch PANDA (Roots avec bypass)">
+          <option value="Busch PANDA 250">Busch PANDA 250 m³/h</option>
+          <option value="Busch PANDA 500">Busch PANDA 500 m³/h</option>
+          <option value="Busch PANDA 1000">Busch PANDA 1000 m³/h</option>
+          <option value="Busch PANDA 2000">Busch PANDA 2000 m³/h</option>
+        </optgroup>
+        <optgroup label="Busch PUMA (Roots sans bypass)">
+          <option value="Busch PUMA 500">Busch PUMA 500 m³/h</option>
+          <option value="Busch PUMA 1000">Busch PUMA 1000 m³/h</option>
+          <option value="Busch PUMA 2000">Busch PUMA 2000 m³/h</option>
+        </optgroup>
+        <optgroup label="Edwards EH (Roots)">
+          <option value="Edwards EH 250">Edwards EH 250 m³/h</option>
+          <option value="Edwards EH 500">Edwards EH 500 m³/h</option>
+          <option value="Edwards EH 1200">Edwards EH 1200 m³/h</option>
+          <option value="Edwards EH 2600">Edwards EH 2600 m³/h</option>
+        </optgroup>
+        <optgroup label="Becker Roots (boosters à lobes)">
+          <option value="Becker Roots 500">Becker Roots 500 m³/h</option>
+          <option value="Becker Roots 1000">Becker Roots 1000 m³/h</option>
+          <option value="Becker Roots 2000">Becker Roots 2000 m³/h</option>
+        </optgroup>
+        <optgroup label="Atlas Copco DRT">
+          <option value="Atlas Copco DRT1000">Atlas Copco DRT1000</option>
+          <option value="Atlas Copco DRT2000">Atlas Copco DRT2000</option>
+        </optgroup>
       </select>
+    </div>
+    <!-- Tarage bypass PANDA — visible uniquement si Roots avec bypass sélectionné -->
+    <div id="cv-bypassTarring-wrap" style="display:none;">
+      <div class="cv-field">
+        <label for="cv-bypassTarring">Tarage du bypass (mbar abs)</label>
+        <input id="cv-bypassTarring" type="number" step="1" min="5" max="200" placeholder="ex : 40" class="form-control" value="40">
+      </div>
     </div>
   </div>
 </div>
@@ -416,12 +429,13 @@
     </div>
 
     <div class="cv-field">
-      <label for="cv-elbowCount">Coudes 90° DN60 supplémentaires (amont répartiteur)</label>
+      <label for="cv-elbowCount">Coudes 90° DN60 supplémentaires sur le tuyau amont</label>
       <input id="cv-elbowCount" type="number" step="1" min="0" placeholder="ex : 2" class="form-control" value="0">
+      <small style="color:#6b7280;font-size:11px;margin-top:4px;display:block;">Ne pas compter le coude du répartiteur — il est toujours inclus automatiquement (voir ci-dessous).</small>
     </div>
 
     <div class="cv-result-box">
-      Répartiteur (fixe) : <strong>DN70 × 10 cm = 0.38 L + 1 coude DN60 90° fixe</strong><br>
+      Répartiteur (fixe) : <strong>DN70 × 10 cm = 0.38 L + 1 coude DN60 90° fixe</strong> — <em>toujours comptabilisé dans le calcul</em><br>
       Circuit interne outillage (fixe) : <strong>DN22 × 25 cm × 4 = 0.38 L</strong>
     </div>
 
@@ -516,81 +530,159 @@
         return 0.07;
       }
     },
-    /* Edwards GV (pompes à palettes rotatives) */
-    'Edwards GV80': {
-      flow: function (p) { return p > 100 ? 0.022 : p > 10 ? 0.018 : 0.011; }
-    },
-    'Edwards GV160': {
-      flow: function (p) { return p > 100 ? 0.044 : p > 10 ? 0.036 : 0.022; }
-    },
-    'Edwards GV250': {
-      flow: function (p) { return p > 100 ? 0.069 : p > 10 ? 0.056 : 0.034; }
-    },
-    'Edwards GV600': {
-      flow: function (p) { return p > 100 ? 0.167 : p > 10 ? 0.136 : 0.083; }
-    },
-    'Edwards GV1000': {
-      flow: function (p) { return p > 100 ? 0.278 : p > 10 ? 0.222 : 0.139; }
-    },
-    'Edwards GV2000': {
-      flow: function (p) { return p > 100 ? 0.556 : p > 10 ? 0.444 : 0.278; }
-    },
-    /* Becker KDT / VTLF (pompes à palettes rotatives) */
-    'Becker KDT 100': {
-      flow: function (p) { return p > 100 ? 0.028 : p > 10 ? 0.022 : 0.014; }
-    },
-    'Becker KDT 300': {
-      flow: function (p) { return p > 100 ? 0.083 : p > 10 ? 0.067 : 0.042; }
-    },
-    'Becker VTLF 250': {
-      flow: function (p) { return p > 100 ? 0.069 : p > 10 ? 0.056 : 0.035; }
-    },
-    'Becker VTLF 400': {
-      flow: function (p) { return p > 100 ? 0.111 : p > 10 ? 0.089 : 0.056; }
-    },
-    'Becker VTLF 1000': {
-      flow: function (p) { return p > 100 ? 0.278 : p > 10 ? 0.222 : 0.139; }
-    },
-    'Becker VTLF 2000': {
-      flow: function (p) { return p > 100 ? 0.556 : p > 10 ? 0.444 : 0.278; }
-    }
   };
 
   var rootsModels = {
     'Aucune': {
-      enabled: false,
+      enabled: false, hasBypass: false,
       gain: function () { return 1; }
     },
+
+    /* ---- Busch PANDA (Roots avec bypass) ----
+     * Le bypass s'ouvre au-delà du tarage → Roots inactif.
+     * En dessous du tarage : le bypass se ferme progressivement,
+     * le gain monte jusqu'à gainMax au seuil T/2.
+     * gainMax ≈ 3.5 (compression ratio typique palettes Busch). */
+    'Busch PANDA 250': {
+      enabled: true, hasBypass: true, gainMax: 3.5,
+      gain: function (p, T) {
+        T = T || 40;
+        if (p >= T) return 1;
+        return 1 + (this.gainMax - 1) * Math.min((T - p) / (T * 0.5), 1.0);
+      }
+    },
+    'Busch PANDA 500': {
+      enabled: true, hasBypass: true, gainMax: 3.5,
+      gain: function (p, T) {
+        T = T || 40;
+        if (p >= T) return 1;
+        return 1 + (this.gainMax - 1) * Math.min((T - p) / (T * 0.5), 1.0);
+      }
+    },
+    'Busch PANDA 1000': {
+      enabled: true, hasBypass: true, gainMax: 3.5,
+      gain: function (p, T) {
+        T = T || 40;
+        if (p >= T) return 1;
+        return 1 + (this.gainMax - 1) * Math.min((T - p) / (T * 0.5), 1.0);
+      }
+    },
+    'Busch PANDA 2000': {
+      enabled: true, hasBypass: true, gainMax: 3.5,
+      gain: function (p, T) {
+        T = T || 40;
+        if (p >= T) return 1;
+        return 1 + (this.gainMax - 1) * Math.min((T - p) / (T * 0.5), 1.0);
+      }
+    },
+
+    /* ---- Busch PUMA (Roots sans bypass) ----
+     * Engagement progressif dès 200 mbar, plein gain sous 40 mbar.
+     * gainMax ≈ 4.0 (performances légèrement supérieures au PANDA sans perte bypass). */
+    'Busch PUMA 500': {
+      enabled: true, hasBypass: false, gainMax: 4.0,
+      gain: function (p) {
+        if (p > 200) return 1;
+        if (p > 40)  return 1 + (this.gainMax - 1) * (200 - p) / 160;
+        return this.gainMax;
+      }
+    },
+    'Busch PUMA 1000': {
+      enabled: true, hasBypass: false, gainMax: 4.0,
+      gain: function (p) {
+        if (p > 200) return 1;
+        if (p > 40)  return 1 + (this.gainMax - 1) * (200 - p) / 160;
+        return this.gainMax;
+      }
+    },
+    'Busch PUMA 2000': {
+      enabled: true, hasBypass: false, gainMax: 4.0,
+      gain: function (p) {
+        if (p > 200) return 1;
+        if (p > 40)  return 1 + (this.gainMax - 1) * (200 - p) / 160;
+        return this.gainMax;
+      }
+    },
+
+    /* ---- Edwards EH (Roots / mechanical booster) ----
+     * Série EH : boosters mécaniques haute performance sans bypass intégré.
+     * Engagement dès 200 mbar, gainMax ≈ 4.5 (meilleur taux de compression). */
+    'Edwards EH 250': {
+      enabled: true, hasBypass: false, gainMax: 4.5,
+      gain: function (p) {
+        if (p > 200) return 1;
+        if (p > 40)  return 1 + (this.gainMax - 1) * (200 - p) / 160;
+        return this.gainMax;
+      }
+    },
+    'Edwards EH 500': {
+      enabled: true, hasBypass: false, gainMax: 4.5,
+      gain: function (p) {
+        if (p > 200) return 1;
+        if (p > 40)  return 1 + (this.gainMax - 1) * (200 - p) / 160;
+        return this.gainMax;
+      }
+    },
+    'Edwards EH 1200': {
+      enabled: true, hasBypass: false, gainMax: 4.5,
+      gain: function (p) {
+        if (p > 200) return 1;
+        if (p > 40)  return 1 + (this.gainMax - 1) * (200 - p) / 160;
+        return this.gainMax;
+      }
+    },
+    'Edwards EH 2600': {
+      enabled: true, hasBypass: false, gainMax: 4.5,
+      gain: function (p) {
+        if (p > 200) return 1;
+        if (p > 40)  return 1 + (this.gainMax - 1) * (200 - p) / 160;
+        return this.gainMax;
+      }
+    },
+
+    /* ---- Becker Roots (boosters à lobes) ----
+     * Série VSB : Roots industriels sans bypass.
+     * gainMax ≈ 4.0, courbe identique aux PUMA. */
+    'Becker Roots 500': {
+      enabled: true, hasBypass: false, gainMax: 4.0,
+      gain: function (p) {
+        if (p > 200) return 1;
+        if (p > 40)  return 1 + (this.gainMax - 1) * (200 - p) / 160;
+        return this.gainMax;
+      }
+    },
+    'Becker Roots 1000': {
+      enabled: true, hasBypass: false, gainMax: 4.0,
+      gain: function (p) {
+        if (p > 200) return 1;
+        if (p > 40)  return 1 + (this.gainMax - 1) * (200 - p) / 160;
+        return this.gainMax;
+      }
+    },
+    'Becker Roots 2000': {
+      enabled: true, hasBypass: false, gainMax: 4.0,
+      gain: function (p) {
+        if (p > 200) return 1;
+        if (p > 40)  return 1 + (this.gainMax - 1) * (200 - p) / 160;
+        return this.gainMax;
+      }
+    },
+
+    /* ---- Atlas Copco DRT (Roots sans bypass) — conservés ---- */
     'Atlas Copco DRT1000': {
-      enabled: true,
+      enabled: true, hasBypass: false, gainMax: 2.5,
       gain: function (p) {
         if (p > 100) return 1;
-        if (p > 40)  return 1 + ((100 - p) / 60) * 1.5;
-        return 2.5;
+        if (p > 40)  return 1 + (this.gainMax - 1) * (100 - p) / 60;
+        return this.gainMax;
       }
     },
     'Atlas Copco DRT2000': {
-      enabled: true,
+      enabled: true, hasBypass: false, gainMax: 3.5,
       gain: function (p) {
         if (p > 100) return 1;
-        if (p > 40)  return 1 + ((100 - p) / 60) * 2.5;
-        return 3.5;
-      }
-    },
-    'Busch PANDA WV 1000': {
-      enabled: true,
-      gain: function (p) {
-        if (p > 100) return 1;
-        if (p > 40)  return 1 + ((100 - p) / 60) * 1.7;
-        return 2.7;
-      }
-    },
-    'Busch PANDA WV 2000': {
-      enabled: true,
-      gain: function (p) {
-        if (p > 100) return 1;
-        if (p > 40)  return 1 + ((100 - p) / 60) * 2.8;
-        return 3.8;
+        if (p > 40)  return 1 + (this.gainMax - 1) * (100 - p) / 60;
+        return this.gainMax;
       }
     }
   };
@@ -600,12 +692,34 @@
      ============================================================ */
 
   /* --- toolingVolume.js --- */
-  /* Bug 2 corrigé : les cales réduisent le volume (soustraction) */
+  /*
+   * Volume de la cavité outillage.
+   *
+   * Sans cales : V = laize × (pitch − 20) × depth
+   *
+   * Avec cales : les cales ne remplissent PAS toute la surface — jeu de 10 mm
+   * de chaque côté (côté laize et côté pas d'avance).
+   *   Dimensions réelles des cales :
+   *     largeur = laize − 20 mm   (−10 mm de chaque côté)
+   *     longueur = effPitch − 20 mm (−10 mm de chaque côté)
+   *   Volume déplacé par les cales = largeur × longueur × épaisseurCales
+   *   Volume final = cavité totale − volume_cales
+   */
   function calculateToolingVolume(laize, pitch, depth, hasFillers, fillerThickness) {
-    var effPitch = pitch - 20; /* soustraction cadre outillage */
-    var surface  = laize * effPitch;
-    var effDepth = hasFillers ? Math.max(depth - fillerThickness, 0) : depth;
-    return (surface * effDepth) / 1e9; /* m³ */
+    var effPitch  = pitch - 20;                /* soustraction cadre outillage */
+    var cavityVol = laize * effPitch * depth;  /* mm³, cavité brute */
+
+    if (!hasFillers || fillerThickness <= 0) {
+      return cavityVol / 1e9; /* m³ */
+    }
+
+    /* Cales : jeu 10 mm de chaque côté → dimensions réelles */
+    var caleW   = Math.max(laize - 20, 0);
+    var caleL   = Math.max(effPitch - 20, 0);
+    var caleT   = Math.min(fillerThickness, depth); /* cale ne peut pas dépasser la profondeur */
+    var caleVol = caleW * caleL * caleT;
+
+    return Math.max(cavityVol - caleVol, 0) / 1e9; /* m³ */
   }
 
   /* --- network.js --- */
@@ -706,6 +820,7 @@
     networkPressure:      '35',
     pumpModel:            'Busch R5 RA 0250',
     rootsModel:            'Aucune',
+    rootsBypassTarring:    '40',
     machineType:           'centralized_vanne',
     sourceTubeDiameter:    '60',
     sourceTubeLength:      '',
@@ -736,6 +851,8 @@
   var elNetworkPressure      = document.getElementById('cv-networkPressure');
   var elPumpModel            = document.getElementById('cv-pumpModel');
   var elRootsModel             = document.getElementById('cv-rootsModel');
+  var elBypassTarringWrap      = document.getElementById('cv-bypassTarring-wrap');
+  var elRootsBypassTarring     = document.getElementById('cv-bypassTarring');
   var elMachineType            = document.getElementById('cv-machineType');
   var elMachineTypeDesc        = document.getElementById('cv-machineType-desc');
   var elSourceTubeDiameter     = document.getElementById('cv-sourceTubeDiameter');
@@ -769,6 +886,7 @@
       networkPressure:      elNetworkPressure.value,
       pumpModel:            elPumpModel.value,
       rootsModel:             elRootsModel.value,
+      rootsBypassTarring:     elRootsBypassTarring.value,
       machineType:            elMachineType.value,
       sourceTubeDiameter:     elSourceTubeDiameter.value,
       sourceTubeLength:       elSourceTubeLength.value,
@@ -791,6 +909,7 @@
     elNetworkPressure.value      = st.networkPressure    !== undefined ? st.networkPressure    : defaultState.networkPressure;
     elPumpModel.value                = st.pumpModel              || defaultState.pumpModel;
     elRootsModel.value               = st.rootsModel             || defaultState.rootsModel;
+    elRootsBypassTarring.value       = st.rootsBypassTarring !== undefined ? st.rootsBypassTarring : defaultState.rootsBypassTarring;
     elMachineType.value              = st.machineType            || defaultState.machineType;
     elSourceTubeDiameter.value       = st.sourceTubeDiameter     || defaultState.sourceTubeDiameter;
     elSourceTubeLength.value         = st.sourceTubeLength       !== undefined ? st.sourceTubeLength       : defaultState.sourceTubeLength;
@@ -848,6 +967,10 @@
     var hasRoots = elRootsModel.value !== 'Aucune';
     elTube2Wrap.style.display = hasRoots ? 'block' : 'none';
 
+    /* Tarage bypass : visible uniquement si le Roots sélectionné a un bypass */
+    var rootsHasBypass = rootsModels[elRootsModel.value] && rootsModels[elRootsModel.value].hasBypass;
+    elBypassTarringWrap.style.display = rootsHasBypass ? 'block' : 'none';
+
     /* 3ème tuyau : visible si bol décanteur */
     var hasBol = (elMachineType.value === 'bol_remote' || elMachineType.value === 'bol_only');
     elTube3Wrap.style.display = hasBol ? 'block' : 'none';
@@ -891,15 +1014,18 @@
   }
 
   /* Gain du Roots selon la pression courante */
-  function rootsGain(p, rootsModelKey) {
+  function rootsGain(p, rootsModelKey, bypassTarring) {
     var r = rootsModels[rootsModelKey];
     if (!r || !r.enabled) return 1;
-    return r.gain(p);
+    return r.hasBypass ? r.gain(p, bypassTarring) : r.gain(p);
   }
 
-  /* Format mm:ss */
+  /* Format : secondes si < 60 s, sinon min+s */
   function formatTime(seconds) {
     if (!isFinite(seconds) || seconds < 0) return '—';
+    if (seconds < 60) {
+      return seconds.toFixed(1) + ' s';
+    }
     var m = Math.floor(seconds / 60);
     var s = Math.round(seconds % 60);
     return m + 'min ' + (s < 10 ? '0' : '') + s + 's';
@@ -995,21 +1121,39 @@
     if (st.sourceType === 'network') {
       var pReseau = parseFloat(st.networkPressure);
       if (!pReseau || pReseau <= 0) { renderEmpty(); return; }
-      if (pReseau >= pFinal) {
-        /* Réseau trop faible pour atteindre pFinal : afficher un avertissement */
+      var hasRootsBooster = st.rootsModel && st.rootsModel !== 'Aucune'
+                            && rootsModels[st.rootsModel] && rootsModels[st.rootsModel].enabled;
+      if (!hasRootsBooster && pReseau >= pFinal) {
+        /* Réseau trop faible pour atteindre pFinal et pas de booster Roots : afficher un avertissement */
         elResultsContent.innerHTML =
           '<p class="cv-results-empty" style="color:#e53e3e;">⚠️ La pression réseau (' + pReseau +
           ' mbar) est supérieure ou égale à la cible (' + pFinal + ' mbar). Le réseau ne peut pas atteindre cet objectif.</p>';
         return;
       }
-      /* Intégration V_aval de ATM → pFinal */
+      /* RÉSEAU : intégration V_aval */
+      /* Phase 1 : ATM → pReseau (ou pFinal si cible > pReseau) — débit réseau pur */
+      var pEnd1 = hasRootsBooster ? Math.max(pFinal, pReseau) : pFinal;
       var pA    = ATM;
-      var dlogA = (Math.log(ATM) - Math.log(pFinal)) / steps;
+      var dlogA = (Math.log(ATM) - Math.log(pEnd1)) / steps;
       for (var i = 0; i < steps; i++) {
         var pANext = Math.exp(Math.log(pA) - dlogA);
         var qA     = sourceFlow(pA, st) / penalty;
         if (qA > 0) t += (volAval / qA) * Math.log(pA / pANext);
         pA = pANext;
+      }
+      /* Phase 2 (uniquement si Roots actif et pFinal < pReseau) : pReseau → pFinal */
+      if (hasRootsBooster && pFinal < pReseau) {
+        var qBacking      = networkFlow(pReseau, parseFloat(st.networkInletDiameter) || 50);
+        var bypassTarring = parseFloat(st.rootsBypassTarring) || 40;
+        var pB    = pReseau;
+        var dlogB = (Math.log(pReseau) - Math.log(pFinal)) / steps;
+        for (var j = 0; j < steps; j++) {
+          var pBNext = Math.exp(Math.log(pB) - dlogB);
+          var gain   = rootsGain(pB, st.rootsModel, bypassTarring);
+          var qB     = (qBacking * gain) / penalty;
+          if (qB > 0) t += (volAval / qB) * Math.log(pB / pBNext);
+          pB = pBNext;
+        }
       }
       P_eq = ATM; /* pas d'équilibrage significatif pour le réseau */
     }
@@ -1031,7 +1175,7 @@
         var dlogB = (Math.log(P_eq) - Math.log(pFinal)) / steps;
         for (var j = 0; j < steps; j++) {
           var pBNext = Math.exp(Math.log(pB) - dlogB);
-          var qB     = (sourceFlow(pB, st) * rootsGain(pB, st.rootsModel)) / penalty;
+          var qB     = (sourceFlow(pB, st) * rootsGain(pB, st.rootsModel, parseFloat(st.rootsBypassTarring) || 40)) / penalty;
           if (qB > 0) t += (volTotal / qB) * Math.log(pB / pBNext);
           pB = pBNext;
         }
@@ -1140,7 +1284,7 @@
     elNetworkPressure,
     elSourceTubeLength, elSourceTube2Length,
     elTube3Length, elOutillageTubesLength, elElbowCount,
-    elFinalPressure
+    elFinalPressure, elRootsBypassTarring
   ];
 
   inputs.forEach(function (el) {
