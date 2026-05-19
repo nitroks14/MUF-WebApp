@@ -1008,9 +1008,14 @@
       var pump = primaryPumpModels[state.pumpModel];
       return pump ? pump.flow(p) : 0;
     }
-    /* Mode réseau — débit uniquement fonction du diamètre d'arrivée */
-    var dia = parseFloat(state.networkInletDiameter) || 50;
-    return networkFlow(p, dia);
+    /* Mode réseau — goulot d'étranglement = min(diamètre réseau, diamètre Tuyau 1).
+     * Le Tuyau 1 est l'unique conduit entre le réseau et le répartiteur :
+     * tout le débit y passe. Le réseau de bâtiment est généralement surdimensionné.
+     * Utiliser uniquement le diamètre réseau (ex. DN100) surestime le débit ×3-4. */
+    var dInlet  = parseFloat(state.networkInletDiameter) || 50;
+    var dSource = parseFloat(state.sourceTubeDiameter)   || 60;
+    var dEff    = Math.min(dInlet, dSource);
+    return networkFlow(p, dEff);
   }
 
   /* Gain du Roots selon la pression courante */
