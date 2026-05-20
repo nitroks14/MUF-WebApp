@@ -172,18 +172,20 @@
   var timerSave = null;
 
   /* ----------------------------------------------------------
-     Helpers DOM
+     Références DOM
      ---------------------------------------------------------- */
-  function el(id) { return document.getElementById(id); }
+  var champDate    = document.getElementById('ri-date');
+  var champClient  = document.getElementById('ri-client');
+  var champMachine = document.getElementById('ri-machine');
 
   /* ----------------------------------------------------------
      Récupération des données du formulaire (3 champs minimaux)
      ---------------------------------------------------------- */
   function lireDonnees() {
     return {
-      date:    el('ri-date')    ? el('ri-date').value    : '',
-      client:  el('ri-client')  ? el('ri-client').value  : '',
-      machine: el('ri-machine') ? el('ri-machine').value : '',
+      date:    champDate    ? champDate.value    : '',
+      client:  champClient  ? champClient.value  : '',
+      machine: champMachine ? champMachine.value : '',
     };
   }
 
@@ -192,15 +194,9 @@
      ---------------------------------------------------------- */
   function appliquerDonnees(data) {
     if (!data) return;
-    if (data.date !== undefined && el('ri-date')) {
-      el('ri-date').value = data.date;
-    }
-    if (data.client !== undefined && el('ri-client')) {
-      el('ri-client').value = data.client;
-    }
-    if (data.machine !== undefined && el('ri-machine')) {
-      el('ri-machine').value = data.machine;
-    }
+    if (data.date    !== undefined && champDate)    champDate.value    = data.date;
+    if (data.client  !== undefined && champClient)  champClient.value  = data.client;
+    if (data.machine !== undefined && champMachine) champMachine.value = data.machine;
   }
 
   /* ----------------------------------------------------------
@@ -231,7 +227,6 @@
      Date du jour par défaut
      ---------------------------------------------------------- */
   function initialiserDate() {
-    var champDate = el('ri-date');
     if (!champDate || champDate.value) return;
     var now   = new Date();
     var annee = now.getFullYear();
@@ -254,11 +249,16 @@
      Feedback dans la zone de statut
      ---------------------------------------------------------- */
   function afficherStatut(texte, type) {
-    var statusEl = el('ri-archive-status');
+    var statusEl = document.getElementById('ri-archive-status');
     if (!statusEl) return;
     statusEl.textContent = texte;
-    statusEl.className   = 'ri-archive-status' +
-      (type === 'ok' ? ' ri-ok' : (type === 'err' ? ' ri-err' : ''));
+    if (type === 'ok') {
+      statusEl.className = 'ri-archive-status ri-ok';
+    } else if (type === 'err') {
+      statusEl.className = 'ri-archive-status ri-err';
+    } else {
+      statusEl.className = 'ri-archive-status';
+    }
   }
 
   /* ----------------------------------------------------------
@@ -292,9 +292,9 @@
   function nouveauRapport() {
     if (!confirm('Créer un nouveau rapport ? Le rapport actuel sera effacé de cet appareil.')) return;
 
-    if (el('ri-date'))    el('ri-date').value = '';
-    if (el('ri-client'))  el('ri-client').value = '';
-    if (el('ri-machine')) el('ri-machine').value = '';
+    if (champDate)    champDate.value    = '';
+    if (champClient)  champClient.value  = '';
+    if (champMachine) champMachine.value = '';
 
     afficherStatut('', '');
 
@@ -306,19 +306,17 @@
   /* ----------------------------------------------------------
      Branchement des événements
      ---------------------------------------------------------- */
-  var champs = ['ri-date', 'ri-client', 'ri-machine'];
-  champs.forEach(function (id) {
-    var champ = el(id);
+  [champDate, champClient, champMachine].forEach(function (champ) {
     if (!champ) return;
     champ.addEventListener('input', sauvegarder);
     champ.addEventListener('change', sauvegarder);
   });
 
-  var btnCopier   = el('ri-btn-copier');
-  var btnNouveau  = el('ri-btn-nouveau');
+  var btnCopier  = document.getElementById('ri-btn-copier');
+  var btnNouveau = document.getElementById('ri-btn-nouveau');
 
-  if (btnCopier)   btnCopier.addEventListener('click', copierPressePapier);
-  if (btnNouveau)  btnNouveau.addEventListener('click', nouveauRapport);
+  if (btnCopier)  btnCopier.addEventListener('click', copierPressePapier);
+  if (btnNouveau) btnNouveau.addEventListener('click', nouveauRapport);
 
   /* ----------------------------------------------------------
      Initialisation
@@ -333,5 +331,3 @@
 
 })();
 </script>
-</content>
-</invoke>

@@ -864,8 +864,6 @@
     btnExport.disabled = true;
     btnExport.textContent = "Export en cours…";
 
-    console.log("[LP-v11] Export démarré avec ExcelJS");
-
     chargerTemplate()
       .then(function (buf) {
         var wb = new ExcelJS.Workbook();
@@ -873,7 +871,6 @@
       })
       .then(function (wb) {
         var sheet = wb.getWorksheet(TEMPLATE_CONFIG.sheetName) || wb.worksheets[0];
-        console.log("[LP-v11] Feuille chargée :", sheet ? sheet.name : "INTROUVABLE");
 
         var cells = TEMPLATE_CONFIG.cells;
 
@@ -918,7 +915,6 @@
           setVal(cols.repere      + rowNum, part.repere);
         }
 
-        console.log("[LP-v11] Cellules écrites, génération du buffer…");
         return wb.xlsx.writeBuffer();
       })
       .then(function (buffer) {

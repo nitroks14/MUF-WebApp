@@ -554,13 +554,8 @@
     if (window.Parametrage) {
       const prenom = window.Parametrage.get('prenom') || '';
       const nom    = window.Parametrage.get('nom')    || '';
-      const tel    = window.Parametrage.get('telephone') || '';
-      const sigCustom = window.Parametrage.get('signature') || '';
-      if (sigCustom) {
-        signature = '\n\n--\n' + sigCustom;
-      } else if (prenom || nom) {
+      if (prenom || nom) {
         signature = '\n\n--\n' + [prenom, nom].filter(Boolean).join(' ');
-        if (tel) signature += '\n' + tel;
       }
     }
 

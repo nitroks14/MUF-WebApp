@@ -892,10 +892,7 @@
     var r = (tubeDiaMm / 1000) / 2;
     return nCircuits * Math.PI * r * r * 0.25;
   }
-  /* Rétrocompatibilité : constante utilisée dans les cas sans état (défaut 4v DN22) */
-  var REPARTITEUR_VOL     = repartiteurVol(4);
-  var CIRCUIT_INTERNE_VOL = circuitInterneVol(4, 22);
-  var debounceTimer     = null;
+  var debounceTimer = null;
 
   var defaultState = {
     laize:                '',
@@ -1513,10 +1510,6 @@
       y += 6;
 
       var hasFillers = st.hasFillers;
-      var volOutillageL = (lastResults.volAval > 0 || lastResults.volAmont > 0)
-        ? (parseFloat(elVolOutillage ? elVolOutillage.textContent : '—') || '—')
-        : '—';
-      /* Relire directement le texte affiché */
       var volTxt = elVolOutillage ? elVolOutillage.textContent : '—';
 
       /* 2 colonnes côte à côte */
