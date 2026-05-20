@@ -1215,14 +1215,17 @@
       } else {
         /* === RÉGIME B : vide superficiel sans Roots ===
          * Modèle vitesse variable (débit ∝ p à haute pression → absorption rapide).
-         * Pas d'équilibrage : le réseau absorbe l'inrush sans limitation de throughput. */
-        var pEnd1B = pFinal;
-        var pAB    = ATM;
-        var dlogAB = (Math.log(ATM) - Math.log(pEnd1B)) / steps;
+         * Volume effectif = V_total (aval + amont) : à l'ouverture vanne, V_amont
+         * (pré-évacué à P_n) subit l'équilibrage et remonte à P_eq > P_final ;
+         * le réseau doit repomper V_total pour atteindre P_final. */
+        var pEnd1B  = pFinal;
+        var pAB     = ATM;
+        var volEffB = volAval + volAmont;   /* V_total : volume effectif à pomper */
+        var dlogAB  = (Math.log(ATM) - Math.log(pEnd1B)) / steps;
         for (var i = 0; i < steps; i++) {
           var pANextB = Math.exp(Math.log(pAB) - dlogAB);
           var qAB     = sourceFlow(pAB, st) / penalty;
-          if (qAB > 0) t += (volAval / qAB) * Math.log(pAB / pANextB);
+          if (qAB > 0) t += (volEffB / qAB) * Math.log(pAB / pANextB);
           pAB = pANextB;
         }
         P_eq = ATM;
