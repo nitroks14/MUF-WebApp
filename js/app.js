@@ -328,13 +328,6 @@ function init() {
 
   /* PWA */
   enregistrerServiceWorker();
-
-  /* Synchronisation Notion au démarrage si token présent */
-  if (window.Parametrage && window.Parametrage.get('notion_token')) {
-    window.Parametrage.syncFromNotion().catch(erreur => {
-      console.warn('[MUF] Sync Notion au démarrage échouée :', erreur.message);
-    });
-  }
 }
 
 /* Démarrage quand le DOM est prêt */
