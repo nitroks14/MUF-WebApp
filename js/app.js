@@ -79,7 +79,7 @@ const PLUGINS = [
   {
     id:   'rapport-intervention',
     nom:  'Rapport d\'intervention',
-    desc: 'Rédiger et exporter un rapport d\'intervention avec checklists',
+    desc: 'Rédiger un rapport d\'intervention',
     icone: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
               viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
               <path stroke-linecap="round" stroke-linejoin="round"
