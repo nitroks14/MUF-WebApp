@@ -268,6 +268,14 @@
         <label for="cv-networkPressure">Pression réseau (mbar abs)</label>
         <input id="cv-networkPressure" type="number" step="any" min="0" placeholder="ex : 35" class="form-control" value="35">
       </div>
+      <div class="cv-field">
+        <label for="cv-descenteLength">Longueur descente (m)</label>
+        <input id="cv-descenteLength" type="number" step="any" min="0" placeholder="ex : 5" class="form-control">
+      </div>
+      <div class="cv-checkbox-row">
+        <input type="checkbox" id="cv-hasReserve" checked>
+        <label for="cv-hasReserve">Connectée à une grosse réserve (réseau bâtiment)</label>
+      </div>
     </div>
 
     <div id="cv-pump-fields" style="display:none">
@@ -810,6 +818,14 @@
       var outLen = parseFloat(st.outillageTubesLength)   || 0;
       vol += 4 * pipeVol(outLen, outDia);
     }
+    /* Descente bâtiment — ajoutée à V_amont uniquement si pas de grosse réserve.
+     * Avec réserve (réseau bâtiment) : la pression P_n est maintenue au pied de la
+     * descente par le réseau → son volume n'influe pas sur l'équilibrage. */
+    if (st.sourceType === 'network' && !st.hasReserve) {
+      var dDesc = parseFloat(st.networkInletDiameter) || 50;
+      var lDesc = parseFloat(st.descenteLength) || 0;
+      vol += pipeVol(lDesc, dDesc);
+    }
     return vol;
   }
 
@@ -837,6 +853,8 @@
     sourceType:           'network',
     networkInletDiameter: '50',
     networkPressure:      '35',
+    descenteLength:       '',
+    hasReserve:           true,
     pumpModel:            'Busch R5 RA 0250',
     rootsModel:            'Aucune',
     rootsBypassTarring:    '40',
@@ -868,6 +886,8 @@
   var elPumpFields           = document.getElementById('cv-pump-fields');
   var elNetworkInletDiameter = document.getElementById('cv-networkInletDiameter');
   var elNetworkPressure      = document.getElementById('cv-networkPressure');
+  var elDescenteLength       = document.getElementById('cv-descenteLength');
+  var elHasReserve           = document.getElementById('cv-hasReserve');
   var elPumpModel            = document.getElementById('cv-pumpModel');
   var elRootsModel             = document.getElementById('cv-rootsModel');
   var elBypassTarringWrap      = document.getElementById('cv-bypassTarring-wrap');
@@ -905,6 +925,8 @@
       sourceType:           elSourceType.value,
       networkInletDiameter: elNetworkInletDiameter.value,
       networkPressure:      elNetworkPressure.value,
+      descenteLength:       elDescenteLength.value,
+      hasReserve:           elHasReserve.checked,
       pumpModel:            elPumpModel.value,
       rootsModel:             elRootsModel.value,
       rootsBypassTarring:     elRootsBypassTarring.value,
@@ -928,6 +950,8 @@
     elHasFillers.checked         = !!st.hasFillers;
     elFillerThickness.value      = st.fillerThickness    !== undefined ? st.fillerThickness    : defaultState.fillerThickness;
     elNetworkPressure.value      = st.networkPressure    !== undefined ? st.networkPressure    : defaultState.networkPressure;
+    elDescenteLength.value       = st.descenteLength     !== undefined ? st.descenteLength     : defaultState.descenteLength;
+    elHasReserve.checked         = st.hasReserve !== undefined ? !!st.hasReserve : defaultState.hasReserve;
     elPumpModel.value                = st.pumpModel              || defaultState.pumpModel;
     elRootsModel.value               = st.rootsModel             || defaultState.rootsModel;
     elRootsBypassTarring.value       = st.rootsBypassTarring !== undefined ? st.rootsBypassTarring : defaultState.rootsBypassTarring;
@@ -1361,7 +1385,7 @@
 
   var inputs = [
     elLaize, elPitch, elDepth, elFillerThickness,
-    elNetworkPressure,
+    elNetworkPressure, elDescenteLength,
     elSourceTubeLength, elSourceTube2Length,
     elTube3Length, elOutillageTubesLength, elElbowCount,
     elFinalPressure, elRootsBypassTarring
@@ -1381,6 +1405,7 @@
   });
 
   elHasFillers.addEventListener('change', onInput);
+  elHasReserve.addEventListener('change', onInput);
 
   /* ============================================================
      GENERATION PDF
@@ -1495,6 +1520,13 @@
         ligneKV('Pression reseau :', (st.networkPressure || '—') + ' mbar abs', y, col2X, colW2);
         y += 6;
         ligneKV('DN arrivee vide :', 'DN' + (st.networkInletDiameter || '—'), y, col1X, larg / 2);
+        var reserveTxt = st.hasReserve ? 'Oui (reseau batiment)' : 'Non';
+        ligneKV('Grosse reserve :', reserveTxt, y, col2X, colW2);
+        y += 6;
+        if (!st.hasReserve && st.descenteLength) {
+          ligneKV('Long. descente :', (st.descenteLength || '0') + ' m', y, col1X, larg / 2);
+          y += 6;
+        }
       }
       y += 9;
 
