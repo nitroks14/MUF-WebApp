@@ -467,6 +467,24 @@
   </div>
 </div>
 
+<!-- Bouton PDF — visible uniquement après calcul -->
+<div id="cv-pdf-btn-wrap" style="display:none; margin-bottom:24px;">
+  <button id="cv-btn-pdf" type="button"
+          style="width:100%;padding:12px 20px;background:#003A70;color:#fff;border:none;
+                 border-radius:6px;font-size:14px;font-weight:600;font-family:inherit;
+                 cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+                 transition:background 0.15s;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+         aria-hidden="true">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/>
+      <line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+    Telecharger le rapport PDF
+  </button>
+</div>
+
 <script>
 (function () {
   'use strict';
@@ -801,6 +819,7 @@
 
   var STORAGE_KEY = 'muf_calcul_vide_v2';
   var ATM               = 1013; /* pression atmosphérique en mbar */
+  var lastResults       = null; /* stockage des derniers résultats calculés pour le PDF */
 
   /* Volumes fixes (constantes machine) */
   /* Répartiteur : DN70 × 100mm. Perturbation flux DN60 → 4 raccords. Toujours présent. */
@@ -869,6 +888,8 @@
   var elFinalPressure          = document.getElementById('cv-finalPressure');
   var elVolOutillage         = document.getElementById('cv-vol-outillage');
   var elResultsContent       = document.getElementById('cv-results-content');
+  var elPdfBtnWrap           = document.getElementById('cv-pdf-btn-wrap');
+  var elBtnPdf               = document.getElementById('cv-btn-pdf');
 
   /* ============================================================
      SAUVEGARDE / RESTAURATION
@@ -1198,6 +1219,8 @@
 
   function renderEmpty() {
     elResultsContent.innerHTML = '<p class="cv-results-empty">Renseignez les parametres ci-dessus pour obtenir une estimation.</p>';
+    lastResults = null;
+    if (elPdfBtnWrap) elPdfBtnWrap.style.display = 'none';
   }
 
   function renderResults(volAval, volAmont, timeSeconds, penalty, st, P_eq) {
@@ -1252,6 +1275,10 @@
           : '') +
         facteurHtml +
       '</div>';
+
+    /* Stocker les résultats pour le PDF et afficher le bouton */
+    lastResults = { volAval: volAval, volAmont: volAmont, timeSeconds: timeSeconds, penalty: penalty, st: st, P_eq: P_eq, tempsFormate: tempsFormate, interp: interp, nomPompe: nomPompe, facteur: facteur };
+    if (elPdfBtnWrap) elPdfBtnWrap.style.display = 'block';
 
     /* Archivage Notion silencieux */
     if (window.NotionArchive) {
@@ -1308,8 +1335,323 @@
   elHasFillers.addEventListener('change', onInput);
 
   /* ============================================================
+     GENERATION PDF
+     ============================================================ */
+
+  function genererPDFVide() {
+    if (!lastResults) return;
+    if (elBtnPdf) elBtnPdf.disabled = true;
+
+    function construirePDF(jsPDF) {
+      var r   = lastResults;
+      var st  = r.st;
+      var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      var mG  = 14;  /* marge gauche */
+      var mD  = 196; /* marge droite */
+      var larg = mD - mG; /* largeur utile = 182 mm */
+      var y   = 0;
+
+      /* ----------------------------------------------------------
+         EN-TETE MULTIVAC
+         ---------------------------------------------------------- */
+      doc.setFillColor(0, 58, 112); /* #003A70 */
+      doc.rect(0, 0, 210, 22, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('MULTIVAC France', mG, 10);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Calcul mise sous vide — Rapport technique', mG, 17);
+      doc.setFontSize(8);
+      doc.text(new Date().toLocaleDateString('fr-FR'), mD, 10, { align: 'right' });
+      doc.text(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }), mD, 17, { align: 'right' });
+
+      y = 29;
+      doc.setTextColor(51, 51, 51); /* #333333 */
+
+      /* ----------------------------------------------------------
+         FONCTION UTILITAIRE : ligne label / valeur
+         ---------------------------------------------------------- */
+      function ligneKV(label, valeur, yPos, colX, colW) {
+        colX = colX || mG;
+        colW = colW || larg;
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text(label, colX + 2, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(String(valeur || '—'), colX + colW * 0.52, yPos);
+      }
+
+      /* ----------------------------------------------------------
+         FONCTION UTILITAIRE : en-tête de section
+         ---------------------------------------------------------- */
+      function enteteSection(titre, yPos) {
+        doc.setFillColor(0, 58, 112);
+        doc.rect(mG, yPos - 4, larg, 7, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text(titre, mG + 2, yPos);
+        doc.setTextColor(51, 51, 51);
+      }
+
+      /* ----------------------------------------------------------
+         SECTION 1 — OUTILLAGE
+         ---------------------------------------------------------- */
+      enteteSection('1 — Outillage', y);
+      y += 6;
+
+      var hasFillers = st.hasFillers;
+      var volOutillageL = (lastResults.volAval > 0 || lastResults.volAmont > 0)
+        ? (parseFloat(elVolOutillage ? elVolOutillage.textContent : '—') || '—')
+        : '—';
+      /* Relire directement le texte affiché */
+      var volTxt = elVolOutillage ? elVolOutillage.textContent : '—';
+
+      /* 2 colonnes côte à côte */
+      var col1X = mG;
+      var col2X = mG + larg / 2 + 2;
+      var colW2 = larg / 2 - 2;
+
+      doc.setFillColor(245, 245, 245);
+      doc.rect(mG, y - 3, larg, 22, 'F');
+
+      ligneKV('Laize :', (st.laize || '—') + ' mm', y, col1X, larg / 2);
+      ligneKV('Pas d\'avance :', (st.pitch || '—') + ' mm', y, col2X, colW2);
+      y += 6;
+      ligneKV('Profondeur :', (st.depth || '—') + ' mm', y, col1X, larg / 2);
+      ligneKV('Cales / remplisseurs :', hasFillers ? 'Oui' : 'Non', y, col2X, colW2);
+      y += 6;
+      if (hasFillers) {
+        ligneKV('Hauteur des cales :', (st.fillerThickness || '—') + ' mm', y, col1X, larg / 2);
+      }
+      ligneKV('Volume outillage :', volTxt, y, hasFillers ? col2X : col1X, hasFillers ? colW2 : larg / 2);
+      y += 9;
+
+      /* ----------------------------------------------------------
+         SECTION 2 — SOURCE DE VIDE
+         ---------------------------------------------------------- */
+      enteteSection('2 — Source de vide', y);
+      y += 6;
+
+      doc.setFillColor(245, 245, 245);
+      doc.rect(mG, y - 3, larg, st.sourceType === 'pump' ? 12 : 12, 'F');
+
+      if (st.sourceType === 'pump') {
+        ligneKV('Type :', 'Pompe de vide', y, col1X, larg / 2);
+        ligneKV('Modele :', st.pumpModel || '—', y, col2X, colW2);
+      } else {
+        ligneKV('Type :', 'Reseau vide', y, col1X, larg / 2);
+        ligneKV('Pression reseau :', (st.networkPressure || '—') + ' mbar abs', y, col2X, colW2);
+        y += 6;
+        ligneKV('DN arrivee vide :', 'DN' + (st.networkInletDiameter || '—'), y, col1X, larg / 2);
+      }
+      y += 9;
+
+      /* ----------------------------------------------------------
+         SECTION 3 — ROOTS
+         ---------------------------------------------------------- */
+      enteteSection('3 — Roots (amplificateur)', y);
+      y += 6;
+
+      doc.setFillColor(245, 245, 245);
+      var hasRoots = st.rootsModel && st.rootsModel !== 'Aucune';
+      doc.rect(mG, y - 3, larg, hasRoots ? 12 : 6, 'F');
+
+      ligneKV('Modele Roots :', st.rootsModel || 'Aucune', y, col1X, larg);
+      if (hasRoots && rootsModels[st.rootsModel] && rootsModels[st.rootsModel].hasBypass) {
+        y += 6;
+        ligneKV('Tarage bypass :', (st.rootsBypassTarring || '—') + ' mbar abs', y, col1X, larg);
+      }
+      y += 9;
+
+      /* ----------------------------------------------------------
+         SECTION 4 — CONFIGURATION MACHINE
+         ---------------------------------------------------------- */
+      enteteSection('4 — Configuration machine', y);
+      y += 6;
+
+      var machineDescs = {
+        centralized_vanne: 'Vannes centralisees (repartiteur cote source)',
+        remote_vanne:      'Vannes deportees (proches de l\'outillage)',
+        bol_remote:        'Bol decanteur + vannes deportees',
+        bol_only:          'Bol decanteur seul (sans vanne deportee)'
+      };
+      var hasBol  = (st.machineType === 'bol_remote' || st.machineType === 'bol_only');
+
+      var nbLignesMachine = 4 + (hasRoots ? 1 : 0) + (hasBol ? 2 : 0);
+      doc.setFillColor(245, 245, 245);
+      doc.rect(mG, y - 3, larg, nbLignesMachine * 6, 'F');
+
+      ligneKV('Type de machine :', machineDescs[st.machineType] || st.machineType, y, col1X, larg);
+      y += 6;
+      ligneKV('DN tuyau source :', 'DN' + (st.sourceTubeDiameter || '—'), y, col1X, larg / 2);
+      ligneKV('Long. tuyau source :', (st.sourceTubeLength || '0') + ' m', y, col2X, colW2);
+      y += 6;
+      if (hasRoots) {
+        ligneKV('Long. 2eme tuyau (DN60) :', (st.sourceTube2Length || '0') + ' m', y, col1X, larg);
+        y += 6;
+      }
+      if (hasBol) {
+        ligneKV('DN 3eme tuyau (bol) :', 'DN' + (st.tube3Diameter || '—'), y, col1X, larg / 2);
+        ligneKV('Long. 3eme tuyau :', (st.tube3Length || '0') + ' m', y, col2X, colW2);
+        y += 6;
+      }
+      ligneKV('DN tuyaux outillage x4 :', 'DN' + (st.outillageTubesDiameter || '—'), y, col1X, larg / 2);
+      ligneKV('Long. tuyaux outillage :', (st.outillageTubesLength || '0') + ' m', y, col2X, colW2);
+      y += 6;
+      ligneKV('Coudes 90 DN60 sup. :', (st.elbowCount || '0'), y, col1X, larg);
+      y += 9;
+
+      /* ----------------------------------------------------------
+         SECTION 5 — OBJECTIF
+         ---------------------------------------------------------- */
+      enteteSection('5 — Objectif', y);
+      y += 6;
+
+      doc.setFillColor(245, 245, 245);
+      doc.rect(mG, y - 3, larg, 6, 'F');
+      ligneKV('Pression finale cible :', (st.finalPressure || '—') + ' mbar abs', y, col1X, larg);
+      y += 9;
+
+      /* ----------------------------------------------------------
+         SECTION RESULTATS
+         ---------------------------------------------------------- */
+      enteteSection('Resultats du calcul', y);
+      y += 6;
+
+      /* Panneau bleu résultats */
+      doc.setFillColor(0, 58, 112);
+      doc.rect(mG, y - 3, larg, 46, 'F');
+      doc.setTextColor(255, 255, 255);
+
+      /* Temps estimé — grand et centré */
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text(r.tempsFormate, 105, y + 9, { align: 'center' });
+
+      /* Badge interprétation */
+      var interpColors = {
+        'cv-interp-ok':       [72, 187, 120],
+        'cv-interp-warn':     [246, 173, 85],
+        'cv-interp-critical': [245, 101, 101]
+      };
+      var ic = interpColors[r.interp.cls] || [255, 255, 255];
+      doc.setFillColor(ic[0], ic[1], ic[2]);
+      doc.setDrawColor(ic[0], ic[1], ic[2]);
+      var badgeTxt = r.interp.label;
+      var badgeW   = 28;
+      doc.roundedRect(105 - badgeW / 2, y + 13, badgeW, 7, 3, 3, 'F');
+      doc.setTextColor(51, 51, 51);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text(badgeTxt, 105, y + 18, { align: 'center' });
+
+      /* Lignes de détail */
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+
+      var ry = y + 24;
+      var labelOpacity = 200; /* blanc légèrement atténué via gris */
+
+      function resultLigne(label, valeur, yPos) {
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(200, 215, 230);
+        doc.text(label, mG + 4, yPos);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(255, 255, 255);
+        doc.text(String(valeur), mD - 2, yPos, { align: 'right' });
+        /* séparateur subtil */
+        doc.setDrawColor(255, 255, 255, 0.15);
+        doc.setLineWidth(0.2);
+        doc.line(mG + 2, yPos + 1.5, mD - 2, yPos + 1.5);
+      }
+
+      resultLigne('Volume aval (a pomper)', (r.volAval * 1000).toFixed(3) + ' L', ry);
+      ry += 5;
+      resultLigne('Volume amont (pre-evacue)', (r.volAmont * 1000).toFixed(3) + ' L', ry);
+      ry += 5;
+      resultLigne('Source de vide', r.nomPompe, ry);
+      ry += 5;
+      if (st.sourceType === 'pump' && r.P_eq !== undefined) {
+        resultLigne('Pression equilibrage (ouverture vannes)', r.P_eq.toFixed(0) + ' mbar', ry);
+        ry += 5;
+      }
+      if (r.facteur) {
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(200, 215, 230);
+        doc.text('Facteur limitant', mG + 4, ry);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(255, 255, 255);
+        var factLines = doc.splitTextToSize(r.facteur, 80);
+        doc.text(factLines[0] || '', mD - 2, ry, { align: 'right' });
+      }
+
+      y = ry + 12;
+
+      doc.setTextColor(51, 51, 51);
+
+      /* ----------------------------------------------------------
+         PIED DE PAGE
+         ---------------------------------------------------------- */
+      doc.setFontSize(7);
+      doc.setTextColor(150, 150, 150);
+      doc.setFont('helvetica', 'normal');
+      doc.text(
+        'MUF-WebApp — Multivac France  |  Calcul de vide  |  Document genere le ' +
+        new Date().toLocaleDateString('fr-FR') + ' a ' +
+        new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+        105, 290, { align: 'center' }
+      );
+
+      /* ----------------------------------------------------------
+         SAUVEGARDE
+         ---------------------------------------------------------- */
+      var dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      doc.save('calcul_vide_' + dateStr + '.pdf');
+    }
+
+    /* Chargement lazy de jsPDF — meme pattern que rapport-intervention */
+    if (window.jspdf && window.jspdf.jsPDF) {
+      try {
+        construirePDF(window.jspdf.jsPDF);
+      } catch (e) {
+        console.error('[CalcVide] Erreur generation PDF :', e);
+        alert('Erreur lors de la generation du PDF.');
+      } finally {
+        if (elBtnPdf) elBtnPdf.disabled = false;
+      }
+    } else {
+      var script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      script.onload = function () {
+        try {
+          var jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+          if (!jsPDF) throw new Error('jsPDF non trouve apres chargement');
+          construirePDF(jsPDF);
+        } catch (e) {
+          console.error('[CalcVide] Erreur generation PDF :', e);
+          alert('Erreur lors de la generation du PDF. Verifiez votre connexion et reessayez.');
+        } finally {
+          if (elBtnPdf) elBtnPdf.disabled = false;
+        }
+      };
+      script.onerror = function () {
+        alert('Impossible de charger jsPDF. Verifiez votre connexion internet.');
+        if (elBtnPdf) elBtnPdf.disabled = false;
+      };
+      document.body.appendChild(script);
+    }
+  }
+
+  /* ============================================================
      INITIALISATION
      ============================================================ */
+
+  if (elBtnPdf) elBtnPdf.addEventListener('click', genererPDFVide);
 
   var savedState = loadState();
   applyState(savedState);
