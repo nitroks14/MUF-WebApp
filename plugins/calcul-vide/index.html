@@ -419,9 +419,18 @@
       </div>
     </div>
 
+    <!-- Répartiteur -->
+    <div class="cv-field">
+      <label for="cv-repartiteurVoies">Répartiteur</label>
+      <select id="cv-repartiteurVoies" class="form-control">
+        <option value="4">4 voies (DN70 × 10 cm = 0.38 L)</option>
+        <option value="6">6 voies (DN70 × 20 cm = 0.77 L)</option>
+      </select>
+    </div>
+
     <!-- Tuyaux outillage -->
     <div class="cv-field">
-      <label for="cv-outillageTubesDiameter">Diamètre tuyaux outillage ×4 (mm)</label>
+      <label for="cv-outillageTubesDiameter">Diamètre tuyaux outillage <span id="cv-nvoies-label">×4</span> (mm)</label>
       <select id="cv-outillageTubesDiameter" class="form-control">
         <option value="22">DN22</option>
         <option value="32" selected>DN32</option>
@@ -442,9 +451,9 @@
       <small style="color:#6b7280;font-size:11px;margin-top:4px;display:block;">Ne pas compter le coude du répartiteur — il est toujours inclus automatiquement (voir ci-dessous).</small>
     </div>
 
-    <div class="cv-result-box">
-      Répartiteur (fixe) : <strong>DN70 × 10 cm = 0.38 L + 1 coude DN60 90° fixe</strong> — <em>toujours comptabilisé dans le calcul</em><br>
-      Circuit interne outillage (fixe) : <strong>DN22 × 25 cm × 4 = 0.38 L</strong>
+    <div class="cv-result-box" id="cv-infos-fixes">
+      Répartiteur : <strong id="cv-info-repartiteur">DN70 × 10 cm = 0.38 L</strong> + 1 coude DN60 90° fixe — <em>toujours comptabilisé dans le calcul</em><br>
+      Circuit interne outillage : <strong id="cv-info-circuit">DN22 × 25 cm × 4 = 0.38 L</strong>
     </div>
 
   </div>
@@ -764,9 +773,12 @@
 
   /* Volume aval (à pomper à chaque cycle) selon le type de machine */
   function calculateDownstreamVolume(st, toolingVol) {
-    var tubeDia = parseFloat(st.outillageTubesDiameter) || 32;
-    var tubeLen = parseFloat(st.outillageTubesLength)   || 0;
-    var tube4vol = 4 * pipeVol(tubeLen, tubeDia);
+    var tubeDia  = parseFloat(st.outillageTubesDiameter) || 32;
+    var tubeLen  = parseFloat(st.outillageTubesLength)   || 0;
+    var nVoies   = parseInt(st.repartiteurVoies) || 4;
+    var circVol  = circuitInterneVol(nVoies, tubeDia);
+    var repVol   = repartiteurVol(nVoies);
+    var tube4vol = nVoies * pipeVol(tubeLen, tubeDia);
 
     /*
      * Position des vannes par schéma :
@@ -780,29 +792,30 @@
      */
     switch (st.machineType) {
       case 'centralized_vanne':
-        /* Vanne au distributeur → 4 tuyaux côté AVAL → à pomper */
-        return tube4vol + CIRCUIT_INTERNE_VOL + toolingVol;
+        /* Vanne au distributeur → N tuyaux côté AVAL → à pomper */
+        return tube4vol + circVol + toolingVol;
       case 'remote_vanne':
-        /* Vanne à l'entrée outillage → 4 tuyaux côté AMONT (pré-évacués) → seul circuit+outillage à pomper */
-        return CIRCUIT_INTERNE_VOL + toolingVol;
+        /* Vanne à l'entrée outillage → N tuyaux côté AMONT (pré-évacués) → seul circuit+outillage à pomper */
+        return circVol + toolingVol;
       case 'bol_remote':
-        /* Vanne à l'entrée outillage → 4 tuyaux côté AMONT (pré-évacués via bol+répartiteur) */
-        return CIRCUIT_INTERNE_VOL + toolingVol;
+        /* Vanne à l'entrée outillage → N tuyaux côté AMONT (pré-évacués via bol+répartiteur) */
+        return circVol + toolingVol;
       case 'bol_only':
         /* Vanne au bol → Tuyau3 + Répartiteur + 4 tuyaux côté AVAL → tout à pomper */
         var t3d = parseFloat(st.tube3Diameter) || 60;
         var t3l = parseFloat(st.tube3Length)   || 0;
-        return pipeVol(t3l, t3d) + REPARTITEUR_VOL + tube4vol + CIRCUIT_INTERNE_VOL + toolingVol;
+        return pipeVol(t3l, t3d) + repVol + tube4vol + circVol + toolingVol;
       default:
-        return tube4vol + CIRCUIT_INTERNE_VOL + toolingVol;
+        return tube4vol + circVol + toolingVol;
     }
   }
 
   /* Volume amont (pré-évacué, déjà sous vide — réservoir utile pour la descente en pression) */
   function calculateUpstreamVolume(st) {
-    var dia1 = parseFloat(st.sourceTubeDiameter) || 60;
-    var len1 = parseFloat(st.sourceTubeLength)   || 0;
-    var vol  = pipeVol(len1, dia1);
+    var dia1    = parseFloat(st.sourceTubeDiameter) || 60;
+    var len1    = parseFloat(st.sourceTubeLength)   || 0;
+    var nVoies  = parseInt(st.repartiteurVoies) || 4;
+    var vol     = pipeVol(len1, dia1);
     var roots = rootsModels[st.rootsModel];
     if (roots && roots.enabled) {
       var len2 = parseFloat(st.sourceTube2Length) || 0;
@@ -810,13 +823,13 @@
     }
     /* Répartiteur : côté amont pour schémas 1-2-3 (bol_only : il est aval) */
     if (st.machineType !== 'bol_only') {
-      vol += REPARTITEUR_VOL;
+      vol += repartiteurVol(nVoies);
     }
-    /* Schémas vannes déportées : les 4 tuyaux outillage sont aussi côté amont (pré-évacués) */
+    /* Schémas vannes déportées : les N tuyaux outillage sont aussi côté amont (pré-évacués) */
     if (st.machineType === 'remote_vanne' || st.machineType === 'bol_remote') {
       var outDia = parseFloat(st.outillageTubesDiameter) || 32;
       var outLen = parseFloat(st.outillageTubesLength)   || 0;
-      vol += 4 * pipeVol(outLen, outDia);
+      vol += nVoies * pipeVol(outLen, outDia);
     }
     /* Descente bâtiment — ajoutée à V_amont uniquement si pas de grosse réserve.
      * Avec réserve (réseau bâtiment) : la pression P_n est maintenue au pied de la
@@ -837,11 +850,23 @@
   var ATM               = 1013; /* pression atmosphérique en mbar */
   var lastResults       = null; /* stockage des derniers résultats calculés pour le PDF */
 
-  /* Volumes fixes (constantes machine) */
-  /* Répartiteur : DN70 × 100mm. Perturbation flux DN60 → 4 raccords. Toujours présent. */
-  var REPARTITEUR_VOL     = Math.PI * Math.pow(0.035, 2) * 0.10; /* ≈ 0.000385 m³ = 0.385 L */
-  /* Circuit interne outillage : 4 tubes DN22 × 250mm soudés dans le plateau. Fixe. */
-  var CIRCUIT_INTERNE_VOL = 4 * Math.PI * Math.pow(0.011, 2) * 0.25; /* ≈ 0.000380 m³ = 0.380 L */
+  /* Volumes machine — calculés selon la configuration répartiteur */
+  /* Répartiteur : DN70, longueur selon voies (4v=10cm, 6v=20cm) */
+  function repartiteurVol(nVoies) {
+    var longueur = (nVoies === 6) ? 0.20 : 0.10;
+    return Math.PI * Math.pow(0.035, 2) * longueur;
+  }
+  /* Circuit interne outillage : N tubes × 25 cm dans le plateau outillage.
+   * Diamètre = même que les tuyaux outillage (DN22 ou DN32).
+   * Nombre = nVoies (sauf DN22 → toujours 4). */
+  function circuitInterneVol(nVoies, tubeDiaMm) {
+    var nCircuits = (tubeDiaMm <= 22) ? 4 : nVoies;
+    var r = (tubeDiaMm / 1000) / 2;
+    return nCircuits * Math.PI * r * r * 0.25;
+  }
+  /* Rétrocompatibilité : constante utilisée dans les cas sans état (défaut 4v DN22) */
+  var REPARTITEUR_VOL     = repartiteurVol(4);
+  var CIRCUIT_INTERNE_VOL = circuitInterneVol(4, 22);
   var debounceTimer     = null;
 
   var defaultState = {
@@ -864,6 +889,7 @@
     sourceTube2Length:     '',
     tube3Diameter:         '60',
     tube3Length:           '',
+    repartiteurVoies:       '4',
     outillageTubesDiameter:'32',
     outillageTubesLength:  '',
     elbowCount:            '0',
@@ -899,6 +925,7 @@
   var elSourceTube2Length      = document.getElementById('cv-sourceTube2Length');
   var elTube3Diameter          = document.getElementById('cv-tube3Diameter');
   var elTube3Length            = document.getElementById('cv-tube3Length');
+  var elRepartiteurVoies       = document.getElementById('cv-repartiteurVoies');
   var elOutillageTubesDiameter = document.getElementById('cv-outillageTubesDiameter');
   var elOutillageTubesLength   = document.getElementById('cv-outillageTubesLength');
   var elElbowCount             = document.getElementById('cv-elbowCount');
@@ -936,6 +963,7 @@
       sourceTube2Length:      elSourceTube2Length.value,
       tube3Diameter:          elTube3Diameter.value,
       tube3Length:            elTube3Length.value,
+      repartiteurVoies:        elRepartiteurVoies.value,
       outillageTubesDiameter: elOutillageTubesDiameter.value,
       outillageTubesLength:   elOutillageTubesLength.value,
       elbowCount:             elElbowCount.value,
@@ -961,6 +989,7 @@
     elSourceTube2Length.value        = st.sourceTube2Length      !== undefined ? st.sourceTube2Length      : defaultState.sourceTube2Length;
     elTube3Diameter.value            = st.tube3Diameter          || defaultState.tube3Diameter;
     elTube3Length.value              = st.tube3Length            !== undefined ? st.tube3Length            : defaultState.tube3Length;
+    elRepartiteurVoies.value          = st.repartiteurVoies       || defaultState.repartiteurVoies;
     elOutillageTubesDiameter.value   = st.outillageTubesDiameter || defaultState.outillageTubesDiameter;
     elOutillageTubesLength.value     = st.outillageTubesLength   !== undefined ? st.outillageTubesLength   : defaultState.outillageTubesLength;
     elElbowCount.value               = st.elbowCount             !== undefined ? st.elbowCount             : defaultState.elbowCount;
@@ -1370,8 +1399,24 @@
      EVENEMENTS
      ============================================================ */
 
+  function updateInfosFixesBox() {
+    var nVoies  = parseInt(elRepartiteurVoies.value) || 4;
+    var tubeDia = parseFloat(elOutillageTubesDiameter.value) || 32;
+    var repL    = nVoies === 6 ? 20 : 10;
+    var repV    = repartiteurVol(nVoies) * 1000;
+    var nCirc   = (tubeDia <= 22) ? 4 : nVoies;
+    var circV   = circuitInterneVol(nVoies, tubeDia) * 1000;
+    var elRep   = document.getElementById('cv-info-repartiteur');
+    var elCirc  = document.getElementById('cv-info-circuit');
+    var elLabel = document.getElementById('cv-nvoies-label');
+    if (elRep)   elRep.textContent   = 'DN70 × ' + repL + ' cm = ' + repV.toFixed(2) + ' L';
+    if (elCirc)  elCirc.textContent  = 'DN' + tubeDia + ' × 25 cm × ' + nCirc + ' = ' + circV.toFixed(2) + ' L';
+    if (elLabel) elLabel.textContent = '×' + nVoies;
+  }
+
   function onInput() {
     updateVisibility();
+    updateInfosFixesBox();
     compute();
     scheduleSave();
   }
@@ -1397,7 +1442,8 @@
 
   var selects = [
     elNetworkInletDiameter, elPumpModel, elRootsModel,
-    elMachineType, elSourceTubeDiameter, elTube3Diameter, elOutillageTubesDiameter
+    elMachineType, elSourceTubeDiameter, elTube3Diameter,
+    elRepartiteurVoies, elOutillageTubesDiameter
   ];
 
   selects.forEach(function (el) {
@@ -1561,7 +1607,7 @@
       };
       var hasBol  = (st.machineType === 'bol_remote' || st.machineType === 'bol_only');
 
-      var nbLignesMachine = 4 + (hasRoots ? 1 : 0) + (hasBol ? 2 : 0);
+      var nbLignesMachine = 5 + (hasRoots ? 1 : 0) + (hasBol ? 2 : 0);
       doc.setFillColor(245, 245, 245);
       doc.rect(mG, y - 3, larg, nbLignesMachine * 6, 'F');
 
@@ -1579,8 +1625,11 @@
         ligneKV('Long. 3eme tuyau :', (st.tube3Length || '0') + ' m', y, col2X, colW2);
         y += 6;
       }
-      ligneKV('DN tuyaux outillage x4 :', 'DN' + (st.outillageTubesDiameter || '—'), y, col1X, larg / 2);
-      ligneKV('Long. tuyaux outillage :', (st.outillageTubesLength || '0') + ' m', y, col2X, colW2);
+      var nV = parseInt(st.repartiteurVoies) || 4;
+      ligneKV('Repartiteur :', nV + ' voies', y, col1X, larg / 2);
+      ligneKV('DN tuyaux outillage x' + nV + ' :', 'DN' + (st.outillageTubesDiameter || '—'), y, col2X, colW2);
+      y += 6;
+      ligneKV('Long. tuyaux outillage :', (st.outillageTubesLength || '0') + ' m', y, col1X, larg / 2);
       y += 6;
       ligneKV('Coudes 90 DN60 sup. :', (st.elbowCount || '0'), y, col1X, larg);
       y += 9;
