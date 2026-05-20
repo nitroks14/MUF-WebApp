@@ -1141,38 +1141,66 @@
     var volTotal = volAval + volAmont;
 
     /* ---- MODE RÉSEAU ----
-     * Grand réservoir → équilibrage négligeable.
-     * Le réseau maintient pReseau en permanence ; on pompe uniquement V_aval
-     * de ATM jusqu'à pFinal (intégration continue, pas de saut de pression). */
+     * Source à pression constante P_n (réseau vide industriel).
+     * Modèle throughput constant : dp/dt = −Q_T / V  →  décroissance linéaire en pression.
+     * Q_T = networkFlow(P_n, dEff) × P_n  [évalué à la pression réseau, constant].
+     *
+     * Pour vannes déportées (remote_vanne, bol_remote) : l'amont est pré-évacué à P_n.
+     * À l'ouverture des vannes, équilibrage immédiat aval (ATM) + amont (P_n) :
+     *   P_eq = (V_aval × ATM + V_amont × P_n) / V_total
+     * La Phase 1 part alors de P_eq sur V_total.
+     * La pénalité coudes ne s'applique pas en Phase 1 (haute pression → vitesses faibles). */
     if (st.sourceType === 'network') {
       var pReseau = parseFloat(st.networkPressure);
       if (!pReseau || pReseau <= 0) { renderEmpty(); return; }
       var hasRootsBooster = st.rootsModel && st.rootsModel !== 'Aucune'
                             && rootsModels[st.rootsModel] && rootsModels[st.rootsModel].enabled;
       if (!hasRootsBooster && pReseau >= pFinal) {
-        /* Réseau trop faible pour atteindre pFinal et pas de booster Roots : afficher un avertissement */
+        /* Réseau trop faible pour atteindre pFinal et pas de booster Roots */
         elResultsContent.innerHTML =
           '<p class="cv-results-empty" style="color:#e53e3e;">⚠️ La pression réseau (' + pReseau +
           ' mbar) est supérieure ou égale à la cible (' + pFinal + ' mbar). Le réseau ne peut pas atteindre cet objectif.</p>';
         return;
       }
-      /* RÉSEAU : intégration V_aval */
-      /* Phase 1 : ATM → pReseau (ou pFinal si cible > pReseau) — débit réseau pur */
+
+      /* Équilibrage aval/amont pour vannes déportées */
+      var needsEqualization = (st.machineType === 'remote_vanne' || st.machineType === 'bol_remote');
+      var pStart, volPhase1;
+      if (needsEqualization) {
+        var volTotal = volAval + volAmont;
+        var pEq = volTotal > 0 ? (volAval * ATM + volAmont * pReseau) / volTotal : ATM;
+        pStart    = Math.min(ATM, pEq);
+        volPhase1 = volTotal;
+      } else {
+        pStart    = ATM;
+        volPhase1 = volAval;
+      }
+
+      /* Débit de base évalué à P_réseau (throughput constant) — sans pénalité coudes en Phase 1 */
+      var dInletP1  = parseFloat(st.networkInletDiameter) || 50;
+      var dSourceP1 = parseFloat(st.sourceTubeDiameter)   || 60;
+      var dEffP1    = Math.min(dInletP1, dSourceP1);
+      var Q_base    = networkFlow(pReseau, dEffP1); /* m³/s */
+      var bypassTarring = parseFloat(st.rootsBypassTarring) || 40;
+
+      /* Phase 1 : pStart → pReseau — intégration linéaire (throughput constant) */
       var pEnd1 = hasRootsBooster ? Math.max(pFinal, pReseau) : pFinal;
-      var pA    = ATM;
-      var dlogA = (Math.log(ATM) - Math.log(pEnd1)) / steps;
+      var dLinA = (pStart - pEnd1) / steps;
+      var pA    = pStart;
       for (var i = 0; i < steps; i++) {
-        var pANext = Math.exp(Math.log(pA) - dlogA);
-        var qA     = sourceFlow(pA, st) / penalty;
-        if (qA > 0) t += (volAval / qA) * Math.log(pA / pANext);
+        var pANext = pA - dLinA;
+        var gainA  = hasRootsBooster ? Math.max(1, rootsGain(pA, st.rootsModel, bypassTarring)) : 1;
+        if (Q_base > 0 && pReseau > 0) {
+          t += volPhase1 * dLinA / (Q_base * pReseau * gainA);
+        }
         pA = pANext;
       }
-      /* Phase 2 (uniquement si Roots actif et pFinal < pReseau) : pReseau → pFinal */
+
+      /* Phase 2 : pReseau → pFinal — Roots seul, modèle vitesse constante (inchangé) */
       if (hasRootsBooster && pFinal < pReseau) {
-        var qBacking      = networkFlow(pReseau, parseFloat(st.networkInletDiameter) || 50);
-        var bypassTarring = parseFloat(st.rootsBypassTarring) || 40;
-        var pB    = pReseau;
-        var dlogB = (Math.log(pReseau) - Math.log(pFinal)) / steps;
+        var qBacking = networkFlow(pReseau, parseFloat(st.networkInletDiameter) || 50);
+        var pB       = pReseau;
+        var dlogB    = (Math.log(pReseau) - Math.log(pFinal)) / steps;
         for (var j = 0; j < steps; j++) {
           var pBNext = Math.exp(Math.log(pB) - dlogB);
           var gain   = rootsGain(pB, st.rootsModel, bypassTarring);
@@ -1181,7 +1209,7 @@
           pB = pBNext;
         }
       }
-      P_eq = ATM; /* pas d'équilibrage significatif pour le réseau */
+      P_eq = needsEqualization ? pStart : ATM;
     }
 
     /* ---- MODE POMPE ----
