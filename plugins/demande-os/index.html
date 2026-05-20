@@ -624,14 +624,6 @@
     document.body.appendChild(lienTemp);
     lienTemp.click();
 
-    /* Push silencieux vers Notion */
-    if (window.NotionArchive) {
-      window.NotionArchive.archiverDemandeOS({
-        nomClient:   domClient.value.trim(),
-        typeMachine: domMachine.value.trim(),
-      });
-    }
-
     /* Fallback après 100 ms */
     setTimeout(function() {
       document.body.removeChild(lienTemp);

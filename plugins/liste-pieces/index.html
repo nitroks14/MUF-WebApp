@@ -936,23 +936,6 @@
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
 
         showToast("Export réussi : " + filename);
-
-        /* Archivage Notion silencieux */
-        if (window.NotionArchive) {
-          try {
-            window.NotionArchive.archiverListePieces({
-              nomClient:   data.client.name,
-              typeMachine: data.machine.type,
-              reference:   filename.replace(".xlsx", ""),
-              date:        data.machine.date || todayISO(),
-              contenu:     data.parts.map(function (p) {
-                return (p.reference || "?") + " x" + (p.quantity || "1");
-              }).join(", "),
-            });
-          } catch (e) {
-            console.warn("[LP] NotionArchive échoué :", e);
-          }
-        }
       })
       .catch(function (err) {
         console.error("[LP] Erreur export ExcelJS :", err);

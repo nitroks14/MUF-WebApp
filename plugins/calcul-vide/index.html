@@ -1383,19 +1383,6 @@
     /* Stocker les résultats pour le PDF et afficher le bouton */
     lastResults = { volAval: volAval, volAmont: volAmont, timeSeconds: timeSeconds, penalty: penalty, st: st, P_eq: P_eq, tempsFormate: tempsFormate, interp: interp, nomPompe: nomPompe, facteur: facteur };
     if (elPdfBtnWrap) elPdfBtnWrap.style.display = 'block';
-
-    /* Archivage Notion silencieux */
-    if (window.NotionArchive) {
-      try {
-        window.NotionArchive.archiverCalculVide({
-          nomClient:   '',
-          typeMachine: '',
-          reference:   'Calcul-' + new Date().toISOString().slice(0, 10),
-          date:        new Date().toISOString().slice(0, 10),
-          resultat:    'Temps: ' + tempsFormate + ' | Vol aval: ' + volAvalL + 'L | Pompe: ' + nomPompe
-        });
-      } catch (e) { /* silencieux */ }
-    }
   }
 
   /* ============================================================

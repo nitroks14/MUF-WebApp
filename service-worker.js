@@ -8,8 +8,8 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache */
-const CACHE_NOM     = 'muf-webapp-v25';
-const CACHE_PLUGINS = 'muf-plugins-v25';
+const CACHE_NOM     = 'muf-webapp-v26';
+const CACHE_PLUGINS = 'muf-plugins-v26';
 
 /* Liste des assets statiques à précacher */
 const ASSETS_STATIQUES = [
@@ -18,7 +18,6 @@ const ASSETS_STATIQUES = [
   './css/main.css',
   './js/app.js',
   './js/parametrage.js',
-  './js/notion-archive.js',
   './manifest.json',
 ];
 
