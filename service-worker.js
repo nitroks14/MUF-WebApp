@@ -8,8 +8,8 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache */
-const CACHE_NOM     = 'muf-webapp-v27';
-const CACHE_PLUGINS = 'muf-plugins-v27';
+const CACHE_NOM     = 'muf-webapp-v29';
+const CACHE_PLUGINS = 'muf-plugins-v29';
 
 /* Liste des assets statiques à précacher */
 const ASSETS_STATIQUES = [
@@ -25,11 +25,8 @@ const ASSETS_STATIQUES = [
    Installation — précache des assets statiques
    ============================================================ */
 self.addEventListener('install', evenement => {
-  console.log('[SW] Installation…');
-
   evenement.waitUntil(
     caches.open(CACHE_NOM).then(cache => {
-      console.log('[SW] Mise en cache des assets statiques');
       return cache.addAll(ASSETS_STATIQUES);
     })
   );
@@ -42,17 +39,12 @@ self.addEventListener('install', evenement => {
    Activation — nettoyage des anciens caches
    ============================================================ */
 self.addEventListener('activate', evenement => {
-  console.log('[SW] Activation…');
-
   evenement.waitUntil(
     caches.keys().then(nomsCaches => {
       return Promise.all(
         nomsCaches
           .filter(nom => nom !== CACHE_NOM && nom !== CACHE_PLUGINS)
-          .map(nom => {
-            console.log('[SW] Suppression ancien cache :', nom);
-            return caches.delete(nom);
-          })
+          .map(nom => caches.delete(nom))
       );
     })
   );
