@@ -36,7 +36,11 @@
       if (!brut) return Object.assign({}, CONFIG_DEFAUT);
       const parse = JSON.parse(brut);
       /* Fusion avec les valeurs par défaut pour les clés manquantes */
-      return Object.assign({}, CONFIG_DEFAUT, parse);
+      const config = Object.assign({}, CONFIG_DEFAUT, parse);
+      /* Ces valeurs sont figées — ignorer tout ce que le localStorage pourrait contenir */
+      config.date_format = CONFIG_DEFAUT.date_format;
+      config.unites      = CONFIG_DEFAUT.unites;
+      return config;
     } catch (e) {
       console.warn('[Parametrage] Impossible de lire localStorage :', e);
       return Object.assign({}, CONFIG_DEFAUT);
@@ -77,6 +81,10 @@
      * @param {*} value
      */
     set(key, value) {
+      if (key === 'date_format' || key === 'unites') {
+        /* Valeurs figées — toute écriture externe est ignorée */
+        return;
+      }
       if (!(key in CONFIG_DEFAUT)) {
         console.warn(`[Parametrage] Clé inconnue : "${key}"`);
       }

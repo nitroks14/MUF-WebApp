@@ -109,38 +109,6 @@
   </section>
 
   <!-- ================================================================
-       SECTION 6 — Préférences
-       ================================================================ -->
-  <section class="card mb-24" aria-labelledby="titre-preferences">
-    <div class="card-header">
-      <h2 class="card-title" id="titre-preferences">Préférences</h2>
-    </div>
-    <div class="card-body">
-
-      <div class="param-grid-2col">
-
-        <div class="form-group">
-          <label class="form-label" for="param-date-format">Format de date</label>
-          <select class="form-control" id="param-date-format" name="date_format">
-            <option value="DD/MM/YYYY">DD/MM/YYYY (France)</option>
-            <option value="MM/DD/YYYY">MM/DD/YYYY (États-Unis)</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="param-unites">Unités de mesure</label>
-          <select class="form-control" id="param-unites" name="unites">
-            <option value="SI">SI — Système international (kg, °C, bar…)</option>
-            <option value="imperial">Impérial (lb, °F, psi…)</option>
-          </select>
-        </div>
-
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ================================================================
        SECTION QR CODE - Partage rapide de configuration
        ================================================================ -->
   <section class="card mb-24" aria-labelledby="titre-qr">
@@ -353,8 +321,6 @@
     nom:               document.getElementById('param-nom'),
     prenom:            document.getElementById('param-prenom'),
     email_maintenance: document.getElementById('param-email-maintenance'),
-    date_format:    document.getElementById('param-date-format'),
-    unites:         document.getElementById('param-unites'),
   };
 
   const emailsListe       = document.getElementById('emails-liste');
