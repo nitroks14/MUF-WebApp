@@ -152,10 +152,6 @@
       <p class="text-muted text-sm mb-16">
         Transférez instantanément votre configuration vers un autre appareil.
       </p>
-      <p class="text-muted text-sm mb-16">
-        <small>Les listes de contacts ne sont pas incluses dans le QR Code.</small>
-      </p>
-
       <div class="qr-actions">
         <button type="button" class="btn btn-primary" id="btn-generer-qr">
           Générer le QR Code
@@ -647,25 +643,21 @@
       window.Parametrage.set(key, valeurs[key]);
     });
 
-    /* Sérialisation partielle : on exclut les grandes listes pour rester
-       dans les limites de capacité du QR Code (max ~6880 caractères). */
+    /* Sérialisation complète + compression LZ-String pour tenir dans le QR Code */
     const config = window.Parametrage.getAll();
-    const configReduite = {};
-    ['nom', 'prenom', 'email_maintenance', 'date_format', 'unites'].forEach(function (k) {
-      if (config[k] !== undefined) configReduite[k] = config[k];
-    });
-    const jsonConfig = JSON.stringify(configReduite);
+    const jsonConfig = JSON.stringify(config);
+    const compressed = LZString.compressToEncodedURIComponent(jsonConfig);
 
     /* Vide le conteneur et génère le QR */
     qrContainer.innerHTML = '';
     try {
       new QRCode(qrContainer, {
-        text:         jsonConfig,
+        text:         compressed,
         width:        220,
         height:       220,
         colorDark:    '#003A70',
         colorLight:   '#FFFFFF',
-        correctLevel: QRCode.CorrectLevel.M,
+        correctLevel: QRCode.CorrectLevel.L,
       });
     } catch (e) {
       afficherFeedbackQR('danger', 'Impossible de générer le QR Code : ' + e.message);
@@ -726,7 +718,15 @@
       if (code) {
         stopperCamera();
         try {
-          const configImportee = JSON.parse(code.data);
+          const raw = code.data;
+          let jsonStr;
+          try {
+            const decompressed = LZString.decompressFromEncodedURIComponent(raw);
+            jsonStr = decompressed || raw;
+          } catch (e) {
+            jsonStr = raw;
+          }
+          const configImportee = JSON.parse(jsonStr);
 
           /* Validation minimale */
           if (typeof configImportee !== 'object' || configImportee === null) {
@@ -738,11 +738,11 @@
             window.Parametrage.set(key, configImportee[key]);
           });
 
-          /* Mise à jour de l'affichage du formulaire */
-          remplirFormulaire();
-
-          afficherFeedbackQR('success', '✓ Configuration importée avec succès !');
+          afficherFeedbackQR('success', '✓ Configuration importée ! Rechargement en cours…');
           zoneGeneration.style.display = 'none';
+          setTimeout(function () {
+            window.location.reload();
+          }, 1500);
         } catch (e) {
           afficherFeedbackQR('danger', 'QR Code invalide : ' + e.message);
         }
