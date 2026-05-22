@@ -1,6 +1,6 @@
 <!--
   Plugin : Bon de retour pièces sous garantie
-  Génère un document imprimable + un fichier .eml (Outlook) avec le bon en PJ
+  Génère un PDF A4 via jsPDF + un fichier .eml (Outlook) avec le bon en PJ PDF
   Préfixe IDs : brg- (Bon Retour Garantie)
 -->
 
@@ -139,8 +139,8 @@
   </div>
   <div class="card-body">
     <p class="text-muted text-sm">
-      Remplissez le formulaire, puis imprimez le bon et/ou téléchargez un fichier
-      <strong>.eml</strong> à ouvrir dans Outlook (le bon sera en pièce jointe).
+      Remplissez le formulaire, puis téléchargez le bon en PDF et/ou téléchargez un fichier
+      <strong>.eml</strong> à ouvrir dans Outlook (le bon sera en pièce jointe PDF).
     </p>
   </div>
 </div>
@@ -288,11 +288,10 @@
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
              viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round"
-            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2
-               4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2
-               2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1
+               1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
         </svg>
-        Imprimer le bon
+        Télécharger le bon (PDF)
       </button>
     </div>
     <div class="brg-btn-wrap">
@@ -311,7 +310,7 @@
 
   <p class="text-muted text-sm" style="margin-top:10px;">
     Le bouton Outlook télécharge un fichier <strong>.eml</strong> — double-cliquez dessus
-    pour l'ouvrir directement dans Outlook avec le bon en pièce jointe.
+    pour l'ouvrir directement dans Outlook avec le bon PDF en pièce jointe.
   </p>
 
 </div>
@@ -322,27 +321,27 @@
 
   function el(id) { return document.getElementById(id); }
 
-  const domClient       = el('brg-client');
-  const domTypeMachine  = el('brg-type-machine');
-  const domNumMachine   = el('brg-num-machine');
-  const domPN           = el('brg-pn');
-  const domDefaut       = el('brg-defaut');
-  const domConstat      = el('brg-constat');
-  const domDate         = el('brg-date');
-  const domTech         = el('brg-technicien');
-  const domEmailTo           = el('brg-email-to');
-  const domSupportWrap       = el('brg-support-wrap');
-  const domSupportListe      = el('brg-support-liste');
-  const domEmailCc           = el('brg-email-cc');
-  const domNoteDestinat      = el('brg-note-destinataires');
-  const domEmailsFreqListeCc = el('brg-emails-freq-liste-cc');
-  const domTbodyCmd     = el('brg-tbody-cmd');
-  const domTbodyRet     = el('brg-tbody-ret');
-  const domBtnAddCmd    = el('brg-btn-add-cmd');
-  const domBtnAddRet    = el('brg-btn-add-ret');
-  const domBtnPrint     = el('brg-btn-print');
-  const domBtnOutlook   = el('brg-btn-outlook');
-  const domBtnReset     = el('brg-btn-reset');
+  var domClient       = el('brg-client');
+  var domTypeMachine  = el('brg-type-machine');
+  var domNumMachine   = el('brg-num-machine');
+  var domPN           = el('brg-pn');
+  var domDefaut       = el('brg-defaut');
+  var domConstat      = el('brg-constat');
+  var domDate         = el('brg-date');
+  var domTech         = el('brg-technicien');
+  var domEmailTo           = el('brg-email-to');
+  var domSupportWrap       = el('brg-support-wrap');
+  var domSupportListe      = el('brg-support-liste');
+  var domEmailCc           = el('brg-email-cc');
+  var domNoteDestinat      = el('brg-note-destinataires');
+  var domEmailsFreqListeCc = el('brg-emails-freq-liste-cc');
+  var domTbodyCmd     = el('brg-tbody-cmd');
+  var domTbodyRet     = el('brg-tbody-ret');
+  var domBtnAddCmd    = el('brg-btn-add-cmd');
+  var domBtnAddRet    = el('brg-btn-add-ret');
+  var domBtnPrint     = el('brg-btn-print');
+  var domBtnOutlook   = el('brg-btn-outlook');
+  var domBtnReset     = el('brg-btn-reset');
 
   /* ----------------------------------------------------------
      Tableaux de pièces — gestion des lignes dynamiques
@@ -410,8 +409,7 @@
       if ((prenom || nom) && !domTech.value) {
         domTech.value = [prenom, nom].filter(Boolean).join(' ');
       }
-
-    } /* fin if (window.Parametrage) */
+    }
 
     /* --- Chips contacts Support Technique pour le champ À --- */
     var contactsSupport = window.Parametrage ? window.Parametrage.get('contacts_support') : null;
@@ -430,7 +428,6 @@
         chip.setAttribute('aria-label', 'Sélectionner À : ' + adresse);
 
         chip.addEventListener('click', function () {
-          /* Sélection exclusive */
           var dejaActif = chip.classList.contains('brg-chip-actif');
           domSupportListe.querySelectorAll('.brg-email-chip').forEach(function (c) {
             c.classList.remove('brg-chip-actif');
@@ -451,7 +448,6 @@
     /* --- Chips CC : sav@multivac.fr (fixe) + emails_frequents (Paramétrage) --- */
     var emailsFreq = window.Parametrage ? window.Parametrage.get('emails_frequents') : null;
 
-    /* Adresse service support fixe + adresses Paramétrage */
     var sourceCC = [{ label: 'Service support', adresse: 'sav@multivac.fr' }];
     if (Array.isArray(emailsFreq)) {
       emailsFreq.forEach(function (entree) {
@@ -464,7 +460,7 @@
     sourceCC.forEach(function (item) {
       var chip = document.createElement('button');
       chip.type = 'button';
-      chip.className = 'brg-email-chip brg-chip-actif'; /* pré-coché */
+      chip.className = 'brg-email-chip brg-chip-actif';
       chip.textContent = item.label;
       chip.title = item.adresse;
       chip.setAttribute('aria-label', 'CC : ' + item.adresse);
@@ -475,9 +471,7 @@
       domEmailsFreqListeCc.appendChild(chip);
     });
 
-    /* Initialiser le champ CC */
     majEmailCcDepuisChips();
-
     majNoteDestinat();
   }
 
@@ -525,7 +519,6 @@
     check(domDefaut,      'Défaut constaté avant changement de pièces');
     check(domEmailTo,     'Email destinataire (À :)');
 
-    /* Au moins 1 référence dans les pièces retournées */
     var retLignes = lireLignes(domTbodyRet);
     var hasRef = retLignes.some(function (l) { return l.ref; });
     if (!hasRef) {
@@ -538,9 +531,9 @@
   }
 
   /* ----------------------------------------------------------
-     Génération du document HTML (bon de retour imprimable)
+     Génération du bon PDF via jsPDF
      ---------------------------------------------------------- */
-  function genererBonHTML() {
+  function construirePDF(jsPDF) {
     var client  = domClient.value.trim();
     var machine = domTypeMachine.value.trim() + ' n°' + domNumMachine.value.trim();
     var pn      = domPN.value.trim();
@@ -548,115 +541,284 @@
     var constat = domConstat.value.trim();
     var dateVal = domDate.value
       ? new Date(domDate.value + 'T12:00:00').toLocaleDateString('fr-FR')
-      : '—';
-    var tech = domTech.value.trim() || '—';
+      : new Date().toLocaleDateString('fr-FR');
+    var tech    = domTech.value.trim() || '—';
 
     var lignesCmd = lireLignes(domTbodyCmd);
     var lignesRet = lireLignes(domTbodyRet);
 
-    function esc(str) {
-      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
+    var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-    function genLignes(lignes, nbMin) {
-      var html = '';
-      var total = Math.max(lignes.length, nbMin);
-      for (var i = 0; i < total; i++) {
-        var l = lignes[i] || { ref: '', qty: '', ser: '' };
-        html +=
-          '<tr>' +
-          '<td style="padding:6px 8px; min-height:24px;">' + esc(l.ref) + '</td>' +
-          '<td style="padding:6px 8px; text-align:center;">' + esc(l.qty) + '</td>' +
-          '<td style="padding:6px 8px;">' + esc(l.ser) + '</td>' +
-          '</tr>';
+    /* Constantes de mise en page */
+    var mG   = 14;   /* marge gauche */
+    var mD   = 196;  /* x droite (210 - 14) */
+    var larg = mD - mG;  /* largeur utile */
+    var bleu = '#003A70';
+    var y    = 14;
+
+    /* ---- Filigrane ---- */
+    doc.saveGraphicsState();
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(52);
+    doc.setTextColor(0, 58, 112);
+    doc.setGState(new doc.GState({ opacity: 0.05 }));
+    doc.text('MULTIVAC FRANCE', 105, 148.5, {
+      align: 'center',
+      angle: 30
+    });
+    doc.restoreGraphicsState();
+
+    /* ---- Titre ---- */
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(bleu);
+    doc.text('BON DE RETOUR PIÈCES SOUS GARANTIE', 105, y, { align: 'center' });
+    y += 2;
+    doc.setDrawColor(bleu);
+    doc.setLineWidth(0.5);
+    doc.line(mG, y, mD, y);
+    y += 6;
+
+    /* ---- En-tête : client / machine / PN ---- */
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor('#222222');
+    var headerParts = ['CLIENT : ' + client, 'TYPE ET N° MACHINE : ' + machine];
+    if (pn) { headerParts.push('N° PROJET : ' + pn); }
+    var colW = larg / headerParts.length;
+    headerParts.forEach(function (txt, idx) {
+      doc.text(txt, mG + idx * colW, y, { maxWidth: colW - 2 });
+    });
+    y += 8;
+
+    /* ---- Fonction utilitaire : dessiner tableau de pièces ---- */
+    function dessinerTableauPieces(lignes, nbMin, labelVertical) {
+      var nbLignes = Math.max(lignes.length, nbMin);
+      var labelW   = 8;   /* largeur de la colonne label vertical */
+      var tableX   = mG + labelW;
+      var tableW   = larg - labelW;
+      var colWidths = [tableW * 0.60, tableW * 0.14, tableW * 0.26];
+      var rowH      = 7;
+      var headerH   = 8;
+
+      /* Hauteur totale de la section */
+      var sectionH = headerH + nbLignes * rowH;
+
+      /* Label vertical bleu */
+      doc.setFillColor(bleu);
+      doc.rect(mG, y, labelW, sectionH, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor('#ffffff');
+      doc.text(labelVertical, mG + labelW / 2, y + sectionH / 2, {
+        align: 'center',
+        angle: 90,
+        maxWidth: sectionH - 4
+      });
+
+      /* En-tête du tableau */
+      var headers = ['Référence', 'Qté', 'N° série'];
+      doc.setFillColor(bleu);
+      doc.setTextColor('#ffffff');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      var xh = tableX;
+      doc.rect(tableX, y, tableW, headerH, 'F');
+      headers.forEach(function (h, idx) {
+        doc.text(h, xh + 3, y + headerH / 2 + 2.5, { maxWidth: colWidths[idx] - 4 });
+        xh += colWidths[idx];
+      });
+
+      /* Lignes de données */
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor('#222222');
+      for (var i = 0; i < nbLignes; i++) {
+        var l  = lignes[i] || { ref: '', qty: '', ser: '' };
+        var ry = y + headerH + i * rowH;
+        var xc = tableX;
+        var vals = [l.ref, l.qty, l.ser];
+        /* Fond alterné très léger */
+        if (i % 2 === 1) {
+          doc.setFillColor(245, 247, 250);
+          doc.rect(tableX, ry, tableW, rowH, 'F');
+        }
+        vals.forEach(function (v, idx) {
+          doc.rect(xc, ry, colWidths[idx], rowH); /* bordure */
+          if (v) {
+            doc.text(String(v), xc + 3, ry + rowH / 2 + 2, { maxWidth: colWidths[idx] - 4 });
+          }
+          xc += colWidths[idx];
+        });
       }
-      return html;
+
+      /* Bordure extérieure de la section entière */
+      doc.setDrawColor('#999999');
+      doc.setLineWidth(0.3);
+      doc.rect(mG, y, larg, sectionH);
+
+      y += sectionH + 4;
     }
 
-    return '<!DOCTYPE html>\n' +
-'<html lang="fr">\n' +
-'<head>\n' +
-'<meta charset="utf-8">\n' +
-'<title>Bon de retour pièces sous garantie — ' + esc(client) + '</title>\n' +
-'<style>\n' +
-'  @page { size: A4; margin: 14mm 14mm 14mm 14mm; }\n' +
-'  * { box-sizing: border-box; }\n' +
-'  body { font-family: Arial, Helvetica, sans-serif; font-size: 11pt; color: #222; margin: 0; padding: 0; }\n' +
-'  h1 { font-size: 12pt; text-align: center; text-transform: uppercase;\n' +
-'       letter-spacing: 1px; color: #003A70; border-bottom: 2px solid #003A70;\n' +
-'       padding-bottom: 6px; margin: 0 0 14px 0; }\n' +
-'  .header-row { display: flex; justify-content: space-between; margin-bottom: 14px;\n' +
-'                font-weight: bold; font-size: 11pt; }\n' +
-'  table { width: 100%; border-collapse: collapse; }\n' +
-'  th { background: #003A70; color: #fff; font-size: 10pt; padding: 7px 8px;\n' +
-'       text-align: left; border: 1px solid #003A70; }\n' +
-'  td { border: 1px solid #999; font-size: 10pt; vertical-align: middle; }\n' +
-'  .section-wrapper { display: flex; margin-bottom: 14px; border: 1px solid #999; }\n' +
-'  .section-label { writing-mode: vertical-rl; text-orientation: mixed;\n' +
-'                   transform: rotate(180deg); background: #003A70; color: #fff;\n' +
-'                   font-weight: bold; font-size: 8pt; text-transform: uppercase;\n' +
-'                   letter-spacing: 0.8px; padding: 8px 5px; text-align: center;\n' +
-'                   min-width: 26px; }\n' +
-'  .section-content { flex: 1; }\n' +
-'  .text-label { background: #f0f3f8; border-bottom: 1px solid #999;\n' +
-'                padding: 5px 8px; font-weight: bold; font-size: 10pt; }\n' +
-'  .text-block { padding: 8px; min-height: 52px; font-size: 10pt;\n' +
-'                white-space: pre-wrap; border-bottom: 1px solid #999; }\n' +
-'  .footer-row { display: flex; gap: 30px; padding: 7px 8px; font-size: 10pt; }\n' +
-'  .watermark { position: fixed; top: 50%; left: 50%;\n' +
-'               transform: translate(-50%,-50%) rotate(-30deg);\n' +
-'               font-size: 64pt; color: rgba(0,58,112,0.06); font-weight: bold;\n' +
-'               letter-spacing: 3px; white-space: nowrap; pointer-events: none; }\n' +
-'</style>\n' +
-'</head>\n' +
-'<body>\n' +
-'<div class="watermark">MULTIVAC FRANCE</div>\n' +
-'<h1>Bon de retour pièces sous garantie</h1>\n' +
-'<div class="header-row">\n' +
-'  <span>CLIENT : ' + esc(client) + '</span>\n' +
-'  <span>TYPE ET N° MACHINE : ' + esc(machine) + '</span>\n' +
-(pn ? '  <span>N° PROJET : ' + esc(pn) + '</span>\n' : '') +
-'</div>\n' +
-'<div class="section-wrapper">\n' +
-'  <div class="section-label">Multivac</div>\n' +
-'  <div class="section-content">\n' +
-'    <table><thead><tr>\n' +
-'      <th style="width:60%">Référence(s) commandée(s) sous garantie</th>\n' +
-'      <th style="width:15%">Quantité</th>\n' +
-'      <th style="width:25%">N° série</th>\n' +
-'    </tr></thead><tbody>\n' +
-      genLignes(lignesCmd, 4) +
-'    </tbody></table>\n' +
-'  </div>\n' +
-'</div>\n' +
-'<div class="section-wrapper">\n' +
-'  <div class="section-label" style="font-size:7pt;">A remplir par le client / technicien</div>\n' +
-'  <div class="section-content">\n' +
-'    <table><thead><tr>\n' +
-'      <th style="width:60%">Référence(s) retournée(s) HS</th>\n' +
-'      <th style="width:15%">Quantité</th>\n' +
-'      <th style="width:25%">N° série</th>\n' +
-'    </tr></thead><tbody>\n' +
-      genLignes(lignesRet, 4) +
-'    </tbody></table>\n' +
-'    <div class="text-label">Défaut constaté avant le changement de pièces</div>\n' +
-'    <div class="text-block">' + esc(defaut) + '</div>\n' +
-'    <div class="text-label" style="border-top:none;">Constat du technicien (Multivac, freelance ou client)</div>\n' +
-'    <div class="text-block">' + esc(constat) + '</div>\n' +
-'    <div class="footer-row">\n' +
-'      <span><strong>Date :</strong> ' + esc(dateVal) + '</span>\n' +
-'      <span><strong>Nom et signature :</strong> ' + esc(tech) + '</span>\n' +
-'    </div>\n' +
-'  </div>\n' +
-'</div>\n' +
-'</body>\n' +
-'</html>';
+    /* ---- Section MULTIVAC ---- */
+    dessinerTableauPieces(lignesCmd, 4, 'MULTIVAC');
+
+    /* ---- Section CLIENT / TECHNICIEN ---- */
+    var labelW2  = 8;
+    var tableX2  = mG + labelW2;
+    var tableW2  = larg - labelW2;
+    var colW2    = [tableW2 * 0.60, tableW2 * 0.14, tableW2 * 0.26];
+    var rowH2    = 7;
+    var headerH2 = 8;
+
+    /* Calcul hauteur section client/tech */
+    var nbRetMin  = Math.max(lignesRet.length, 4);
+    var defautLines = doc.splitTextToSize(defaut || ' ', tableW2 - 6);
+    var constatLines = doc.splitTextToSize(constat || ' ', tableW2 - 6);
+    var defautH   = Math.max(defautLines.length * 5, 14) + 10; /* label 6 + texte */
+    var constatH  = Math.max(constatLines.length * 5, 14) + 10;
+    var footerH   = 10;
+    var sectionH2 = headerH2 + nbRetMin * rowH2 + defautH + constatH + footerH;
+
+    /* Label vertical */
+    doc.setFillColor(bleu);
+    doc.rect(mG, y, labelW2, sectionH2, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.5);
+    doc.setTextColor('#ffffff');
+    doc.text('A REMPLIR PAR LE CLIENT / TECHNICIEN', mG + labelW2 / 2, y + sectionH2 / 2, {
+      align: 'center',
+      angle: 90,
+      maxWidth: sectionH2 - 4
+    });
+
+    var yS = y; /* mémoriser y de départ pour le rect global */
+
+    /* En-tête tableau retour */
+    doc.setFillColor(bleu);
+    doc.setTextColor('#ffffff');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.rect(tableX2, y, tableW2, headerH2, 'F');
+    var xhR = tableX2;
+    ['Référence(s) retournée(s) HS', 'Qté', 'N° série'].forEach(function (h, idx) {
+      doc.text(h, xhR + 3, y + headerH2 / 2 + 2.5, { maxWidth: colW2[idx] - 4 });
+      xhR += colW2[idx];
+    });
+    y += headerH2;
+
+    /* Lignes pièces retournées */
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor('#222222');
+    for (var i = 0; i < nbRetMin; i++) {
+      var l  = lignesRet[i] || { ref: '', qty: '', ser: '' };
+      var ry = y + i * rowH2;
+      var xc = tableX2;
+      if (i % 2 === 1) {
+        doc.setFillColor(245, 247, 250);
+        doc.rect(tableX2, ry, tableW2, rowH2, 'F');
+      }
+      [l.ref, l.qty, l.ser].forEach(function (v, idx) {
+        doc.setDrawColor('#999999');
+        doc.setLineWidth(0.3);
+        doc.rect(xc, ry, colW2[idx], rowH2);
+        if (v) {
+          doc.setTextColor('#222222');
+          doc.text(String(v), xc + 3, ry + rowH2 / 2 + 2, { maxWidth: colW2[idx] - 4 });
+        }
+        xc += colW2[idx];
+      });
+    }
+    y += nbRetMin * rowH2;
+
+    /* Zone défaut constaté */
+    doc.setFillColor(240, 243, 248);
+    doc.rect(tableX2, y, tableW2, 6, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor('#222222');
+    doc.text('Défaut constaté avant le changement de pièces', tableX2 + 3, y + 4.5);
+    doc.setDrawColor('#999999');
+    doc.setLineWidth(0.3);
+    doc.rect(tableX2, y, tableW2, 6);
+    y += 6;
+
+    var defautTextH = defautH - 10;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.rect(tableX2, y, tableW2, defautTextH);
+    if (defaut) {
+      doc.text(defautLines, tableX2 + 3, y + 5, { maxWidth: tableW2 - 6 });
+    }
+    y += defautTextH;
+
+    /* Zone constat technicien */
+    doc.setFillColor(240, 243, 248);
+    doc.rect(tableX2, y, tableW2, 6, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor('#222222');
+    doc.text('Constat du technicien (Multivac, freelance ou client)', tableX2 + 3, y + 4.5);
+    doc.setDrawColor('#999999');
+    doc.setLineWidth(0.3);
+    doc.rect(tableX2, y, tableW2, 6);
+    y += 6;
+
+    var constatTextH = constatH - 10;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.rect(tableX2, y, tableW2, constatTextH);
+    if (constat) {
+      doc.text(constatLines, tableX2 + 3, y + 5, { maxWidth: tableW2 - 6 });
+    }
+    y += constatTextH;
+
+    /* Footer date / signature */
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor('#222222');
+    doc.rect(tableX2, y, tableW2, footerH);
+    doc.text('Date : ' + dateVal, tableX2 + 4, y + footerH / 2 + 1.5);
+    doc.text('Nom et signature : ' + tech, tableX2 + tableW2 / 2, y + footerH / 2 + 1.5);
+    y += footerH;
+
+    /* Bordure extérieure section client */
+    doc.setDrawColor('#999999');
+    doc.setLineWidth(0.4);
+    doc.rect(mG, yS, larg, sectionH2);
+
+    return doc;
   }
 
   /* ----------------------------------------------------------
-     Impression — ouvre le bon dans un nouvel onglet
+     Chargement lazy de jsPDF — même pattern que calcul-vide
      ---------------------------------------------------------- */
-  function imprimer() {
+  function avecJsPDF(callback) {
+    if (window.jspdf && window.jspdf.jsPDF) {
+      callback(window.jspdf.jsPDF);
+    } else {
+      var script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      script.onload = function () {
+        var jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+        if (!jsPDF) {
+          alert('jsPDF non trouvé après chargement. Vérifiez votre connexion et réessayez.');
+          return;
+        }
+        callback(jsPDF);
+      };
+      script.onerror = function () {
+        alert('Impossible de charger jsPDF. Vérifiez votre connexion internet.');
+      };
+      document.body.appendChild(script);
+    }
+  }
+
+  /* ----------------------------------------------------------
+     Génération et téléchargement PDF
+     ---------------------------------------------------------- */
+  function genererBonPDF(callback) {
     var erreurs = valider();
     if (erreurs.length > 0) {
       alert('Merci de renseigner les champs suivants :\n\n• ' + erreurs.join('\n• '));
@@ -664,18 +826,27 @@
       if (premier) { premier.focus(); }
       return;
     }
-    var html = genererBonHTML();
-    var win = window.open('', '_blank', 'width=900,height=700');
-    if (!win) { alert('Veuillez autoriser les pop-ups pour imprimer.'); return; }
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    setTimeout(function () { win.print(); }, 600);
+
+    avecJsPDF(function (jsPDF) {
+      try {
+        var doc    = construirePDF(jsPDF);
+        var client = domClient.value.trim();
+        var nomFichier = 'Bon_retour_garantie_' + client.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
+
+        if (typeof callback === 'function') {
+          callback(doc, nomFichier);
+        } else {
+          doc.save(nomFichier);
+        }
+      } catch (e) {
+        console.error('[RetourGarantie] Erreur génération PDF :', e);
+        alert('Erreur lors de la génération du PDF.');
+      }
+    });
   }
 
   /* ----------------------------------------------------------
-     Génération du fichier .eml avec le bon en pièce jointe HTML
-     Le fichier téléchargé s'ouvre directement dans Outlook
+     Génération du fichier .eml avec le bon PDF en pièce jointe
      ---------------------------------------------------------- */
   function ouvrirOutlook() {
     var erreurs = valider();
@@ -686,79 +857,97 @@
       return;
     }
 
-    var client  = domClient.value.trim();
-    var machine = domTypeMachine.value.trim() + ' n°' + domNumMachine.value.trim();
-    var pn      = domPN.value.trim();
-    var to      = domEmailTo.value.trim();
-    var cc      = domEmailCc.value.trim().replace(/;/g, ',');
-    var tech    = domTech.value.trim() || '';
-    var dateVal = domDate.value
-      ? new Date(domDate.value + 'T12:00:00').toLocaleDateString('fr-FR')
-      : new Date().toLocaleDateString('fr-FR');
+    avecJsPDF(function (jsPDF) {
+      try {
+        var doc = construirePDF(jsPDF);
 
-    var sujet = 'Retour pièces sous garantie — ' + client + ' — ' + machine;
-    var corps =
-      'Bonjour,\r\n\r\n' +
-      'Veuillez trouver ci-joint le bon de retour pièces sous garantie pour :\r\n' +
-      '  Client  : ' + client + '\r\n' +
-      '  Machine : ' + machine + '\r\n' +
-      (pn ? '  N° Projet : ' + pn + '\r\n' : '') +
-      '  Date    : ' + dateVal + '\r\n\r\n' +
-      'Merci de bien vouloir traiter ce retour.\r\n\r\n' +
-      'Cordialement,\r\n' + tech;
+        var client  = domClient.value.trim();
+        var machine = domTypeMachine.value.trim() + ' n°' + domNumMachine.value.trim();
+        var pn      = domPN.value.trim();
+        var to      = domEmailTo.value.trim();
+        var cc      = domEmailCc.value.trim().replace(/;/g, ',');
+        var tech    = domTech.value.trim() || '';
+        var dateVal = domDate.value
+          ? new Date(domDate.value + 'T12:00:00').toLocaleDateString('fr-FR')
+          : new Date().toLocaleDateString('fr-FR');
 
-    var nomFichier = 'Bon_retour_garantie_' + client.replace(/[^a-zA-Z0-9]/g, '_') + '.html';
-    var htmlDoc    = genererBonHTML();
+        var sujet = 'Retour pièces sous garantie — ' + client + ' — ' + machine;
+        var corps =
+          'Bonjour,\r\n\r\n' +
+          'Veuillez trouver ci-joint le bon de retour pièces sous garantie pour :\r\n' +
+          '  Client  : ' + client + '\r\n' +
+          '  Machine : ' + machine + '\r\n' +
+          (pn ? '  N° Projet : ' + pn + '\r\n' : '') +
+          '  Date    : ' + dateVal + '\r\n\r\n' +
+          'Merci de bien vouloir traiter ce retour.\r\n\r\n' +
+          'Cordialement,\r\n' + tech;
 
-    /* Encodage base64 UTF-8 */
-    var b64 = btoa(unescape(encodeURIComponent(htmlDoc)));
+        var nomFichier = 'Bon_retour_garantie_' + client.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
 
-    /* Construction du fichier EML multipart/mixed */
-    var boundary = 'MUF_BRG_' + Date.now();
-    var dateGMT  = new Date().toUTCString();
+        /* Récupérer le PDF en ArrayBuffer puis encoder en base64 */
+        var pdfArray = doc.output('arraybuffer');
+        var uint8    = new Uint8Array(pdfArray);
+        var binary   = '';
+        /* Conversion en base64 par blocs (compatible Safari iOS) */
+        var chunkSize = 8192;
+        for (var offset = 0; offset < uint8.length; offset += chunkSize) {
+          var chunk = uint8.subarray(offset, offset + chunkSize);
+          binary += String.fromCharCode.apply(null, chunk);
+        }
+        var b64 = btoa(binary);
 
-    var eml  = 'From: \r\n';
-    eml += 'To: ' + to + '\r\n';
-    if (cc) { eml += 'Cc: ' + cc + '\r\n'; }
-    eml += 'Subject: ' + sujet + '\r\n';
-    eml += 'Date: ' + dateGMT + '\r\n';
-    eml += 'MIME-Version: 1.0\r\n';
-    eml += 'Content-Type: multipart/mixed; boundary="' + boundary + '"\r\n';
-    eml += 'X-Unsent: 1\r\n';
-    eml += '\r\n';
+        /* Construction du fichier EML multipart/mixed */
+        var boundary = 'MUF_BRG_' + Date.now();
+        var dateGMT  = new Date().toUTCString();
 
-    /* Partie 1 : corps texte */
-    eml += '--' + boundary + '\r\n';
-    eml += 'Content-Type: text/plain; charset=utf-8\r\n';
-    eml += 'Content-Transfer-Encoding: 8bit\r\n';
-    eml += '\r\n';
-    eml += corps + '\r\n';
-    eml += '\r\n';
+        var eml  = 'From: \r\n';
+        eml += 'To: ' + to + '\r\n';
+        if (cc) { eml += 'Cc: ' + cc + '\r\n'; }
+        eml += 'Subject: ' + sujet + '\r\n';
+        eml += 'Date: ' + dateGMT + '\r\n';
+        eml += 'MIME-Version: 1.0\r\n';
+        eml += 'Content-Type: multipart/mixed; boundary="' + boundary + '"\r\n';
+        eml += 'X-Unsent: 1\r\n';
+        eml += '\r\n';
 
-    /* Partie 2 : pièce jointe HTML */
-    eml += '--' + boundary + '\r\n';
-    eml += 'Content-Type: text/html; charset=utf-8; name="' + nomFichier + '"\r\n';
-    eml += 'Content-Disposition: attachment; filename="' + nomFichier + '"\r\n';
-    eml += 'Content-Transfer-Encoding: base64\r\n';
-    eml += '\r\n';
-    /* Découpage en lignes de 76 caractères (RFC 2045) */
-    eml += b64.match(/.{1,76}/g).join('\r\n');
-    eml += '\r\n';
-    eml += '--' + boundary + '--\r\n';
+        /* Partie 1 : corps texte */
+        eml += '--' + boundary + '\r\n';
+        eml += 'Content-Type: text/plain; charset=utf-8\r\n';
+        eml += 'Content-Transfer-Encoding: 8bit\r\n';
+        eml += '\r\n';
+        eml += corps + '\r\n';
+        eml += '\r\n';
 
-    /* Téléchargement du fichier .eml */
-    var blob    = new Blob([eml], { type: 'message/rfc822' });
-    var url     = URL.createObjectURL(blob);
-    var lienTmp = document.createElement('a');
-    lienTmp.href     = url;
-    lienTmp.download = 'Bon_retour_' + client.replace(/[^a-zA-Z0-9]/g, '_') + '.eml';
-    lienTmp.style.display = 'none';
-    document.body.appendChild(lienTmp);
-    lienTmp.click();
-    setTimeout(function () {
-      document.body.removeChild(lienTmp);
-      URL.revokeObjectURL(url);
-    }, 1000);
+        /* Partie 2 : pièce jointe PDF */
+        eml += '--' + boundary + '\r\n';
+        eml += 'Content-Type: application/pdf; name="' + nomFichier + '"\r\n';
+        eml += 'Content-Disposition: attachment; filename="' + nomFichier + '"\r\n';
+        eml += 'Content-Transfer-Encoding: base64\r\n';
+        eml += '\r\n';
+        /* Découpage en lignes de 76 caractères (RFC 2045) */
+        eml += b64.match(/.{1,76}/g).join('\r\n');
+        eml += '\r\n';
+        eml += '--' + boundary + '--\r\n';
+
+        /* Téléchargement du fichier .eml */
+        var blob    = new Blob([eml], { type: 'message/rfc822' });
+        var url     = URL.createObjectURL(blob);
+        var lienTmp = document.createElement('a');
+        lienTmp.href     = url;
+        lienTmp.download = 'Bon_retour_' + client.replace(/[^a-zA-Z0-9]/g, '_') + '.eml';
+        lienTmp.style.display = 'none';
+        document.body.appendChild(lienTmp);
+        lienTmp.click();
+        setTimeout(function () {
+          document.body.removeChild(lienTmp);
+          URL.revokeObjectURL(url);
+        }, 1000);
+
+      } catch (e) {
+        console.error('[RetourGarantie] Erreur génération EML :', e);
+        alert('Erreur lors de la génération du fichier Outlook.');
+      }
+    });
   }
 
   /* ----------------------------------------------------------
@@ -772,22 +961,18 @@
     domDefaut.value      = '';
     domConstat.value     = '';
     domDate.value        = dateDuJour();
-    /* Vider le champ À et désactiver les chips support */
     domEmailTo.value = '';
     domSupportListe.querySelectorAll('.brg-email-chip').forEach(function (c) {
       c.classList.remove('brg-chip-actif');
     });
-    /* Remettre toutes les chips CC cochées */
     domEmailsFreqListeCc.querySelectorAll('.brg-email-chip').forEach(function (c) {
       c.classList.add('brg-chip-actif');
     });
     majEmailCcDepuisChips();
-    /* Réinitialiser les tableaux */
     domTbodyCmd.innerHTML = '';
     domTbodyRet.innerHTML = '';
     creerLigne(domTbodyCmd);
     creerLigne(domTbodyRet);
-    /* Nom technicien depuis Parametrage ou vide */
     if (window.Parametrage) {
       var prenom = window.Parametrage.get('prenom') || '';
       var nom    = window.Parametrage.get('nom')    || '';
@@ -804,7 +989,7 @@
   /* ----------------------------------------------------------
      Branchement des événements
      ---------------------------------------------------------- */
-  domBtnPrint.addEventListener('click', imprimer);
+  domBtnPrint.addEventListener('click', function () { genererBonPDF(); });
   domBtnOutlook.addEventListener('click', ouvrirOutlook);
   domBtnReset.addEventListener('click', reinitialiser);
 
