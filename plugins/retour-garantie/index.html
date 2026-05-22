@@ -1,0 +1,673 @@
+<!--
+  Plugin : Bon de retour pièces sous garantie
+  Génère un document imprimable + un fichier .eml (Outlook) avec le bon en PJ
+  Préfixe IDs : brg- (Bon Retour Garantie)
+-->
+
+<style>
+  .brg-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  @media (min-width: 600px) { .brg-grid { grid-template-columns: 1fr 1fr; } }
+
+  .brg-section { margin-top: 20px; }
+
+  .brg-section-title {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--color-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--color-primary);
+    margin-bottom: 12px;
+  }
+
+  /* Tableau de saisie des pièces */
+  .brg-table { width: 100%; border-collapse: collapse; }
+  .brg-table th {
+    background: var(--color-primary);
+    color: var(--color-white);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    padding: 8px 10px;
+    text-align: left;
+    border: 1px solid var(--color-primary);
+  }
+  .brg-table td { border: 1px solid var(--color-border); padding: 3px; vertical-align: middle; }
+  .brg-table input {
+    width: 100%;
+    border: none;
+    outline: none;
+    padding: 6px 8px;
+    font-size: var(--font-size-sm);
+    font-family: inherit;
+    background: transparent;
+    color: var(--color-text);
+  }
+  .brg-table input:focus { background: rgba(0,58,112,0.05); border-radius: 3px; }
+  .brg-table .brg-col-ref { width: 55%; }
+  .brg-table .brg-col-qty { width: 14%; }
+  .brg-table .brg-col-ser { width: 24%; }
+  .brg-table .brg-col-del { width: 7%; text-align: center; }
+
+  .brg-btn-addrow {
+    margin-top: 8px;
+    font-size: var(--font-size-sm);
+    color: var(--color-primary);
+    background: none;
+    border: 1px dashed var(--color-primary);
+    border-radius: var(--radius);
+    padding: 6px 12px;
+    cursor: pointer;
+    width: 100%;
+    transition: background-color var(--transition);
+  }
+  .brg-btn-addrow:hover { background: rgba(0,58,112,0.06); }
+
+  .brg-del-btn {
+    background: none;
+    border: none;
+    color: #bbb;
+    cursor: pointer;
+    font-size: 17px;
+    padding: 4px 6px;
+    line-height: 1;
+    border-radius: 3px;
+    transition: color 0.15s;
+  }
+  .brg-del-btn:hover { color: #E53E3E; background: rgba(229,62,62,0.08); }
+
+  .form-control.brg-invalid { border-color: #E53E3E !important; box-shadow: 0 0 0 3px rgba(229,62,62,0.15); }
+  .brg-table input.brg-invalid { background: rgba(229,62,62,0.08) !important; border-radius: 3px; }
+
+  .brg-note-box {
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 12px;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin-top: 8px;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 599px) {
+    .brg-btn-wrap { width: 100%; }
+    .brg-btn-wrap .btn { width: 100%; }
+    .brg-table thead { display: none; }
+    .brg-table, .brg-table tbody, .brg-table tr, .brg-table td { display: block; width: 100%; }
+    .brg-table tr { border: 1px solid var(--color-border); margin-bottom: 8px; border-radius: var(--radius); }
+    .brg-table td { border: none; border-bottom: 1px solid var(--color-border); padding: 2px 6px; }
+    .brg-table td::before { content: attr(data-label); font-size: 10px; color: var(--color-text-muted); display: block; margin-top: 4px; }
+    .brg-table .brg-col-del { border-bottom: none; }
+  }
+</style>
+
+<!-- EN-TÊTE DU PLUGIN -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h2 class="card-title">Bon de retour pièces sous garantie</h2>
+    <span class="badge badge-secondary">Document + Outlook</span>
+  </div>
+  <div class="card-body">
+    <p class="text-muted text-sm">
+      Remplissez le formulaire, puis imprimez le bon et/ou téléchargez un fichier
+      <strong>.eml</strong> à ouvrir dans Outlook (le bon sera en pièce jointe).
+    </p>
+  </div>
+</div>
+
+<!-- FORMULAIRE -->
+<div class="card">
+
+  <!-- Identification -->
+  <div class="brg-section-title">Identification</div>
+  <div class="brg-grid">
+    <div class="form-group">
+      <label class="form-label" for="brg-client">Nom du client <span aria-hidden="true">*</span></label>
+      <input class="form-control" id="brg-client" type="text"
+             placeholder="Ex. Société Martin" autocomplete="off" required>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <div class="form-group">
+        <label class="form-label" for="brg-type-machine">Type machine <span aria-hidden="true">*</span></label>
+        <input class="form-control" id="brg-type-machine" type="text"
+               placeholder="Ex. T300L" autocomplete="off" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="brg-num-machine">N° machine <span aria-hidden="true">*</span></label>
+        <input class="form-control" id="brg-num-machine" type="text"
+               placeholder="Ex. 291520" autocomplete="off" required>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pièces commandées sous garantie (section Multivac du document) -->
+  <div class="brg-section">
+    <div class="brg-section-title">Pièces commandées sous garantie — Multivac</div>
+    <p class="text-muted text-sm" style="margin-bottom:10px;">
+      Pièces neuves envoyées par Multivac en remplacement.
+    </p>
+    <table class="brg-table">
+      <thead>
+        <tr>
+          <th class="brg-col-ref">Référence(s) commandée(s) sous garantie</th>
+          <th class="brg-col-qty">Quantité</th>
+          <th class="brg-col-ser">N° série</th>
+          <th class="brg-col-del"></th>
+        </tr>
+      </thead>
+      <tbody id="brg-tbody-cmd"></tbody>
+    </table>
+    <button class="brg-btn-addrow" id="brg-btn-add-cmd" type="button">+ Ajouter une référence</button>
+  </div>
+
+  <!-- Pièces retournées HS -->
+  <div class="brg-section">
+    <div class="brg-section-title">Pièces retournées HS — À remplir par le client / technicien</div>
+    <table class="brg-table">
+      <thead>
+        <tr>
+          <th class="brg-col-ref">Référence(s) retournée(s) HS</th>
+          <th class="brg-col-qty">Quantité</th>
+          <th class="brg-col-ser">N° série</th>
+          <th class="brg-col-del"></th>
+        </tr>
+      </thead>
+      <tbody id="brg-tbody-ret"></tbody>
+    </table>
+    <button class="brg-btn-addrow" id="brg-btn-add-ret" type="button">+ Ajouter une référence</button>
+  </div>
+
+  <!-- Défaut constaté -->
+  <div class="brg-section form-group">
+    <label class="form-label" for="brg-defaut">
+      Défaut constaté avant le changement de pièces <span aria-hidden="true">*</span>
+    </label>
+    <textarea class="form-control" id="brg-defaut" rows="3"
+              placeholder="Décrire le défaut observé avant remplacement…"></textarea>
+  </div>
+
+  <!-- Constat technicien -->
+  <div class="form-group">
+    <label class="form-label" for="brg-constat">
+      Constat du technicien (Multivac, freelance ou client)
+    </label>
+    <textarea class="form-control" id="brg-constat" rows="3"
+              placeholder="Observations et diagnostic du technicien…"></textarea>
+  </div>
+
+  <!-- Date + Technicien -->
+  <div class="brg-grid" style="margin-top:4px;">
+    <div class="form-group">
+      <label class="form-label" for="brg-date">Date</label>
+      <input class="form-control" id="brg-date" type="date">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="brg-technicien">Nom et signature</label>
+      <input class="form-control" id="brg-technicien" type="text" placeholder="Prénom Nom">
+    </div>
+  </div>
+
+  <!-- Destinataires -->
+  <div class="brg-section">
+    <div class="brg-section-title">Destinataires</div>
+    <div class="brg-grid">
+      <div class="form-group">
+        <label class="form-label" for="brg-email-to">
+          À (email SAV / garantie Multivac) <span aria-hidden="true">*</span>
+        </label>
+        <input class="form-control" id="brg-email-to" type="email"
+               placeholder="sav@multivac.fr">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="brg-email-cc">CC (optionnel)</label>
+        <input class="form-control" id="brg-email-cc" type="email"
+               placeholder="copie@votre-domaine.fr">
+      </div>
+    </div>
+    <div id="brg-note-destinataires" class="brg-note-box">
+      Configurez vos destinataires dans le module <strong>Paramétrage</strong>.
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="brg-section" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+    <div class="brg-btn-wrap">
+      <button class="btn btn-outline" id="brg-btn-print" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2
+               4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2
+               2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+        </svg>
+        Imprimer le bon
+      </button>
+    </div>
+    <div class="brg-btn-wrap">
+      <button class="btn btn-primary" id="brg-btn-outlook" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0
+               002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+        Ouvrir dans Outlook (avec PJ)
+      </button>
+    </div>
+    <button class="btn btn-outline btn-sm" id="brg-btn-reset" type="button">Réinitialiser</button>
+  </div>
+
+  <p class="text-muted text-sm" style="margin-top:10px;">
+    Le bouton Outlook télécharge un fichier <strong>.eml</strong> — double-cliquez dessus
+    pour l'ouvrir directement dans Outlook avec le bon en pièce jointe.
+  </p>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  function el(id) { return document.getElementById(id); }
+
+  const domClient       = el('brg-client');
+  const domTypeMachine  = el('brg-type-machine');
+  const domNumMachine   = el('brg-num-machine');
+  const domDefaut       = el('brg-defaut');
+  const domConstat      = el('brg-constat');
+  const domDate         = el('brg-date');
+  const domTech         = el('brg-technicien');
+  const domEmailTo      = el('brg-email-to');
+  const domEmailCc      = el('brg-email-cc');
+  const domNoteDestinat = el('brg-note-destinataires');
+  const domTbodyCmd     = el('brg-tbody-cmd');
+  const domTbodyRet     = el('brg-tbody-ret');
+  const domBtnAddCmd    = el('brg-btn-add-cmd');
+  const domBtnAddRet    = el('brg-btn-add-ret');
+  const domBtnPrint     = el('brg-btn-print');
+  const domBtnOutlook   = el('brg-btn-outlook');
+  const domBtnReset     = el('brg-btn-reset');
+
+  /* ----------------------------------------------------------
+     Tableaux de pièces — gestion des lignes dynamiques
+     ---------------------------------------------------------- */
+  function creerLigne(tbody) {
+    var i = tbody.rows.length + 1;
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td data-label="Référence" class="brg-col-ref">' +
+        '<input type="text" placeholder="Référence pièce" aria-label="Référence ' + i + '">' +
+      '</td>' +
+      '<td data-label="Quantité" class="brg-col-qty">' +
+        '<input type="number" min="1" placeholder="Qté" aria-label="Quantité ' + i + '">' +
+      '</td>' +
+      '<td data-label="N° série" class="brg-col-ser">' +
+        '<input type="text" placeholder="N° série" aria-label="N° série ' + i + '">' +
+      '</td>' +
+      '<td class="brg-col-del">' +
+        '<button class="brg-del-btn" type="button" title="Supprimer" aria-label="Supprimer ligne">×</button>' +
+      '</td>';
+    tr.querySelector('.brg-del-btn').addEventListener('click', function () {
+      if (tbody.rows.length > 1) { tr.remove(); }
+    });
+    tbody.appendChild(tr);
+  }
+
+  /* Initialiser 1 ligne par tableau */
+  creerLigne(domTbodyCmd);
+  creerLigne(domTbodyRet);
+
+  domBtnAddCmd.addEventListener('click', function () {
+    if (domTbodyCmd.rows.length < 8) { creerLigne(domTbodyCmd); }
+  });
+  domBtnAddRet.addEventListener('click', function () {
+    if (domTbodyRet.rows.length < 8) { creerLigne(domTbodyRet); }
+  });
+
+  /* ----------------------------------------------------------
+     Pré-remplissage depuis window.Parametrage
+     ---------------------------------------------------------- */
+  function preremplir() {
+    if (!window.Parametrage) { return; }
+    var prenom = window.Parametrage.get('prenom') || '';
+    var nom    = window.Parametrage.get('nom')    || '';
+    if ((prenom || nom) && !domTech.value) {
+      domTech.value = [prenom, nom].filter(Boolean).join(' ');
+    }
+    var emailMaint = window.Parametrage.get('email_maintenance')
+                  || window.Parametrage.get('email') || '';
+    if (emailMaint) { domEmailTo.value = emailMaint; }
+    majNoteDestinat();
+  }
+
+  function majNoteDestinat() {
+    var to = domEmailTo.value.trim() || '(non configuré — voir Paramétrage)';
+    var cc = domEmailCc.value.trim() || '—';
+    domNoteDestinat.innerHTML =
+      '<strong>À :</strong> ' + to +
+      ' &nbsp;|&nbsp; <strong>CC :</strong> ' + cc +
+      '<br><em>Le bouton Outlook génère un fichier .eml à ouvrir manuellement.</em>';
+  }
+
+  domEmailTo.addEventListener('input', majNoteDestinat);
+  domEmailCc.addEventListener('input', majNoteDestinat);
+
+  /* ----------------------------------------------------------
+     Date du jour par défaut
+     ---------------------------------------------------------- */
+  function dateDuJour() {
+    return new Date().toISOString().split('T')[0];
+  }
+  domDate.value = dateDuJour();
+
+  /* ----------------------------------------------------------
+     Lecture des lignes des tableaux
+     ---------------------------------------------------------- */
+  function lireLignes(tbody) {
+    var lignes = [];
+    Array.from(tbody.rows).forEach(function (tr) {
+      var inputs = tr.querySelectorAll('input');
+      var ref = inputs[0] ? inputs[0].value.trim() : '';
+      var qty = inputs[1] ? inputs[1].value.trim() : '';
+      var ser = inputs[2] ? inputs[2].value.trim() : '';
+      if (ref || qty) { lignes.push({ ref: ref, qty: qty, ser: ser }); }
+    });
+    return lignes;
+  }
+
+  /* ----------------------------------------------------------
+     Validation
+     ---------------------------------------------------------- */
+  function valider() {
+    document.querySelectorAll('.brg-invalid').forEach(function (e) {
+      e.classList.remove('brg-invalid');
+    });
+    var erreurs = [];
+
+    function check(dom, label) {
+      if (!dom.value.trim()) { dom.classList.add('brg-invalid'); erreurs.push(label); }
+    }
+
+    check(domClient,      'Nom du client');
+    check(domTypeMachine, 'Type de machine');
+    check(domNumMachine,  'N° de machine');
+    check(domDefaut,      'Défaut constaté avant changement de pièces');
+    check(domEmailTo,     'Email destinataire (À :)');
+
+    /* Au moins 1 référence dans les pièces retournées */
+    var retLignes = lireLignes(domTbodyRet);
+    var hasRef = retLignes.some(function (l) { return l.ref; });
+    if (!hasRef) {
+      var firstInput = domTbodyRet.querySelector('input');
+      if (firstInput) { firstInput.classList.add('brg-invalid'); }
+      erreurs.push('Au moins une référence pièce retournée HS');
+    }
+
+    return erreurs;
+  }
+
+  /* ----------------------------------------------------------
+     Génération du document HTML (bon de retour imprimable)
+     ---------------------------------------------------------- */
+  function genererBonHTML() {
+    var client  = domClient.value.trim();
+    var machine = domTypeMachine.value.trim() + ' n°' + domNumMachine.value.trim();
+    var defaut  = domDefaut.value.trim();
+    var constat = domConstat.value.trim();
+    var dateVal = domDate.value
+      ? new Date(domDate.value + 'T12:00:00').toLocaleDateString('fr-FR')
+      : '—';
+    var tech = domTech.value.trim() || '—';
+
+    var lignesCmd = lireLignes(domTbodyCmd);
+    var lignesRet = lireLignes(domTbodyRet);
+
+    function esc(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function genLignes(lignes, nbMin) {
+      var html = '';
+      var total = Math.max(lignes.length, nbMin);
+      for (var i = 0; i < total; i++) {
+        var l = lignes[i] || { ref: '', qty: '', ser: '' };
+        html +=
+          '<tr>' +
+          '<td style="padding:6px 8px; min-height:24px;">' + esc(l.ref) + '</td>' +
+          '<td style="padding:6px 8px; text-align:center;">' + esc(l.qty) + '</td>' +
+          '<td style="padding:6px 8px;">' + esc(l.ser) + '</td>' +
+          '</tr>';
+      }
+      return html;
+    }
+
+    return '<!DOCTYPE html>\n' +
+'<html lang="fr">\n' +
+'<head>\n' +
+'<meta charset="utf-8">\n' +
+'<title>Bon de retour pièces sous garantie — ' + esc(client) + '</title>\n' +
+'<style>\n' +
+'  @page { size: A4; margin: 14mm 14mm 14mm 14mm; }\n' +
+'  * { box-sizing: border-box; }\n' +
+'  body { font-family: Arial, Helvetica, sans-serif; font-size: 11pt; color: #222; margin: 0; padding: 0; }\n' +
+'  h1 { font-size: 12pt; text-align: center; text-transform: uppercase;\n' +
+'       letter-spacing: 1px; color: #003A70; border-bottom: 2px solid #003A70;\n' +
+'       padding-bottom: 6px; margin: 0 0 14px 0; }\n' +
+'  .header-row { display: flex; justify-content: space-between; margin-bottom: 14px;\n' +
+'                font-weight: bold; font-size: 11pt; }\n' +
+'  table { width: 100%; border-collapse: collapse; }\n' +
+'  th { background: #003A70; color: #fff; font-size: 10pt; padding: 7px 8px;\n' +
+'       text-align: left; border: 1px solid #003A70; }\n' +
+'  td { border: 1px solid #999; font-size: 10pt; vertical-align: middle; }\n' +
+'  .section-wrapper { display: flex; margin-bottom: 14px; border: 1px solid #999; }\n' +
+'  .section-label { writing-mode: vertical-rl; text-orientation: mixed;\n' +
+'                   transform: rotate(180deg); background: #003A70; color: #fff;\n' +
+'                   font-weight: bold; font-size: 8pt; text-transform: uppercase;\n' +
+'                   letter-spacing: 0.8px; padding: 8px 5px; text-align: center;\n' +
+'                   min-width: 26px; }\n' +
+'  .section-content { flex: 1; }\n' +
+'  .text-label { background: #f0f3f8; border-bottom: 1px solid #999;\n' +
+'                padding: 5px 8px; font-weight: bold; font-size: 10pt; }\n' +
+'  .text-block { padding: 8px; min-height: 52px; font-size: 10pt;\n' +
+'                white-space: pre-wrap; border-bottom: 1px solid #999; }\n' +
+'  .footer-row { display: flex; gap: 30px; padding: 7px 8px; font-size: 10pt; }\n' +
+'  .watermark { position: fixed; top: 50%; left: 50%;\n' +
+'               transform: translate(-50%,-50%) rotate(-30deg);\n' +
+'               font-size: 64pt; color: rgba(0,58,112,0.06); font-weight: bold;\n' +
+'               letter-spacing: 3px; white-space: nowrap; pointer-events: none; }\n' +
+'</style>\n' +
+'</head>\n' +
+'<body>\n' +
+'<div class="watermark">MULTIVAC FRANCE</div>\n' +
+'<h1>Bon de retour pièces sous garantie</h1>\n' +
+'<div class="header-row">\n' +
+'  <span>CLIENT : ' + esc(client) + '</span>\n' +
+'  <span>TYPE ET N° MACHINE : ' + esc(machine) + '</span>\n' +
+'</div>\n' +
+'<div class="section-wrapper">\n' +
+'  <div class="section-label">Multivac</div>\n' +
+'  <div class="section-content">\n' +
+'    <table><thead><tr>\n' +
+'      <th style="width:60%">Référence(s) commandée(s) sous garantie</th>\n' +
+'      <th style="width:15%">Quantité</th>\n' +
+'      <th style="width:25%">N° série</th>\n' +
+'    </tr></thead><tbody>\n' +
+      genLignes(lignesCmd, 4) +
+'    </tbody></table>\n' +
+'  </div>\n' +
+'</div>\n' +
+'<div class="section-wrapper">\n' +
+'  <div class="section-label" style="font-size:7pt;">A remplir par le client / technicien</div>\n' +
+'  <div class="section-content">\n' +
+'    <table><thead><tr>\n' +
+'      <th style="width:60%">Référence(s) retournée(s) HS</th>\n' +
+'      <th style="width:15%">Quantité</th>\n' +
+'      <th style="width:25%">N° série</th>\n' +
+'    </tr></thead><tbody>\n' +
+      genLignes(lignesRet, 4) +
+'    </tbody></table>\n' +
+'    <div class="text-label">Défaut constaté avant le changement de pièces</div>\n' +
+'    <div class="text-block">' + esc(defaut) + '</div>\n' +
+'    <div class="text-label" style="border-top:none;">Constat du technicien (Multivac, freelance ou client)</div>\n' +
+'    <div class="text-block">' + esc(constat) + '</div>\n' +
+'    <div class="footer-row">\n' +
+'      <span><strong>Date :</strong> ' + esc(dateVal) + '</span>\n' +
+'      <span><strong>Nom et signature :</strong> ' + esc(tech) + '</span>\n' +
+'    </div>\n' +
+'  </div>\n' +
+'</div>\n' +
+'</body>\n' +
+'</html>';
+  }
+
+  /* ----------------------------------------------------------
+     Impression — ouvre le bon dans un nouvel onglet
+     ---------------------------------------------------------- */
+  function imprimer() {
+    var erreurs = valider();
+    if (erreurs.length > 0) {
+      alert('Merci de renseigner les champs suivants :\n\n• ' + erreurs.join('\n• '));
+      var premier = document.querySelector('.brg-invalid');
+      if (premier) { premier.focus(); }
+      return;
+    }
+    var html = genererBonHTML();
+    var win = window.open('', '_blank', 'width=900,height=700');
+    if (!win) { alert('Veuillez autoriser les pop-ups pour imprimer.'); return; }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(function () { win.print(); }, 600);
+  }
+
+  /* ----------------------------------------------------------
+     Génération du fichier .eml avec le bon en pièce jointe HTML
+     Le fichier téléchargé s'ouvre directement dans Outlook
+     ---------------------------------------------------------- */
+  function ouvrirOutlook() {
+    var erreurs = valider();
+    if (erreurs.length > 0) {
+      alert('Merci de renseigner les champs suivants :\n\n• ' + erreurs.join('\n• '));
+      var premier = document.querySelector('.brg-invalid');
+      if (premier) { premier.focus(); }
+      return;
+    }
+
+    var client  = domClient.value.trim();
+    var machine = domTypeMachine.value.trim() + ' n°' + domNumMachine.value.trim();
+    var to      = domEmailTo.value.trim();
+    var cc      = domEmailCc.value.trim();
+    var tech    = domTech.value.trim() || '';
+    var dateVal = domDate.value
+      ? new Date(domDate.value + 'T12:00:00').toLocaleDateString('fr-FR')
+      : new Date().toLocaleDateString('fr-FR');
+
+    var sujet = 'Retour pièces sous garantie — ' + client + ' — ' + machine;
+    var corps =
+      'Bonjour,\r\n\r\n' +
+      'Veuillez trouver ci-joint le bon de retour pièces sous garantie pour :\r\n' +
+      '  Client  : ' + client + '\r\n' +
+      '  Machine : ' + machine + '\r\n' +
+      '  Date    : ' + dateVal + '\r\n\r\n' +
+      'Merci de bien vouloir traiter ce retour.\r\n\r\n' +
+      'Cordialement,\r\n' + tech;
+
+    var nomFichier = 'Bon_retour_garantie_' + client.replace(/[^a-zA-Z0-9]/g, '_') + '.html';
+    var htmlDoc    = genererBonHTML();
+
+    /* Encodage base64 UTF-8 */
+    var b64 = btoa(unescape(encodeURIComponent(htmlDoc)));
+
+    /* Construction du fichier EML multipart/mixed */
+    var boundary = 'MUF_BRG_' + Date.now();
+    var dateGMT  = new Date().toUTCString();
+
+    var eml  = 'From: \r\n';
+    eml += 'To: ' + to + '\r\n';
+    if (cc) { eml += 'Cc: ' + cc + '\r\n'; }
+    eml += 'Subject: ' + sujet + '\r\n';
+    eml += 'Date: ' + dateGMT + '\r\n';
+    eml += 'MIME-Version: 1.0\r\n';
+    eml += 'Content-Type: multipart/mixed; boundary="' + boundary + '"\r\n';
+    eml += 'X-Unsent: 1\r\n';
+    eml += '\r\n';
+
+    /* Partie 1 : corps texte */
+    eml += '--' + boundary + '\r\n';
+    eml += 'Content-Type: text/plain; charset=utf-8\r\n';
+    eml += 'Content-Transfer-Encoding: 8bit\r\n';
+    eml += '\r\n';
+    eml += corps + '\r\n';
+    eml += '\r\n';
+
+    /* Partie 2 : pièce jointe HTML */
+    eml += '--' + boundary + '\r\n';
+    eml += 'Content-Type: text/html; charset=utf-8; name="' + nomFichier + '"\r\n';
+    eml += 'Content-Disposition: attachment; filename="' + nomFichier + '"\r\n';
+    eml += 'Content-Transfer-Encoding: base64\r\n';
+    eml += '\r\n';
+    /* Découpage en lignes de 76 caractères (RFC 2045) */
+    eml += b64.match(/.{1,76}/g).join('\r\n');
+    eml += '\r\n';
+    eml += '--' + boundary + '--\r\n';
+
+    /* Téléchargement du fichier .eml */
+    var blob    = new Blob([eml], { type: 'message/rfc822' });
+    var url     = URL.createObjectURL(blob);
+    var lienTmp = document.createElement('a');
+    lienTmp.href     = url;
+    lienTmp.download = 'Bon_retour_' + client.replace(/[^a-zA-Z0-9]/g, '_') + '.eml';
+    lienTmp.style.display = 'none';
+    document.body.appendChild(lienTmp);
+    lienTmp.click();
+    setTimeout(function () {
+      document.body.removeChild(lienTmp);
+      URL.revokeObjectURL(url);
+    }, 1000);
+  }
+
+  /* ----------------------------------------------------------
+     Réinitialisation
+     ---------------------------------------------------------- */
+  function reinitialiser() {
+    domClient.value      = '';
+    domTypeMachine.value = '';
+    domNumMachine.value  = '';
+    domDefaut.value      = '';
+    domConstat.value     = '';
+    domDate.value        = dateDuJour();
+    domEmailCc.value     = '';
+    /* Réinitialiser les tableaux */
+    domTbodyCmd.innerHTML = '';
+    domTbodyRet.innerHTML = '';
+    creerLigne(domTbodyCmd);
+    creerLigne(domTbodyRet);
+    /* Nom technicien depuis Parametrage ou vide */
+    if (window.Parametrage) {
+      var prenom = window.Parametrage.get('prenom') || '';
+      var nom    = window.Parametrage.get('nom')    || '';
+      domTech.value = [prenom, nom].filter(Boolean).join(' ');
+    } else {
+      domTech.value = '';
+    }
+    document.querySelectorAll('.brg-invalid').forEach(function (e) {
+      e.classList.remove('brg-invalid');
+    });
+    majNoteDestinat();
+  }
+
+  /* ----------------------------------------------------------
+     Branchement des événements
+     ---------------------------------------------------------- */
+  domBtnPrint.addEventListener('click', imprimer);
+  domBtnOutlook.addEventListener('click', ouvrirOutlook);
+  domBtnReset.addEventListener('click', reinitialiser);
+
+  /* ----------------------------------------------------------
+     Initialisation
+     ---------------------------------------------------------- */
+  preremplir();
+
+})();
+</script>

@@ -88,6 +88,16 @@ const PLUGINS = [
                    002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
             </svg>`,
   },
+  {
+    id:   'retour-garantie',
+    nom:  'Retour pièces garantie',
+    desc: 'Générer un bon de retour pièces sous garantie et l\'envoyer par Outlook',
+    icone: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+              viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+            </svg>`,
+  },
   /* Exemple de futurs plugins — décommenter quand ils existent :
   {
     id:   'diagnostic',
