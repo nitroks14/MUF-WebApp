@@ -119,6 +119,20 @@
     line-height: 1.6;
   }
 
+  .brg-radio-group {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    min-height: 44px;
+  }
+  .brg-radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+
   @media (max-width: 599px) {
     .brg-btn-wrap { width: 100%; }
     .brg-btn-wrap .btn { width: 100%; }
@@ -172,6 +186,15 @@
         <input class="form-control" id="brg-pn" type="text"
                placeholder="Ex. PN123456" autocomplete="off">
       </div>
+    </div>
+  </div>
+
+  <!-- Type de retour -->
+  <div class="form-group" style="margin-top:12px;">
+    <label class="form-label">Type de retour</label>
+    <div class="brg-radio-group">
+      <label><input type="radio" name="brg-type-retour" value="echange" checked> Échange standard</label>
+      <label><input type="radio" name="brg-type-retour" value="pret"> Prêt</label>
     </div>
   </div>
 
@@ -342,6 +365,28 @@
   var domBtnPrint     = el('brg-btn-print');
   var domBtnOutlook   = el('brg-btn-outlook');
   var domBtnReset     = el('brg-btn-reset');
+
+  /* ----------------------------------------------------------
+     Logo Multivac SVG + conversion PNG
+     ---------------------------------------------------------- */
+  var LOGO_MULTIVAC_SVG = '<svg width="216" height="40" viewBox="0 0 216 40" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_49_132)"><path fill-rule="evenodd" clip-rule="evenodd" d="M205.195 26.2886C207.261 26.2886 208.263 25.0835 208.334 22.4709L208.344 22.481H215.301C215.261 24.3038 215.099 26.0658 213.843 27.5848C212.02 29.7721 208.83 30.724 205.357 30.724C197.235 30.724 194.562 26.5418 194.562 20.0608C194.562 15.2608 196.294 9.39746 205.357 9.39746C209.418 9.39746 212.243 10.3494 213.661 12.0304C214.673 13.2354 215.008 14.4709 215.028 17.4481H208.071C207.889 14.957 207.038 13.8329 205.195 13.8329C202.552 13.8329 201.651 16.6987 201.651 20.0608C201.651 23.4228 202.542 26.2886 205.195 26.2886ZM67.443 23.5038H67.4936L70.7645 9.92407H81.1645V30.1874H74.8354V14.9469H74.7848L70.3392 30.1874H63.7468L59.5747 14.9469H59.5038V30.1874H53.7114V9.92407H64.0607L67.443 23.5038ZM94.2683 26.1165C96.3341 26.1165 97.4076 24.9013 97.4076 21.0329V9.92407H103.868V21.762C103.868 24.962 103.372 26.3089 102.319 27.6861C100.689 29.8127 97.8531 30.7139 94.1974 30.7139C90.5417 30.7139 87.7164 29.8228 86.0759 27.6861C85.0228 26.3089 84.5266 24.962 84.5266 21.762V9.92407H91.1291V21.0329C91.1291 24.9114 92.2025 26.1165 94.2683 26.1165ZM114.046 9.92407H107.22V30.1874H121.519V25.2456H114.046V9.92407ZM124.911 14.8658H119.585V9.92407H137.053V14.8658H131.727V30.1874H124.911V14.8658ZM147.058 9.92407H140.233V30.1874H147.058V9.92407ZM161.62 22.7241L165.772 9.92407H172.739L165.58 30.1874H157.225L150.066 9.92407H157.59L161.62 22.7241ZM177.468 9.92407L169.205 30.1874H175.889L177.144 26.8253H185.519L186.704 30.1874H194.218L185.954 9.92407H177.468ZM178.795 22.3798L181.418 15.3114L183.929 22.3798H178.795Z" fill="#1E2B50"/><path fill-rule="evenodd" clip-rule="evenodd" d="M9.98481 0H40V30.0152C40 35.5241 35.5342 40 30.0152 40H0V9.98481C0 4.47595 4.47595 0 9.98481 0ZM12.0304 11.9495C9.61013 11.9495 7.6557 13.9039 7.6557 16.314V28.0507H13.843V16.0203H17.2253V28.0507H23.2101V16.0203H26.8253V28.0507H32.3342V11.9495H12.0304Z" fill="#1E2B50"/></g><defs><clipPath id="clip0_49_132"><rect width="215.291" height="40" fill="white"/></clipPath></defs></svg>';
+
+  function chargerLogoPng(callback) {
+    try {
+      var blob = new Blob([LOGO_MULTIVAC_SVG], {type: 'image/svg+xml'});
+      var url = URL.createObjectURL(blob);
+      var img = new Image();
+      img.onload = function() {
+        var canvas = document.createElement('canvas');
+        canvas.width = 432; canvas.height = 80;
+        canvas.getContext('2d').drawImage(img, 0, 0, 432, 80);
+        URL.revokeObjectURL(url);
+        callback(canvas.toDataURL('image/png'));
+      };
+      img.onerror = function() { URL.revokeObjectURL(url); callback(null); };
+      img.src = url;
+    } catch(e) { callback(null); }
+  }
 
   /* ----------------------------------------------------------
      Tableaux de pièces — gestion des lignes dynamiques
@@ -533,7 +578,7 @@
   /* ----------------------------------------------------------
      Génération du bon PDF via jsPDF
      ---------------------------------------------------------- */
-  function construirePDF(jsPDF) {
+  function construirePDF(jsPDF, logoPng) {
     var client  = domClient.value.trim();
     var machine = domTypeMachine.value.trim() + ' n°' + domNumMachine.value.trim();
     var pn      = domPN.value.trim();
@@ -543,6 +588,7 @@
       ? new Date(domDate.value + 'T12:00:00').toLocaleDateString('fr-FR')
       : new Date().toLocaleDateString('fr-FR');
     var tech    = domTech.value.trim() || '—';
+    var typeRetour = (document.querySelector('input[name="brg-type-retour"]:checked') || {}).value || 'echange';
 
     var lignesCmd = lireLignes(domTbodyCmd);
     var lignesRet = lireLignes(domTbodyRet);
@@ -556,17 +602,11 @@
     var bleu = '#003A70';
     var y    = 14;
 
-    /* ---- Filigrane ---- */
-    doc.saveGraphicsState();
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(52);
-    doc.setTextColor(0, 58, 112);
-    doc.setGState(new doc.GState({ opacity: 0.05 }));
-    doc.text('MULTIVAC FRANCE', 105, 148.5, {
-      align: 'center',
-      angle: 30
-    });
-    doc.restoreGraphicsState();
+    /* ---- Logo Multivac en en-tête ---- */
+    if (logoPng) {
+      doc.addImage(logoPng, 'PNG', 10, 8, 50, 9.3);
+      y = 22;
+    }
 
     /* ---- Titre ---- */
     doc.setFont('helvetica', 'bold');
@@ -578,6 +618,15 @@
     doc.setLineWidth(0.5);
     doc.line(mG, y, mD, y);
     y += 6;
+
+    /* ---- Type de retour : cases à cocher ---- */
+    var cocheE = typeRetour === 'echange' ? '☑' : '☐';
+    var cocheP = typeRetour === 'pret'    ? '☑' : '☐';
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text(cocheE + ' ECHANGE STANDARD          ' + cocheP + ' PRET', 105, y, {align: 'center'});
+    y += 7;
 
     /* ---- En-tête : client / machine / PN ---- */
     doc.setFont('helvetica', 'bold');
@@ -788,6 +837,29 @@
     doc.setLineWidth(0.4);
     doc.rect(mG, yS, larg, sectionH2);
 
+    /* ---- Bandeau jaune garantie ---- */
+    var yBandeau = y + 4;
+    doc.setFillColor(255, 215, 0);
+    doc.rect(10, yBandeau, 190, 8, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Aucune prise en charge de la garantie ne sera acceptée sans ce document', 105, yBandeau + 5, {align: 'center'});
+
+    /* ---- Texte légal ---- */
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6);
+    doc.setTextColor(100, 100, 100);
+    var yLegal = yBandeau + 12;
+    var texteLegal = [
+      'Rappel : Toutes les références commandées sous garantie font l\'objet d\'une expertise de notre part. Multivac à Wolfertschwenden.',
+      'Après expertise, celles-ci peuvent être refusées en garantie pour diverses raisons (connexes à utilisation, détérioration anormale, mauvais montage...).',
+      'Les pièces dites "libres" tels que soudure, huile, couteau, etc... ne peuvent être acceptées** sous garantie.   ** sauf cas particulier'
+    ];
+    texteLegal.forEach(function(ligne, i) {
+      doc.text(ligne, 105, yLegal + i * 4, {align: 'center', maxWidth: 190});
+    });
+
     return doc;
   }
 
@@ -828,20 +900,22 @@
     }
 
     avecJsPDF(function (jsPDF) {
-      try {
-        var doc    = construirePDF(jsPDF);
-        var client = domClient.value.trim();
-        var nomFichier = 'Bon_retour_garantie_' + client.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
+      chargerLogoPng(function (logoPng) {
+        try {
+          var doc    = construirePDF(jsPDF, logoPng);
+          var client = domClient.value.trim();
+          var nomFichier = 'Bon_retour_garantie_' + client.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
 
-        if (typeof callback === 'function') {
-          callback(doc, nomFichier);
-        } else {
-          doc.save(nomFichier);
+          if (typeof callback === 'function') {
+            callback(doc, nomFichier);
+          } else {
+            doc.save(nomFichier);
+          }
+        } catch (e) {
+          console.error('[RetourGarantie] Erreur génération PDF :', e);
+          alert('Erreur lors de la génération du PDF.');
         }
-      } catch (e) {
-        console.error('[RetourGarantie] Erreur génération PDF :', e);
-        alert('Erreur lors de la génération du PDF.');
-      }
+      });
     });
   }
 
@@ -858,95 +932,99 @@
     }
 
     avecJsPDF(function (jsPDF) {
-      try {
-        var doc = construirePDF(jsPDF);
+      chargerLogoPng(function (logoPng) {
+        try {
+          var doc = construirePDF(jsPDF, logoPng);
 
-        var client  = domClient.value.trim();
-        var machine = domTypeMachine.value.trim() + ' n°' + domNumMachine.value.trim();
-        var pn      = domPN.value.trim();
-        var to      = domEmailTo.value.trim();
-        var cc      = domEmailCc.value.trim().replace(/;/g, ',');
-        var tech    = domTech.value.trim() || '';
-        var dateVal = domDate.value
-          ? new Date(domDate.value + 'T12:00:00').toLocaleDateString('fr-FR')
-          : new Date().toLocaleDateString('fr-FR');
+          var client  = domClient.value.trim();
+          var machine = domTypeMachine.value.trim() + ' n°' + domNumMachine.value.trim();
+          var pn      = domPN.value.trim();
+          var to      = domEmailTo.value.trim();
+          var cc      = domEmailCc.value.trim().replace(/;/g, ',');
+          var tech    = domTech.value.trim() || '';
+          var dateVal = domDate.value
+            ? new Date(domDate.value + 'T12:00:00').toLocaleDateString('fr-FR')
+            : new Date().toLocaleDateString('fr-FR');
+          var typeRetour = (document.querySelector('input[name="brg-type-retour"]:checked') || {}).value || 'echange';
+          var typeLabel = typeRetour === 'pret' ? 'Prêt' : 'Échange standard';
 
-        var sujet = 'Retour pièces sous garantie — ' + client + ' — ' + machine;
-        var corps =
-          'Bonjour,\r\n\r\n' +
-          'Veuillez trouver ci-joint le bon de retour pièces sous garantie pour :\r\n' +
-          '  Client  : ' + client + '\r\n' +
-          '  Machine : ' + machine + '\r\n' +
-          (pn ? '  N° Projet : ' + pn + '\r\n' : '') +
-          '  Date    : ' + dateVal + '\r\n\r\n' +
-          'Merci de bien vouloir traiter ce retour.\r\n\r\n' +
-          'Cordialement,\r\n' + tech;
+          var sujet = 'Retour pièces sous garantie (' + typeLabel + ') — ' + client + ' — ' + machine;
+          var corps =
+            'Bonjour,\r\n\r\n' +
+            'Veuillez trouver ci-joint le bon de retour pièces sous garantie pour :\r\n' +
+            '  Client  : ' + client + '\r\n' +
+            '  Machine : ' + machine + '\r\n' +
+            (pn ? '  N° Projet : ' + pn + '\r\n' : '') +
+            '  Date    : ' + dateVal + '\r\n\r\n' +
+            'Merci de bien vouloir traiter ce retour.\r\n\r\n' +
+            'Cordialement,\r\n' + tech;
 
-        var nomFichier = 'Bon_retour_garantie_' + client.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
+          var nomFichier = 'Bon_retour_garantie_' + client.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
 
-        /* Récupérer le PDF en ArrayBuffer puis encoder en base64 */
-        var pdfArray = doc.output('arraybuffer');
-        var uint8    = new Uint8Array(pdfArray);
-        var binary   = '';
-        /* Conversion en base64 par blocs (compatible Safari iOS) */
-        var chunkSize = 8192;
-        for (var offset = 0; offset < uint8.length; offset += chunkSize) {
-          var chunk = uint8.subarray(offset, offset + chunkSize);
-          binary += String.fromCharCode.apply(null, chunk);
+          /* Récupérer le PDF en ArrayBuffer puis encoder en base64 */
+          var pdfArray = doc.output('arraybuffer');
+          var uint8    = new Uint8Array(pdfArray);
+          var binary   = '';
+          /* Conversion en base64 par blocs (compatible Safari iOS) */
+          var chunkSize = 8192;
+          for (var offset = 0; offset < uint8.length; offset += chunkSize) {
+            var chunk = uint8.subarray(offset, offset + chunkSize);
+            binary += String.fromCharCode.apply(null, chunk);
+          }
+          var b64 = btoa(binary);
+
+          /* Construction du fichier EML multipart/mixed */
+          var boundary = 'MUF_BRG_' + Date.now();
+          var dateGMT  = new Date().toUTCString();
+
+          var eml  = 'From: \r\n';
+          eml += 'To: ' + to + '\r\n';
+          if (cc) { eml += 'Cc: ' + cc + '\r\n'; }
+          eml += 'Subject: ' + sujet + '\r\n';
+          eml += 'Date: ' + dateGMT + '\r\n';
+          eml += 'MIME-Version: 1.0\r\n';
+          eml += 'Content-Type: multipart/mixed; boundary="' + boundary + '"\r\n';
+          eml += 'X-Unsent: 1\r\n';
+          eml += '\r\n';
+
+          /* Partie 1 : corps texte */
+          eml += '--' + boundary + '\r\n';
+          eml += 'Content-Type: text/plain; charset=utf-8\r\n';
+          eml += 'Content-Transfer-Encoding: 8bit\r\n';
+          eml += '\r\n';
+          eml += corps + '\r\n';
+          eml += '\r\n';
+
+          /* Partie 2 : pièce jointe PDF */
+          eml += '--' + boundary + '\r\n';
+          eml += 'Content-Type: application/pdf; name="' + nomFichier + '"\r\n';
+          eml += 'Content-Disposition: attachment; filename="' + nomFichier + '"\r\n';
+          eml += 'Content-Transfer-Encoding: base64\r\n';
+          eml += '\r\n';
+          /* Découpage en lignes de 76 caractères (RFC 2045) */
+          eml += b64.match(/.{1,76}/g).join('\r\n');
+          eml += '\r\n';
+          eml += '--' + boundary + '--\r\n';
+
+          /* Téléchargement du fichier .eml */
+          var blob    = new Blob([eml], { type: 'message/rfc822' });
+          var url     = URL.createObjectURL(blob);
+          var lienTmp = document.createElement('a');
+          lienTmp.href     = url;
+          lienTmp.download = 'Bon_retour_' + client.replace(/[^a-zA-Z0-9]/g, '_') + '.eml';
+          lienTmp.style.display = 'none';
+          document.body.appendChild(lienTmp);
+          lienTmp.click();
+          setTimeout(function () {
+            document.body.removeChild(lienTmp);
+            URL.revokeObjectURL(url);
+          }, 1000);
+
+        } catch (e) {
+          console.error('[RetourGarantie] Erreur génération EML :', e);
+          alert('Erreur lors de la génération du fichier Outlook.');
         }
-        var b64 = btoa(binary);
-
-        /* Construction du fichier EML multipart/mixed */
-        var boundary = 'MUF_BRG_' + Date.now();
-        var dateGMT  = new Date().toUTCString();
-
-        var eml  = 'From: \r\n';
-        eml += 'To: ' + to + '\r\n';
-        if (cc) { eml += 'Cc: ' + cc + '\r\n'; }
-        eml += 'Subject: ' + sujet + '\r\n';
-        eml += 'Date: ' + dateGMT + '\r\n';
-        eml += 'MIME-Version: 1.0\r\n';
-        eml += 'Content-Type: multipart/mixed; boundary="' + boundary + '"\r\n';
-        eml += 'X-Unsent: 1\r\n';
-        eml += '\r\n';
-
-        /* Partie 1 : corps texte */
-        eml += '--' + boundary + '\r\n';
-        eml += 'Content-Type: text/plain; charset=utf-8\r\n';
-        eml += 'Content-Transfer-Encoding: 8bit\r\n';
-        eml += '\r\n';
-        eml += corps + '\r\n';
-        eml += '\r\n';
-
-        /* Partie 2 : pièce jointe PDF */
-        eml += '--' + boundary + '\r\n';
-        eml += 'Content-Type: application/pdf; name="' + nomFichier + '"\r\n';
-        eml += 'Content-Disposition: attachment; filename="' + nomFichier + '"\r\n';
-        eml += 'Content-Transfer-Encoding: base64\r\n';
-        eml += '\r\n';
-        /* Découpage en lignes de 76 caractères (RFC 2045) */
-        eml += b64.match(/.{1,76}/g).join('\r\n');
-        eml += '\r\n';
-        eml += '--' + boundary + '--\r\n';
-
-        /* Téléchargement du fichier .eml */
-        var blob    = new Blob([eml], { type: 'message/rfc822' });
-        var url     = URL.createObjectURL(blob);
-        var lienTmp = document.createElement('a');
-        lienTmp.href     = url;
-        lienTmp.download = 'Bon_retour_' + client.replace(/[^a-zA-Z0-9]/g, '_') + '.eml';
-        lienTmp.style.display = 'none';
-        document.body.appendChild(lienTmp);
-        lienTmp.click();
-        setTimeout(function () {
-          document.body.removeChild(lienTmp);
-          URL.revokeObjectURL(url);
-        }, 1000);
-
-      } catch (e) {
-        console.error('[RetourGarantie] Erreur génération EML :', e);
-        alert('Erreur lors de la génération du fichier Outlook.');
-      }
+      });
     });
   }
 
@@ -973,6 +1051,7 @@
 
   function sauvegarderBrouillon() {
     try {
+      var typeRetour = (document.querySelector('input[name="brg-type-retour"]:checked') || {}).value || 'echange';
       var data = {
         client:      domClient.value,
         typeMachine: domTypeMachine.value,
@@ -983,6 +1062,7 @@
         date:        domDate.value,
         tech:        domTech.value,
         emailTo:     domEmailTo.value,
+        typeRetour:  typeRetour,
         lignesCmd:   lireLignesTableau(domTbodyCmd),
         lignesRet:   lireLignesTableau(domTbodyRet)
       };
@@ -1005,6 +1085,11 @@
       if (data.date)        { domDate.value        = data.date; }
       if (data.tech)        { domTech.value        = data.tech; }
       if (data.emailTo)     { domEmailTo.value     = data.emailTo; }
+
+      if (data.typeRetour) {
+        var radio = document.querySelector('input[name="brg-type-retour"][value="' + data.typeRetour + '"]');
+        if (radio) { radio.checked = true; }
+      }
 
       /* Restaurer les lignes des tableaux */
       function restaurerLignes(tbody, lignes) {
@@ -1050,6 +1135,11 @@
   ecouterSaisie(domTech);
   ecouterSaisie(domEmailTo);
 
+  /* Observer les radios type retour */
+  document.querySelectorAll('input[name="brg-type-retour"]').forEach(function(radio) {
+    radio.addEventListener('change', demanderSauvegarde);
+  });
+
   /* Observer les tableaux de pièces (délégation sur tbody) */
   [domTbodyCmd, domTbodyRet].forEach(function (tbody) {
     tbody.addEventListener('input', demanderSauvegarde);
@@ -1075,6 +1165,9 @@
     domTbodyRet.innerHTML = '';
     creerLigne(domTbodyCmd);
     creerLigne(domTbodyRet);
+    /* Remettre le radio échange standard par défaut */
+    var radioEchange = document.querySelector('input[name="brg-type-retour"][value="echange"]');
+    if (radioEchange) { radioEchange.checked = true; }
     if (window.Parametrage) {
       var prenom = window.Parametrage.get('prenom') || '';
       var nom    = window.Parametrage.get('nom')    || '';
