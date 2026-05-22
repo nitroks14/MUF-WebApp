@@ -77,20 +77,23 @@
 
       <div class="form-group mb-16">
         <label class="form-label" for="param-email-maintenance">
-          Email service maintenance Multivac
+          Email destinataire — Service Technique Multivac
         </label>
+        <p class="text-muted text-sm mb-8">
+          Destinataire par défaut dans les demandes d'OS (email général du Service Technique).
+        </p>
         <input class="form-control" type="email" id="param-email-maintenance"
                name="email_maintenance" autocomplete="off"
                inputmode="email"
                placeholder="ex : maintenance@multivac.com" />
         <p class="text-muted text-sm mt-4">
-          Utilisé comme destinataire par défaut dans les demandes d'OS.
+          Pré-rempli à chaque création de demande d'OS, modifiable à tout moment.
         </p>
       </div>
 
       <p class="text-muted text-sm mb-16">
         Enregistrez les adresses email que vous utilisez régulièrement
-        (responsable, client type…).
+        (responsable, réceptionnaire logistique…).
       </p>
 
       <!-- Liste dynamique des emails -->
@@ -390,6 +393,7 @@
       inputLabel.setAttribute('aria-label', `Libellé de l'email ${index + 1}`);
       inputLabel.addEventListener('input', function () {
         emailsEnCours[index].label = this.value;
+        autoSave();
       });
 
       const inputAdresse = document.createElement('input');
@@ -401,6 +405,7 @@
       inputAdresse.setAttribute('aria-label', `Adresse email ${index + 1}`);
       inputAdresse.addEventListener('input', function () {
         emailsEnCours[index].adresse = this.value;
+        autoSave();
       });
 
       const btnSuppr = document.createElement('button');
@@ -411,6 +416,7 @@
       btnSuppr.addEventListener('click', function () {
         emailsEnCours.splice(index, 1);
         rendreListe();
+        autoSave();
       });
 
       ligne.appendChild(inputLabel);
@@ -553,7 +559,7 @@
     Object.keys(valeurs).forEach(function (key) {
       window.Parametrage.set(key, valeurs[key]);
     });
-    afficherAlerte('success', 'Configuration enregistree localement.');
+    afficherAlerte('success', 'Configuration enregistrée localement.');
   });
 
   /* ----------------------------------------------------------
