@@ -40,7 +40,34 @@
   </section>
 
   <!-- ================================================================
-       SECTION 2 — Emails fréquents
+       SECTION 2 — Contacts Support Technique
+       ================================================================ -->
+  <section class="card mb-24" aria-labelledby="titre-support">
+    <div class="card-header">
+      <h2 class="card-title" id="titre-support">Contacts Support Technique</h2>
+    </div>
+    <div class="card-body">
+
+      <p class="text-muted text-sm mb-16">
+        Contacts Multivac auxquels envoyer les bons de retour pièces sous garantie
+        (chips du champ "À" dans le plugin Retour garantie).
+      </p>
+
+      <div id="support-liste" aria-label="Liste des contacts support technique">
+        <!-- Entrées générées par JS -->
+      </div>
+
+      <button type="button" class="btn btn-outline btn-sm mt-8"
+              id="btn-ajouter-support"
+              aria-label="Ajouter un contact support technique">
+        + Ajouter un contact
+      </button>
+
+    </div>
+  </section>
+
+  <!-- ================================================================
+       SECTION 3 — Emails fréquents
        ================================================================ -->
   <section class="card mb-24" aria-labelledby="titre-emails">
     <div class="card-header">
@@ -331,13 +358,16 @@
     unites:         document.getElementById('param-unites'),
   };
 
-  const emailsListe     = document.getElementById('emails-liste');
-  const btnAjouterEmail = document.getElementById('btn-ajouter-email');
-  const btnEnregistrer  = document.getElementById('btn-enregistrer');
-  const zoneAlerte      = document.getElementById('param-alerte');
+  const emailsListe       = document.getElementById('emails-liste');
+  const btnAjouterEmail   = document.getElementById('btn-ajouter-email');
+  const supportListe      = document.getElementById('support-liste');
+  const btnAjouterSupport = document.getElementById('btn-ajouter-support');
+  const btnEnregistrer    = document.getElementById('btn-enregistrer');
+  const zoneAlerte        = document.getElementById('param-alerte');
 
-  /* Tableau local des emails en cours d'édition */
-  let emailsEnCours = [];
+  /* Tableaux locaux en cours d'édition */
+  let emailsEnCours  = [];
+  let supportEnCours = [];
 
   /* ----------------------------------------------------------
      Affichage d'une alerte
@@ -428,8 +458,73 @@
   btnAjouterEmail.addEventListener('click', function () {
     emailsEnCours.push({ label: '', adresse: '' });
     rendreListe();
-    /* Focus sur le dernier label ajouté */
     const dernierInputs = emailsListe.querySelectorAll('.email-row:last-child input');
+    if (dernierInputs.length > 0) dernierInputs[0].focus();
+  });
+
+  /* ----------------------------------------------------------
+     Gestion de la liste des contacts Support Technique
+     ---------------------------------------------------------- */
+  function rendreSupportListe() {
+    supportListe.innerHTML = '';
+
+    if (supportEnCours.length === 0) {
+      const vide = document.createElement('p');
+      vide.className = 'text-muted text-sm mb-8';
+      vide.textContent = 'Aucun contact enregistré.';
+      supportListe.appendChild(vide);
+      return;
+    }
+
+    supportEnCours.forEach(function (entry, index) {
+      const ligne = document.createElement('div');
+      ligne.className = 'email-row';
+
+      const inputLabel = document.createElement('input');
+      inputLabel.type = 'text';
+      inputLabel.className = 'form-control';
+      inputLabel.value = entry.label || '';
+      inputLabel.placeholder = 'Ex : Service SAV';
+      inputLabel.setAttribute('aria-label', 'Libellé contact support ' + (index + 1));
+      inputLabel.addEventListener('input', function () {
+        supportEnCours[index].label = this.value;
+        autoSave();
+      });
+
+      const inputAdresse = document.createElement('input');
+      inputAdresse.type = 'email';
+      inputAdresse.className = 'form-control';
+      inputAdresse.value = entry.adresse || '';
+      inputAdresse.placeholder = 'adresse@multivac.fr';
+      inputAdresse.inputMode = 'email';
+      inputAdresse.setAttribute('aria-label', 'Email contact support ' + (index + 1));
+      inputAdresse.addEventListener('input', function () {
+        supportEnCours[index].adresse = this.value;
+        autoSave();
+      });
+
+      const btnSuppr = document.createElement('button');
+      btnSuppr.type = 'button';
+      btnSuppr.className = 'btn-supprimer-email';
+      btnSuppr.setAttribute('aria-label', 'Supprimer ' + (entry.label || 'contact ' + (index + 1)));
+      btnSuppr.innerHTML = '&times;';
+      btnSuppr.addEventListener('click', function () {
+        supportEnCours.splice(index, 1);
+        rendreSupportListe();
+        autoSave();
+      });
+
+      ligne.appendChild(inputLabel);
+      ligne.appendChild(inputAdresse);
+      ligne.appendChild(btnSuppr);
+      supportListe.appendChild(ligne);
+    });
+  }
+
+  btnAjouterSupport.addEventListener('click', function () {
+    supportEnCours.push({ label: '', adresse: '' });
+    rendreSupportListe();
+    const dernierInputs = supportListe.querySelectorAll('.email-row:last-child input');
     if (dernierInputs.length > 0) dernierInputs[0].focus();
   });
 
@@ -453,6 +548,14 @@
         })
       : [];
     rendreListe();
+
+    /* Contacts support technique */
+    supportEnCours = Array.isArray(config.contacts_support)
+      ? config.contacts_support.map(function (e) {
+          return { label: e.label || '', adresse: e.adresse || '' };
+        })
+      : [];
+    rendreSupportListe();
   }
 
   /* ----------------------------------------------------------
@@ -467,6 +570,10 @@
     });
     /* Nettoyage des emails vides */
     valeurs.emails_frequents = emailsEnCours.filter(function (e) {
+      return e.label.trim() || e.adresse.trim();
+    });
+    /* Contacts support technique */
+    valeurs.contacts_support = supportEnCours.filter(function (e) {
       return e.label.trim() || e.adresse.trim();
     });
     return valeurs;

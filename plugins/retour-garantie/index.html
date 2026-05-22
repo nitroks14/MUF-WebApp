@@ -246,13 +246,19 @@
   <div class="brg-section">
     <div class="brg-section-title">Destinataires</div>
 
-    <!-- Champ À -->
+    <!-- Champ À + chips contacts support technique -->
     <div class="form-group">
       <label class="form-label" for="brg-email-to">
-        À (SAV Multivac) <span aria-hidden="true">*</span>
+        À <span aria-hidden="true">*</span>
       </label>
       <input class="form-control" id="brg-email-to" type="email"
-             placeholder="sav@multivac.fr" autocomplete="off">
+             placeholder="Sélectionner un contact ci-dessous" autocomplete="off">
+    </div>
+    <div id="brg-support-wrap" style="display:none;">
+      <p class="form-label">Contacts Support Technique :</p>
+      <div class="brg-emails-frequents" id="brg-support-liste">
+        <!-- Alimenté depuis Parametrage.get('contacts_support') -->
+      </div>
     </div>
 
     <!-- Champ CC -->
@@ -325,6 +331,8 @@
   const domDate         = el('brg-date');
   const domTech         = el('brg-technicien');
   const domEmailTo           = el('brg-email-to');
+  const domSupportWrap       = el('brg-support-wrap');
+  const domSupportListe      = el('brg-support-liste');
   const domEmailCc           = el('brg-email-cc');
   const domNoteDestinat      = el('brg-note-destinataires');
   const domEmailsFreqListeCc = el('brg-emails-freq-liste-cc');
@@ -403,11 +411,42 @@
         domTech.value = [prenom, nom].filter(Boolean).join(' ');
       }
 
-    /* Pré-remplir le champ À */
-    var emailMaint = window.Parametrage.get('email_maintenance')
-                  || window.Parametrage.get('email') || '';
-    if (emailMaint) { domEmailTo.value = emailMaint; }
     } /* fin if (window.Parametrage) */
+
+    /* --- Chips contacts Support Technique pour le champ À --- */
+    var contactsSupport = window.Parametrage ? window.Parametrage.get('contacts_support') : null;
+    if (Array.isArray(contactsSupport) && contactsSupport.length > 0) {
+      domSupportWrap.style.display = '';
+      contactsSupport.forEach(function (entree) {
+        var label   = typeof entree === 'string' ? entree : (entree.label   || entree.adresse || '');
+        var adresse = typeof entree === 'string' ? entree : (entree.adresse || entree.label   || '');
+        if (!adresse) { return; }
+
+        var chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'brg-email-chip';
+        chip.textContent = label;
+        chip.title = adresse;
+        chip.setAttribute('aria-label', 'Sélectionner À : ' + adresse);
+
+        chip.addEventListener('click', function () {
+          /* Sélection exclusive */
+          var dejaActif = chip.classList.contains('brg-chip-actif');
+          domSupportListe.querySelectorAll('.brg-email-chip').forEach(function (c) {
+            c.classList.remove('brg-chip-actif');
+          });
+          if (!dejaActif) {
+            chip.classList.add('brg-chip-actif');
+            domEmailTo.value = adresse;
+          } else {
+            domEmailTo.value = '';
+          }
+          majNoteDestinat();
+        });
+
+        domSupportListe.appendChild(chip);
+      });
+    }
 
     /* --- Chips CC : sav@multivac.fr (fixe) + emails_frequents (Paramétrage) --- */
     var emailsFreq = window.Parametrage ? window.Parametrage.get('emails_frequents') : null;
@@ -733,12 +772,11 @@
     domDefaut.value      = '';
     domConstat.value     = '';
     domDate.value        = dateDuJour();
-    /* Remettre email À depuis Parametrage */
-    if (window.Parametrage) {
-      var emailMaintReset = window.Parametrage.get('email_maintenance')
-                         || window.Parametrage.get('email') || '';
-      domEmailTo.value = emailMaintReset;
-    }
+    /* Vider le champ À et désactiver les chips support */
+    domEmailTo.value = '';
+    domSupportListe.querySelectorAll('.brg-email-chip').forEach(function (c) {
+      c.classList.remove('brg-chip-actif');
+    });
     /* Remettre toutes les chips CC cochées */
     domEmailsFreqListeCc.querySelectorAll('.brg-email-chip').forEach(function (c) {
       c.classList.add('brg-chip-actif');
