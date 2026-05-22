@@ -305,7 +305,11 @@
         Ouvrir dans Outlook (avec PJ)
       </button>
     </div>
-    <button class="btn btn-outline btn-sm" id="brg-btn-reset" type="button">Réinitialiser</button>
+    <button class="btn btn-outline" id="brg-btn-reset" type="button"
+            style="color:#C53030; border-color:#C53030;"
+            onmouseover="this.style.background='#FEF2F2'" onmouseout="this.style.background=''">
+      🗑 Réinitialiser
+    </button>
   </div>
 
   <p class="text-muted text-sm" style="margin-top:10px;">
@@ -953,6 +957,108 @@
   /* ----------------------------------------------------------
      Réinitialisation
      ---------------------------------------------------------- */
+  /* ----------------------------------------------------------
+     Persistance localStorage — sauvegarde / restauration du brouillon
+     ---------------------------------------------------------- */
+  var BRG_KEY = 'brg_brouillon';
+
+  function lireLignesTableau(tbody) {
+    var lignes = [];
+    Array.from(tbody.rows).forEach(function (tr) {
+      var inputs = tr.querySelectorAll('input');
+      lignes.push({
+        ref: inputs[0] ? inputs[0].value : '',
+        qty: inputs[1] ? inputs[1].value : '',
+        ser: inputs[2] ? inputs[2].value : ''
+      });
+    });
+    return lignes;
+  }
+
+  function sauvegarderBrouillon() {
+    try {
+      var data = {
+        client:      domClient.value,
+        typeMachine: domTypeMachine.value,
+        numMachine:  domNumMachine.value,
+        pn:          domPN.value,
+        defaut:      domDefaut.value,
+        constat:     domConstat.value,
+        date:        domDate.value,
+        tech:        domTech.value,
+        emailTo:     domEmailTo.value,
+        lignesCmd:   lireLignesTableau(domTbodyCmd),
+        lignesRet:   lireLignesTableau(domTbodyRet)
+      };
+      localStorage.setItem(BRG_KEY, JSON.stringify(data));
+    } catch (e) { /* quota dépassé — silencieux */ }
+  }
+
+  function restaurerBrouillon() {
+    try {
+      var raw = localStorage.getItem(BRG_KEY);
+      if (!raw) { return; }
+      var data = JSON.parse(raw);
+
+      if (data.client)      { domClient.value      = data.client; }
+      if (data.typeMachine) { domTypeMachine.value = data.typeMachine; }
+      if (data.numMachine)  { domNumMachine.value  = data.numMachine; }
+      if (data.pn)          { domPN.value          = data.pn; }
+      if (data.defaut)      { domDefaut.value      = data.defaut; }
+      if (data.constat)     { domConstat.value     = data.constat; }
+      if (data.date)        { domDate.value        = data.date; }
+      if (data.tech)        { domTech.value        = data.tech; }
+      if (data.emailTo)     { domEmailTo.value     = data.emailTo; }
+
+      /* Restaurer les lignes des tableaux */
+      function restaurerLignes(tbody, lignes) {
+        if (!Array.isArray(lignes) || lignes.length === 0) { return; }
+        tbody.innerHTML = '';
+        lignes.forEach(function (l) {
+          creerLigne(tbody);
+          var tr = tbody.rows[tbody.rows.length - 1];
+          var inputs = tr.querySelectorAll('input');
+          if (inputs[0]) { inputs[0].value = l.ref || ''; }
+          if (inputs[1]) { inputs[1].value = l.qty || ''; }
+          if (inputs[2]) { inputs[2].value = l.ser || ''; }
+        });
+      }
+      restaurerLignes(domTbodyCmd, data.lignesCmd);
+      restaurerLignes(domTbodyRet, data.lignesRet);
+
+      majNoteDestinat();
+    } catch (e) { /* données corrompues — silencieux */ }
+  }
+
+  /* Auto-save sur chaque modification (debounce 600 ms) */
+  var timerSave = null;
+  function demanderSauvegarde() {
+    clearTimeout(timerSave);
+    timerSave = setTimeout(sauvegarderBrouillon, 600);
+  }
+
+  function ecouterSaisie(dom) {
+    if (dom) {
+      dom.addEventListener('input', demanderSauvegarde);
+      dom.addEventListener('change', demanderSauvegarde);
+    }
+  }
+
+  ecouterSaisie(domClient);
+  ecouterSaisie(domTypeMachine);
+  ecouterSaisie(domNumMachine);
+  ecouterSaisie(domPN);
+  ecouterSaisie(domDefaut);
+  ecouterSaisie(domConstat);
+  ecouterSaisie(domDate);
+  ecouterSaisie(domTech);
+  ecouterSaisie(domEmailTo);
+
+  /* Observer les tableaux de pièces (délégation sur tbody) */
+  [domTbodyCmd, domTbodyRet].forEach(function (tbody) {
+    tbody.addEventListener('input', demanderSauvegarde);
+  });
+
   function reinitialiser() {
     domClient.value      = '';
     domTypeMachine.value = '';
@@ -983,6 +1089,7 @@
     document.querySelectorAll('.brg-invalid').forEach(function (e) {
       e.classList.remove('brg-invalid');
     });
+    localStorage.removeItem(BRG_KEY);
     majNoteDestinat();
   }
 
@@ -997,6 +1104,7 @@
      Initialisation
      ---------------------------------------------------------- */
   preremplir();
+  restaurerBrouillon(); /* écrase les valeurs par défaut si un brouillon existe */
 
 })();
 </script>
