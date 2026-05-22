@@ -8,8 +8,8 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache */
-const CACHE_NOM     = 'muf-webapp-v32';
-const CACHE_PLUGINS = 'muf-plugins-v32';
+const CACHE_NOM     = 'muf-webapp-v33';
+const CACHE_PLUGINS = 'muf-plugins-v33';
 
 /* Liste des assets statiques à précacher */
 const ASSETS_STATIQUES = [
@@ -18,6 +18,7 @@ const ASSETS_STATIQUES = [
   './css/main.css',
   './js/app.js',
   './js/parametrage.js',
+  './js/libs/lz-string.min.js',
   './manifest.json',
 ];
 
