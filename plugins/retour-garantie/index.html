@@ -156,7 +156,7 @@
       <input class="form-control" id="brg-client" type="text"
              placeholder="Ex. Société Martin" autocomplete="off" required>
     </div>
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
       <div class="form-group">
         <label class="form-label" for="brg-type-machine">Type machine <span aria-hidden="true">*</span></label>
         <input class="form-control" id="brg-type-machine" type="text"
@@ -166,6 +166,11 @@
         <label class="form-label" for="brg-num-machine">N° machine <span aria-hidden="true">*</span></label>
         <input class="form-control" id="brg-num-machine" type="text"
                placeholder="Ex. 291520" autocomplete="off" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="brg-pn">Numéro de projet PN</label>
+        <input class="form-control" id="brg-pn" type="text"
+               placeholder="Ex. PN123456" autocomplete="off">
       </div>
     </div>
   </div>
@@ -322,6 +327,7 @@
   const domClient       = el('brg-client');
   const domTypeMachine  = el('brg-type-machine');
   const domNumMachine   = el('brg-num-machine');
+  const domPN           = el('brg-pn');
   const domDefaut       = el('brg-defaut');
   const domConstat      = el('brg-constat');
   const domDate         = el('brg-date');
@@ -545,6 +551,7 @@
   function genererBonHTML() {
     var client  = domClient.value.trim();
     var machine = domTypeMachine.value.trim() + ' n°' + domNumMachine.value.trim();
+    var pn      = domPN.value.trim();
     var defaut  = domDefaut.value.trim();
     var constat = domConstat.value.trim();
     var dateVal = domDate.value
@@ -616,6 +623,7 @@
 '<div class="header-row">\n' +
 '  <span>CLIENT : ' + esc(client) + '</span>\n' +
 '  <span>TYPE ET N° MACHINE : ' + esc(machine) + '</span>\n' +
+(pn ? '  <span>N° PROJET : ' + esc(pn) + '</span>\n' : '') +
 '</div>\n' +
 '<div class="section-wrapper">\n' +
 '  <div class="section-label">Multivac</div>\n' +
@@ -688,6 +696,7 @@
 
     var client  = domClient.value.trim();
     var machine = domTypeMachine.value.trim() + ' n°' + domNumMachine.value.trim();
+    var pn      = domPN.value.trim();
     var to      = domEmailTo.value.trim();
     var cc      = domEmailCc.value.trim().replace(/;/g, ',');
     var tech    = domTech.value.trim() || '';
@@ -701,6 +710,7 @@
       'Veuillez trouver ci-joint le bon de retour pièces sous garantie pour :\r\n' +
       '  Client  : ' + client + '\r\n' +
       '  Machine : ' + machine + '\r\n' +
+      (pn ? '  N° Projet : ' + pn + '\r\n' : '') +
       '  Date    : ' + dateVal + '\r\n\r\n' +
       'Merci de bien vouloir traiter ce retour.\r\n\r\n' +
       'Cordialement,\r\n' + tech;
@@ -766,6 +776,7 @@
     domClient.value      = '';
     domTypeMachine.value = '';
     domNumMachine.value  = '';
+    domPN.value          = '';
     domDefaut.value      = '';
     domConstat.value     = '';
     domDate.value        = dateDuJour();
