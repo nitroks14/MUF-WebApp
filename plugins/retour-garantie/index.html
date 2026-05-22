@@ -656,6 +656,9 @@
       /* Hauteur totale de la section */
       var sectionH = headerH + nbLignes * rowH;
 
+      /* Saut de page si la section ne tient pas sur la page courante */
+      if (y + sectionH > 280) { doc.addPage(); y = 14; }
+
       /* Label vertical bleu */
       doc.setFillColor(bleu);
       doc.rect(mG, y, labelW, sectionH, 'F');
@@ -731,6 +734,9 @@
     var constatH  = Math.max(constatLines.length * 5, 14) + 10;
     var footerH   = 10;
     var sectionH2 = headerH2 + nbRetMin * rowH2 + defautH + constatH + footerH;
+
+    /* Saut de page si la section ne tient pas sur la page courante */
+    if (y + sectionH2 > 280) { doc.addPage(); y = 14; }
 
     /* Label vertical */
     doc.setFillColor(bleu);
@@ -841,6 +847,7 @@
     doc.rect(mG, yS, larg, sectionH2);
 
     /* ---- Bandeau jaune garantie ---- */
+    if (y + 30 > 280) { doc.addPage(); y = 14; }
     var yBandeau = y + 4;
     doc.setFillColor(255, 215, 0);
     doc.rect(10, yBandeau, 190, 8, 'F');
