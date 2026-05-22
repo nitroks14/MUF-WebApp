@@ -22,6 +22,7 @@
     prenom:            '',
     emails_frequents:  [],   /* tableau de { label, adresse } */
     email_maintenance: '',   /* adresse du service maintenance Multivac */
+    contacts_support:  [],   /* contacts support technique */
     date_format:      'DD/MM/YYYY',
     unites:           'SI',
   };

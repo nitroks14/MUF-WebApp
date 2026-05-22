@@ -152,6 +152,9 @@
       <p class="text-muted text-sm mb-16">
         Transférez instantanément votre configuration vers un autre appareil.
       </p>
+      <p class="text-muted text-sm mb-16">
+        <small>Les listes de contacts ne sont pas incluses dans le QR Code.</small>
+      </p>
 
       <div class="qr-actions">
         <button type="button" class="btn btn-primary" id="btn-generer-qr">
@@ -644,9 +647,14 @@
       window.Parametrage.set(key, valeurs[key]);
     });
 
-    /* Sérialisation complète de la configuration */
+    /* Sérialisation partielle : on exclut les grandes listes pour rester
+       dans les limites de capacité du QR Code (max ~6880 caractères). */
     const config = window.Parametrage.getAll();
-    const jsonConfig = JSON.stringify(config);
+    const configReduite = {};
+    ['nom', 'prenom', 'email_maintenance', 'date_format', 'unites'].forEach(function (k) {
+      if (config[k] !== undefined) configReduite[k] = config[k];
+    });
+    const jsonConfig = JSON.stringify(configReduite);
 
     /* Vide le conteneur et génère le QR */
     qrContainer.innerHTML = '';
