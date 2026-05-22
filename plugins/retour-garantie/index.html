@@ -76,6 +76,35 @@
   }
   .brg-del-btn:hover { color: #E53E3E; background: rgba(229,62,62,0.08); }
 
+  /* Chips emails fréquents */
+  .brg-emails-frequents {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .brg-email-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background-color var(--transition), border-color var(--transition);
+    min-height: 36px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .brg-email-chip:hover,
+  .brg-email-chip.brg-chip-actif {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-white);
+  }
+
   .form-control.brg-invalid { border-color: #E53E3E !important; box-shadow: 0 0 0 3px rgba(229,62,62,0.15); }
   .brg-table input.brg-invalid { background: rgba(229,62,62,0.08) !important; border-radius: 3px; }
 
@@ -190,7 +219,7 @@
   <!-- Constat technicien -->
   <div class="form-group">
     <label class="form-label" for="brg-constat">
-      Constat du technicien (Multivac, freelance ou client)
+      Constat du technicien
     </label>
     <textarea class="form-control" id="brg-constat" rows="3"
               placeholder="Observations et diagnostic du technicien…"></textarea>
@@ -211,20 +240,39 @@
   <!-- Destinataires -->
   <div class="brg-section">
     <div class="brg-section-title">Destinataires</div>
-    <div class="brg-grid">
-      <div class="form-group">
-        <label class="form-label" for="brg-email-to">
-          À (email SAV / garantie Multivac) <span aria-hidden="true">*</span>
-        </label>
-        <input class="form-control" id="brg-email-to" type="email"
-               placeholder="sav@multivac.fr">
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="brg-email-cc">CC (optionnel)</label>
-        <input class="form-control" id="brg-email-cc" type="email"
-               placeholder="copie@votre-domaine.fr">
+
+    <!-- Champ À -->
+    <div class="form-group">
+      <label class="form-label" for="brg-email-to">
+        À (SAV Multivac) <span aria-hidden="true">*</span>
+      </label>
+      <input class="form-control" id="brg-email-to" type="email"
+             placeholder="sav@multivac.fr" autocomplete="off">
+    </div>
+
+    <!-- Chips sélection rapide pour À -->
+    <div id="brg-emails-freq-wrap-to" style="display:none;">
+      <p class="form-label">Sélection rapide (cliquer pour renseigner le À) :</p>
+      <div class="brg-emails-frequents" id="brg-emails-freq-liste-to">
+        <!-- Alimenté dynamiquement depuis Parametrage.get('emails_frequents') -->
       </div>
     </div>
+
+    <!-- Champ CC -->
+    <div class="form-group" style="margin-top:12px;">
+      <label class="form-label" for="brg-email-cc">CC</label>
+      <input class="form-control" id="brg-email-cc" type="text"
+             placeholder="adresses séparées par ;" autocomplete="off" readonly>
+    </div>
+
+    <!-- Chips sélection rapide pour CC (pré-cochées automatiquement) -->
+    <div id="brg-emails-freq-wrap-cc" style="display:none;">
+      <p class="form-label">Destinataires CC (décocher si nécessaire) :</p>
+      <div class="brg-emails-frequents" id="brg-emails-freq-liste-cc">
+        <!-- Alimenté dynamiquement depuis Parametrage.get('emails_frequents') -->
+      </div>
+    </div>
+
     <div id="brg-note-destinataires" class="brg-note-box">
       Configurez vos destinataires dans le module <strong>Paramétrage</strong>.
     </div>
@@ -278,9 +326,13 @@
   const domConstat      = el('brg-constat');
   const domDate         = el('brg-date');
   const domTech         = el('brg-technicien');
-  const domEmailTo      = el('brg-email-to');
-  const domEmailCc      = el('brg-email-cc');
-  const domNoteDestinat = el('brg-note-destinataires');
+  const domEmailTo           = el('brg-email-to');
+  const domEmailCc           = el('brg-email-cc');
+  const domNoteDestinat      = el('brg-note-destinataires');
+  const domEmailsFreqWrapTo  = el('brg-emails-freq-wrap-to');
+  const domEmailsFreqListeTo = el('brg-emails-freq-liste-to');
+  const domEmailsFreqWrapCc  = el('brg-emails-freq-wrap-cc');
+  const domEmailsFreqListeCc = el('brg-emails-freq-liste-cc');
   const domTbodyCmd     = el('brg-tbody-cmd');
   const domTbodyRet     = el('brg-tbody-ret');
   const domBtnAddCmd    = el('brg-btn-add-cmd');
@@ -328,19 +380,6 @@
   /* ----------------------------------------------------------
      Pré-remplissage depuis window.Parametrage
      ---------------------------------------------------------- */
-  function preremplir() {
-    if (!window.Parametrage) { return; }
-    var prenom = window.Parametrage.get('prenom') || '';
-    var nom    = window.Parametrage.get('nom')    || '';
-    if ((prenom || nom) && !domTech.value) {
-      domTech.value = [prenom, nom].filter(Boolean).join(' ');
-    }
-    var emailMaint = window.Parametrage.get('email_maintenance')
-                  || window.Parametrage.get('email') || '';
-    if (emailMaint) { domEmailTo.value = emailMaint; }
-    majNoteDestinat();
-  }
-
   function majNoteDestinat() {
     var to = domEmailTo.value.trim() || '(non configuré — voir Paramétrage)';
     var cc = domEmailCc.value.trim() || '—';
@@ -350,8 +389,101 @@
       '<br><em>Le bouton Outlook génère un fichier .eml à ouvrir manuellement.</em>';
   }
 
-  domEmailTo.addEventListener('input', majNoteDestinat);
-  domEmailCc.addEventListener('input', majNoteDestinat);
+  /* Recalcule la valeur du champ CC depuis les chips actives */
+  function majEmailCcDepuisChips() {
+    var adresses = [];
+    domEmailsFreqListeCc.querySelectorAll('.brg-email-chip.brg-chip-actif').forEach(function (c) {
+      adresses.push(c.title);
+    });
+    domEmailCc.value = adresses.join(';');
+    majNoteDestinat();
+  }
+
+  function preremplir() {
+    if (!window.Parametrage) { return; }
+
+    var prenom = window.Parametrage.get('prenom') || '';
+    var nom    = window.Parametrage.get('nom')    || '';
+    if ((prenom || nom) && !domTech.value) {
+      domTech.value = [prenom, nom].filter(Boolean).join(' ');
+    }
+
+    /* Pré-remplir le champ À */
+    var emailMaint = window.Parametrage.get('email_maintenance')
+                  || window.Parametrage.get('email') || '';
+    if (emailMaint) { domEmailTo.value = emailMaint; }
+
+    /* Chips emails fréquents */
+    var emailsFreq = window.Parametrage.get('emails_frequents');
+    if (Array.isArray(emailsFreq) && emailsFreq.length > 0) {
+
+      /* --- Chips pour le champ À --- */
+      domEmailsFreqWrapTo.style.display = '';
+      emailsFreq.forEach(function (entree) {
+        var label   = typeof entree === 'string' ? entree : (entree.label   || entree.adresse || '');
+        var adresse = typeof entree === 'string' ? entree : (entree.adresse || entree.label   || '');
+        if (!adresse) { return; }
+
+        var chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'brg-email-chip';
+        chip.textContent = label;
+        chip.title = adresse;
+        chip.setAttribute('aria-label', 'Renseigner À : ' + adresse);
+
+        chip.addEventListener('click', function () {
+          var dejaActif = chip.classList.contains('brg-chip-actif');
+          domEmailsFreqListeTo.querySelectorAll('.brg-email-chip').forEach(function (c) {
+            c.classList.remove('brg-chip-actif');
+          });
+          if (!dejaActif) {
+            chip.classList.add('brg-chip-actif');
+            domEmailTo.value = adresse;
+          } else {
+            domEmailTo.value = emailMaint || '';
+          }
+          majNoteDestinat();
+        });
+
+        domEmailsFreqListeTo.appendChild(chip);
+      });
+
+      /* --- Chips pour le champ CC (pré-cochées automatiquement) --- */
+      domEmailsFreqWrapCc.style.display = '';
+      emailsFreq.forEach(function (entree) {
+        var label   = typeof entree === 'string' ? entree : (entree.label   || entree.adresse || '');
+        var adresse = typeof entree === 'string' ? entree : (entree.adresse || entree.label   || '');
+        if (!adresse) { return; }
+
+        var chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'brg-email-chip brg-chip-actif'; /* pré-coché */
+        chip.textContent = label;
+        chip.title = adresse;
+        chip.setAttribute('aria-label', 'CC : ' + adresse);
+
+        chip.addEventListener('click', function () {
+          chip.classList.toggle('brg-chip-actif');
+          majEmailCcDepuisChips();
+        });
+
+        domEmailsFreqListeCc.appendChild(chip);
+      });
+
+      /* Initialiser le champ CC avec toutes les adresses */
+      majEmailCcDepuisChips();
+    }
+
+    majNoteDestinat();
+  }
+
+  domEmailTo.addEventListener('input', function () {
+    /* Si l'utilisateur saisit manuellement, désactiver les chips À */
+    domEmailsFreqListeTo.querySelectorAll('.brg-email-chip').forEach(function (c) {
+      c.classList.remove('brg-chip-actif');
+    });
+    majNoteDestinat();
+  });
 
   /* ----------------------------------------------------------
      Date du jour par défaut
@@ -557,7 +689,7 @@
     var client  = domClient.value.trim();
     var machine = domTypeMachine.value.trim() + ' n°' + domNumMachine.value.trim();
     var to      = domEmailTo.value.trim();
-    var cc      = domEmailCc.value.trim();
+    var cc      = domEmailCc.value.trim().replace(/;/g, ',');
     var tech    = domTech.value.trim() || '';
     var dateVal = domDate.value
       ? new Date(domDate.value + 'T12:00:00').toLocaleDateString('fr-FR')
@@ -637,7 +769,21 @@
     domDefaut.value      = '';
     domConstat.value     = '';
     domDate.value        = dateDuJour();
-    domEmailCc.value     = '';
+    /* Réinitialiser chips À */
+    domEmailsFreqListeTo.querySelectorAll('.brg-email-chip').forEach(function (c) {
+      c.classList.remove('brg-chip-actif');
+    });
+    /* Remettre email À depuis Parametrage */
+    if (window.Parametrage) {
+      var emailMaintReset = window.Parametrage.get('email_maintenance')
+                         || window.Parametrage.get('email') || '';
+      domEmailTo.value = emailMaintReset;
+    }
+    /* Remettre toutes les chips CC cochées */
+    domEmailsFreqListeCc.querySelectorAll('.brg-email-chip').forEach(function (c) {
+      c.classList.add('brg-chip-actif');
+    });
+    majEmailCcDepuisChips();
     /* Réinitialiser les tableaux */
     domTbodyCmd.innerHTML = '';
     domTbodyRet.innerHTML = '';
