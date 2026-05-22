@@ -646,7 +646,7 @@
     /* Sérialisation complète + compression LZ-String pour tenir dans le QR Code */
     const config = window.Parametrage.getAll();
     const jsonConfig = JSON.stringify(config);
-    const compressed = LZString.compressToEncodedURIComponent(jsonConfig);
+    const compressed = LZString.compressToBase64(jsonConfig);
 
     /* Vide le conteneur et génère le QR */
     qrContainer.innerHTML = '';
@@ -721,8 +721,8 @@
           const raw = code.data;
           let jsonStr;
           try {
-            const decompressed = LZString.decompressFromEncodedURIComponent(raw);
-            jsonStr = decompressed || raw;
+            const decompressed = LZString.decompressFromBase64(raw);
+            jsonStr = (decompressed && decompressed.length > 0) ? decompressed : raw;
           } catch (e) {
             jsonStr = raw;
           }
