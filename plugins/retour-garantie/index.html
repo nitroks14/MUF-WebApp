@@ -255,14 +255,6 @@
              placeholder="sav@multivac.fr" autocomplete="off">
     </div>
 
-    <!-- Chips sélection rapide pour À -->
-    <div id="brg-emails-freq-wrap-to" style="display:none;">
-      <p class="form-label">Sélection rapide (cliquer pour renseigner le À) :</p>
-      <div class="brg-emails-frequents" id="brg-emails-freq-liste-to">
-        <!-- Alimenté dynamiquement depuis Parametrage.get('emails_frequents') -->
-      </div>
-    </div>
-
     <!-- Champ CC -->
     <div class="form-group" style="margin-top:12px;">
       <label class="form-label" for="brg-email-cc">CC</label>
@@ -270,11 +262,11 @@
              placeholder="adresses séparées par ;" autocomplete="off" readonly>
     </div>
 
-    <!-- Chips sélection rapide pour CC (pré-cochées automatiquement) -->
-    <div id="brg-emails-freq-wrap-cc" style="display:none;">
+    <!-- Chips CC (sav@multivac.fr fixe + emails fréquents depuis Paramétrage) -->
+    <div id="brg-emails-freq-wrap-cc">
       <p class="form-label">Destinataires CC (décocher si nécessaire) :</p>
       <div class="brg-emails-frequents" id="brg-emails-freq-liste-cc">
-        <!-- Alimenté dynamiquement depuis Parametrage.get('emails_frequents') -->
+        <!-- Alimenté dynamiquement : sav@multivac.fr (fixe) + Parametrage.get('emails_frequents') -->
       </div>
     </div>
 
@@ -335,9 +327,6 @@
   const domEmailTo           = el('brg-email-to');
   const domEmailCc           = el('brg-email-cc');
   const domNoteDestinat      = el('brg-note-destinataires');
-  const domEmailsFreqWrapTo  = el('brg-emails-freq-wrap-to');
-  const domEmailsFreqListeTo = el('brg-emails-freq-liste-to');
-  const domEmailsFreqWrapCc  = el('brg-emails-freq-wrap-cc');
   const domEmailsFreqListeCc = el('brg-emails-freq-liste-cc');
   const domTbodyCmd     = el('brg-tbody-cmd');
   const domTbodyRet     = el('brg-tbody-ret');
@@ -406,90 +395,54 @@
   }
 
   function preremplir() {
-    if (!window.Parametrage) { return; }
-
-    var prenom = window.Parametrage.get('prenom') || '';
-    var nom    = window.Parametrage.get('nom')    || '';
-    if ((prenom || nom) && !domTech.value) {
-      domTech.value = [prenom, nom].filter(Boolean).join(' ');
-    }
+    /* Prenom / nom / email depuis Parametrage si disponible */
+    if (window.Parametrage) {
+      var prenom = window.Parametrage.get('prenom') || '';
+      var nom    = window.Parametrage.get('nom')    || '';
+      if ((prenom || nom) && !domTech.value) {
+        domTech.value = [prenom, nom].filter(Boolean).join(' ');
+      }
 
     /* Pré-remplir le champ À */
     var emailMaint = window.Parametrage.get('email_maintenance')
                   || window.Parametrage.get('email') || '';
     if (emailMaint) { domEmailTo.value = emailMaint; }
+    } /* fin if (window.Parametrage) */
 
-    /* Chips emails fréquents */
-    var emailsFreq = window.Parametrage.get('emails_frequents');
-    if (Array.isArray(emailsFreq) && emailsFreq.length > 0) {
+    /* --- Chips CC : sav@multivac.fr (fixe) + emails_frequents (Paramétrage) --- */
+    var emailsFreq = window.Parametrage ? window.Parametrage.get('emails_frequents') : null;
 
-      /* --- Chips pour le champ À --- */
-      domEmailsFreqWrapTo.style.display = '';
+    /* Adresse service support fixe + adresses Paramétrage */
+    var sourceCC = [{ label: 'Service support', adresse: 'sav@multivac.fr' }];
+    if (Array.isArray(emailsFreq)) {
       emailsFreq.forEach(function (entree) {
         var label   = typeof entree === 'string' ? entree : (entree.label   || entree.adresse || '');
         var adresse = typeof entree === 'string' ? entree : (entree.adresse || entree.label   || '');
-        if (!adresse) { return; }
-
-        var chip = document.createElement('button');
-        chip.type = 'button';
-        chip.className = 'brg-email-chip';
-        chip.textContent = label;
-        chip.title = adresse;
-        chip.setAttribute('aria-label', 'Renseigner À : ' + adresse);
-
-        chip.addEventListener('click', function () {
-          var dejaActif = chip.classList.contains('brg-chip-actif');
-          domEmailsFreqListeTo.querySelectorAll('.brg-email-chip').forEach(function (c) {
-            c.classList.remove('brg-chip-actif');
-          });
-          if (!dejaActif) {
-            chip.classList.add('brg-chip-actif');
-            domEmailTo.value = adresse;
-          } else {
-            domEmailTo.value = emailMaint || '';
-          }
-          majNoteDestinat();
-        });
-
-        domEmailsFreqListeTo.appendChild(chip);
+        if (adresse) { sourceCC.push({ label: label, adresse: adresse }); }
       });
-
-      /* --- Chips pour le champ CC (pré-cochées automatiquement) --- */
-      domEmailsFreqWrapCc.style.display = '';
-      emailsFreq.forEach(function (entree) {
-        var label   = typeof entree === 'string' ? entree : (entree.label   || entree.adresse || '');
-        var adresse = typeof entree === 'string' ? entree : (entree.adresse || entree.label   || '');
-        if (!adresse) { return; }
-
-        var chip = document.createElement('button');
-        chip.type = 'button';
-        chip.className = 'brg-email-chip brg-chip-actif'; /* pré-coché */
-        chip.textContent = label;
-        chip.title = adresse;
-        chip.setAttribute('aria-label', 'CC : ' + adresse);
-
-        chip.addEventListener('click', function () {
-          chip.classList.toggle('brg-chip-actif');
-          majEmailCcDepuisChips();
-        });
-
-        domEmailsFreqListeCc.appendChild(chip);
-      });
-
-      /* Initialiser le champ CC avec toutes les adresses */
-      majEmailCcDepuisChips();
     }
+
+    sourceCC.forEach(function (item) {
+      var chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'brg-email-chip brg-chip-actif'; /* pré-coché */
+      chip.textContent = item.label;
+      chip.title = item.adresse;
+      chip.setAttribute('aria-label', 'CC : ' + item.adresse);
+      chip.addEventListener('click', function () {
+        chip.classList.toggle('brg-chip-actif');
+        majEmailCcDepuisChips();
+      });
+      domEmailsFreqListeCc.appendChild(chip);
+    });
+
+    /* Initialiser le champ CC */
+    majEmailCcDepuisChips();
 
     majNoteDestinat();
   }
 
-  domEmailTo.addEventListener('input', function () {
-    /* Si l'utilisateur saisit manuellement, désactiver les chips À */
-    domEmailsFreqListeTo.querySelectorAll('.brg-email-chip').forEach(function (c) {
-      c.classList.remove('brg-chip-actif');
-    });
-    majNoteDestinat();
-  });
+  domEmailTo.addEventListener('input', majNoteDestinat);
 
   /* ----------------------------------------------------------
      Date du jour par défaut
@@ -780,10 +733,6 @@
     domDefaut.value      = '';
     domConstat.value     = '';
     domDate.value        = dateDuJour();
-    /* Réinitialiser chips À */
-    domEmailsFreqListeTo.querySelectorAll('.brg-email-chip').forEach(function (c) {
-      c.classList.remove('brg-chip-actif');
-    });
     /* Remettre email À depuis Parametrage */
     if (window.Parametrage) {
       var emailMaintReset = window.Parametrage.get('email_maintenance')
