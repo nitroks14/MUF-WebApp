@@ -438,16 +438,16 @@
         </div>
       </div>
 
-      <!-- Étape 2 : Photos -->
+      <!-- Étape 2 : Photo -->
       <div class="cv-aruco-step">
         <div class="cv-aruco-step-num">2</div>
         <div class="cv-aruco-step-body">
-          Prendre les 2 photos avec le marqueur visible
-          <small>Vue dessus (90°) pour L et l — Vue 3/4 (~45°) pour la hauteur H</small>
+          Photographier l'outillage du dessus avec le marqueur visible
+          <small>Vue du dessus uniquement — estime la Laize et le Pas d'avance</small>
           <div style="margin-top:6px;padding:7px 10px;background:#fff8e1;border:1px solid #f59e0b;border-radius:5px;font-size:11px;color:#78350f;line-height:1.4;">
-            Photographier l'outillage <strong>sans les cales de remplissage</strong>. Les cales seront à saisir séparément dans le formulaire.
+            Photographier l'outillage <strong>sans les cales de remplissage</strong>. Le marqueur ArUco doit être posé à plat à côté de l'outillage, bien visible. La profondeur reste à saisir manuellement.
           </div>
-          <div class="cv-aruco-photo-row" style="margin-top:8px;">
+          <div style="margin-top:8px;">
             <!-- Photo vue dessus -->
             <div class="cv-aruco-photo-slot">
               <input type="file" id="cv-aruco-photo-top" accept="image/*" capture="environment">
@@ -455,23 +455,10 @@
                 <span class="cv-aruco-photo-icon">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="4"/><path d="M12 3v1M12 20v1M3 12h1M20 12h1"/></svg>
                 </span>
-                Vue dessus (90°)
-                <span style="font-size:10px;color:#92400e;font-weight:600;">Sans cales</span>
+                Vue du dessus (90°)
+                <span style="font-size:10px;color:#92400e;font-weight:600;">Sans cales — marqueur à plat</span>
               </label>
               <canvas id="cv-aruco-canvas-top" class="cv-aruco-preview-canvas"></canvas>
-            </div>
-            <!-- Photo vue de côté -->
-            <div class="cv-aruco-photo-slot">
-              <input type="file" id="cv-aruco-photo-side" accept="image/*" capture="environment">
-              <label for="cv-aruco-photo-side" class="cv-aruco-photo-label" id="cv-aruco-label-side">
-                <span class="cv-aruco-photo-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-                </span>
-                Vue de côté
-                <span style="font-size:10px;color:#92400e;font-weight:600;">Sans cales</span>
-              </label>
-              <canvas id="cv-aruco-canvas-side" class="cv-aruco-preview-canvas"></canvas>
-              <p style="margin:4px 0 0;font-size:10px;color:#555;line-height:1.4;text-align:center;">Angle libre — l'algo calcule automatiquement.<br>Si l'outillage est trop haut pour voir le marqueur au sol, poser le marqueur debout contre le côté.</p>
             </div>
           </div>
         </div>
@@ -2060,20 +2047,17 @@
      MODULE ARUCO — Estimation volume par photo
      ============================================================ */
 
-  var ARUCO_MARKER_ID   = 0;   /* ID du marqueur utilisé (DICT_5X5_100 #0) */
-  var ARUCO_MARKER_MM   = 80;  /* Taille physique réelle du marqueur en mm */
-  var arucoLastVolume   = null; /* Dernier résultat d'estimation */
+  var ARUCO_MARKER_ID  = 0;   /* ID du marqueur utilisé (DICT_5X5_100 #0) */
+  var ARUCO_MARKER_MM  = 80;  /* Taille physique réelle du marqueur en mm */
+  var arucoLastResult  = null; /* Dernier résultat de processTopView */
 
   /* Références DOM ArUco */
   var elArucoEnabled    = document.getElementById('cv-aruco-enabled');
   var elArucoPanel      = document.getElementById('cv-aruco-panel');
   var elArucoBtnPrint   = document.getElementById('cv-aruco-btn-print');
   var elArucoPhotoTop   = document.getElementById('cv-aruco-photo-top');
-  var elArucoPhotoSide  = document.getElementById('cv-aruco-photo-side');
   var elArucoLabelTop   = document.getElementById('cv-aruco-label-top');
-  var elArucoLabelSide  = document.getElementById('cv-aruco-label-side');
   var elArucoCanvasTop  = document.getElementById('cv-aruco-canvas-top');
-  var elArucoCanvasSide = document.getElementById('cv-aruco-canvas-side');
   var elArucoBtnAnalyze = document.getElementById('cv-aruco-btn-analyze');
   var elArucoStatus     = document.getElementById('cv-aruco-status');
   var elArucoResultBox  = document.getElementById('cv-aruco-result-box');
@@ -2081,8 +2065,7 @@
   var elArucoDebugText  = document.getElementById('cv-aruco-debug-text');
   var elArucoBtnApply   = document.getElementById('cv-aruco-btn-apply');
 
-  var arucoFileTop  = null;
-  var arucoFileSide = null;
+  var arucoFileTop = null;
 
   /* Afficher / masquer le statut */
   function arucoSetStatus(msg, type) {
@@ -2092,10 +2075,10 @@
     elArucoStatus.style.display = msg ? 'block' : 'none';
   }
 
-  /* Mise à jour du bouton Analyser selon présence des photos */
+  /* Mise à jour du bouton Analyser selon présence de la photo */
   function arucoUpdateAnalyzeBtn() {
     if (!elArucoBtnAnalyze) return;
-    elArucoBtnAnalyze.disabled = !(arucoFileTop && arucoFileSide);
+    elArucoBtnAnalyze.disabled = !arucoFileTop;
   }
 
   /* Afficher un aperçu miniature dans le canvas dédié */
@@ -2151,10 +2134,10 @@
     }
   }
 
-  /* Pipeline d'analyse complet */
+  /* Pipeline d'analyse — vue du dessus uniquement */
   function arucoAnalyze() {
-    if (!arucoFileTop || !arucoFileSide) {
-      arucoSetStatus('Veuillez d\'abord sélectionner les 2 photos.', 'error');
+    if (!arucoFileTop) {
+      arucoSetStatus('Veuillez d\'abord sélectionner la photo vue du dessus.', 'error');
       return;
     }
     if (!window.ArucoVision) {
@@ -2164,42 +2147,34 @@
 
     elArucoBtnAnalyze.disabled = true;
     if (elArucoResultBox) elArucoResultBox.style.display = 'none';
-    arucoLastVolume = null;
+    arucoLastResult = null;
     arucoSetStatus('Analyse en cours... (3 à 8 secondes)', 'loading');
 
     var t0 = Date.now();
 
-    /* Traitement asynchrone séquentiel pour ne pas bloquer le thread UI */
+    /* Traitement asynchrone pour ne pas bloquer le thread UI */
     setTimeout(function () {
       ArucoVision.processTopView(arucoFileTop, ARUCO_MARKER_MM)
         .then(function (topResult) {
           /* Afficher l'aperçu annoté */
           arucoUpdatePreviewFromCanvas(topResult.canvas, elArucoCanvasTop);
 
-          return ArucoVision.processSideView(arucoFileSide, ARUCO_MARKER_MM)
-            .then(function (sideResult) {
-              arucoUpdatePreviewFromCanvas(sideResult.canvas, elArucoCanvasSide);
+          arucoLastResult = topResult;
 
-              var vol = ArucoVision.estimateVolume(topResult, sideResult);
-              arucoLastVolume = { topResult: topResult, sideResult: sideResult, vol: vol };
+          var elapsed = ((Date.now() - t0) / 1000).toFixed(1);
 
-              var elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+          /* Afficher les résultats — Laize et Pas d'avance uniquement */
+          if (elArucoDimsText) {
+            elArucoDimsText.textContent =
+              'Laize = ' + topResult.lengthMm + ' mm  ·  Pas d\'avance = ' + topResult.widthMm + ' mm';
+          }
+          if (elArucoDebugText) {
+            elArucoDebugText.textContent = topResult.debugInfo + ' | Durée : ' + elapsed + ' s';
+          }
+          if (elArucoResultBox) elArucoResultBox.style.display = 'block';
 
-              /* Afficher les résultats */
-              if (elArucoDimsText) {
-                elArucoDimsText.textContent =
-                  'L = ' + vol.lengthMm + ' mm  ·  l = ' + vol.widthMm + ' mm  ·  H = ' + vol.heightMm + ' mm' +
-                  '  →  Volume ≈ ' + vol.volumeLiters.toFixed(3) + ' L';
-              }
-              if (elArucoDebugText) {
-                elArucoDebugText.textContent =
-                  topResult.debugInfo + ' | ' + sideResult.debugInfo + ' | Durée : ' + elapsed + ' s';
-              }
-              if (elArucoResultBox) elArucoResultBox.style.display = 'block';
-
-              arucoSetStatus('Analyse terminée en ' + elapsed + ' s', 'ok');
-              elArucoBtnAnalyze.disabled = false;
-            });
+          arucoSetStatus('Analyse terminée en ' + elapsed + ' s', 'ok');
+          elArucoBtnAnalyze.disabled = false;
         })
         .catch(function (err) {
           arucoSetStatus('Erreur d\'analyse : ' + (err.message || err), 'error');
@@ -2208,23 +2183,22 @@
     }, 50); /* yield pour que le navigateur affiche le message "loading" d'abord */
   }
 
-  /* Appliquer les dimensions estimées dans les champs du formulaire */
+  /* Appliquer Laize et Pas d'avance dans le formulaire (profondeur non touchée) */
   function arucoApplyToForm() {
-    if (!arucoLastVolume) return;
-    var vol = arucoLastVolume.vol;
+    if (!arucoLastResult) return;
+    var top = arucoLastResult;
 
-    /* laize → largeur outillage (l du volume)
-     * pitch → longueur + 20 mm (le calcul soustrait 20 mm pour le cadre)
-     * depth → hauteur H */
-    if (elLaize  && vol.widthMm  > 0) elLaize.value  = vol.widthMm;
-    if (elPitch  && vol.lengthMm > 0) elPitch.value  = vol.lengthMm + 20; /* compensate frame subtraction */
-    if (elDepth  && vol.heightMm > 0) elDepth.value  = vol.heightMm;
+    /* cv-laize  ← widthMm  (dimension transversale = laize)
+     * cv-pitch  ← lengthMm + 20 mm (le calcul soustrait 20 mm pour le cadre outillage)
+     * cv-depth  — non modifié, saisi manuellement */
+    if (elLaize && top.widthMm  > 0) elLaize.value = top.widthMm;
+    if (elPitch && top.lengthMm > 0) elPitch.value = top.lengthMm + 20;
 
     /* Déclencher le recalcul */
     onInput();
 
     arucoSetStatus(
-      'Dimensions appliquées : L=' + vol.lengthMm + ' mm, l=' + vol.widthMm + ' mm, H=' + vol.heightMm + ' mm',
+      'Appliqué : Laize = ' + top.widthMm + ' mm, Pas d\'avance = ' + (top.lengthMm + 20) + ' mm — Profondeur à saisir manuellement.',
       'ok'
     );
   }
@@ -2250,14 +2224,6 @@
     elArucoPhotoTop.addEventListener('change', function () {
       arucoFileTop = this.files[0] || null;
       if (arucoFileTop) arucoShowPreview(arucoFileTop, elArucoCanvasTop, elArucoLabelTop);
-      arucoUpdateAnalyzeBtn();
-    });
-  }
-
-  if (elArucoPhotoSide) {
-    elArucoPhotoSide.addEventListener('change', function () {
-      arucoFileSide = this.files[0] || null;
-      if (arucoFileSide) arucoShowPreview(arucoFileSide, elArucoCanvasSide, elArucoLabelSide);
       arucoUpdateAnalyzeBtn();
     });
   }

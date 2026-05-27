@@ -1,24 +1,22 @@
 /**
  * aruco-vision.js — MUF-WebApp
  *
- * Pipeline de traitement d'image pour l'estimation de volume outillage :
+ * Pipeline de traitement d'image pour l'estimation des dimensions outillage :
  *   1. Détection du marqueur ArUco (scan de grille 7×7 bits via canvas)
  *   2. Calcul de l'échelle réelle (px → mm) à partir du marqueur connu (80 mm)
- *   3. Correction de perspective (homographie 4-points)
- *   4. Segmentation de l'outillage (différence couleur + flood-fill simplifié)
- *   5. Estimation des dimensions L × l × H → volume
+ *   3. Segmentation de l'outillage (différence couleur + flood-fill simplifié)
+ *   4. Estimation des dimensions L (laize) × l (pas d'avance) — vue dessus uniquement
  *
  * 100% client-side, pas d'OpenCV.js, compatible Safari iOS (Canvas API uniquement).
  *
  * Usage :
  *   ArucoVision.processTopView(imageFile, markerSizeMm)
- *     .then(result => { result.scalePixPerMm, result.toolingRectPx, result.canvas })
+ *     .then(result => { result.scalePixPerMm, result.toolingRectPx, result.canvas,
+ *                       result.lengthMm, result.widthMm })
  *
- *   ArucoVision.processSideView(imageFile, scalePixPerMm)
- *     .then(result => { result.heightMm, result.canvas })
- *
- *   ArucoVision.estimateVolume(topResult, sideResult)
- *     → { lengthMm, widthMm, heightMm, volumeLiters, volumeM3 }
+ * La profondeur est saisie manuellement dans le formulaire.
+ * Une seule photo est requise : vue du dessus (90°), marqueur ArUco posé à plat
+ * à côté de l'outillage (sans cales).
  *
  * Architecture IIFE — pas de dépendances globales.
  */
@@ -504,195 +502,6 @@
   }
 
   /* ================================================================
-     CORRECTION DE PERSPECTIVE — vue 3/4
-     Pour la vue de côté/3/4, on estime la hauteur par la projection
-     du marqueur : on connaît sa taille physique et sa déformation.
-     ================================================================ */
-
-  /**
-   * Mesure la largeur apparente du marqueur dans l'image en scannant horizontalement
-   * depuis son centre — cherche les bords de la zone sombre (marqueur noir).
-   * Utilisé pour calculer l'angle de vue réel depuis la déformation du marqueur.
-   *
-   * @param {Uint8Array} gray  — image en niveaux de gris
-   * @param {number} w         — largeur image
-   * @param {number} h         — hauteur image
-   * @param {Object} marker    — { cx, cy, side }
-   * @returns {number}         — largeur apparente en pixels
-   */
-  function measureMarkerWidthPx(gray, w, h, marker) {
-    var cx   = Math.round(marker.cx);
-    var cy   = Math.round(marker.cy);
-    /* Chercher les bords gauche et droit de la zone noire à la hauteur du centre */
-    var leftEdge  = cx;
-    var rightEdge = cx;
-    var DARK_THRESHOLD = 80;
-    /* Vers la gauche */
-    for (var x = cx; x >= 0; x--) {
-      if (cy >= 0 && cy < h && gray[cy * w + x] < DARK_THRESHOLD) {
-        leftEdge = x;
-      } else if (x < cx - 2) { break; } /* sortir dès qu'on quitte la zone noire */
-    }
-    /* Vers la droite */
-    for (var x2 = cx; x2 < w; x2++) {
-      if (cy >= 0 && cy < h && gray[cy * w + x2] < DARK_THRESHOLD) {
-        rightEdge = x2;
-      } else if (x2 > cx + 2) { break; }
-    }
-    var measuredWidth = rightEdge - leftEdge;
-    /* Si la mesure est trop petite ou incohérente, retourner marker.side */
-    return measuredWidth > marker.side * 0.3 ? measuredWidth : marker.side;
-  }
-
-  /**
-   * Estime la hauteur de l'outillage à partir de la vue de côté.
-   *
-   * Deux modes détectés automatiquement :
-   *
-   * MODE INCLINE (cas normal) :
-   *   Le marqueur au sol est vu en biais → il apparaît compressé verticalement.
-   *   La déformation encode l'angle de vue : cos(angle) = hauteurApparente / largeurApparente.
-   *   L'angle réel est calculé depuis les dimensions du marqueur détecté, sans saisie utilisateur.
-   *   H_réelle = H_apparente_px / scaleH_vertical × (1 / cos(angle))
-   *
-   * MODE VERTICAL (fallback outillage haut) :
-   *   Si le marqueur est vu de face (rapport h/l ≈ 1 — pas de déformation), le marqueur
-   *   est posé debout contre le côté de l'outillage.
-   *   L'échelle est directement px/mm sans correction d'angle.
-   *   H est mesurée sur l'image entre le bas de l'outillage et son sommet.
-   *
-   * @param {ImageData} preprocessed — vue de côté prétraitée
-   * @param {Object} marker          — marqueur détecté dans la vue de côté
-   * @param {number} markerSizeMm    — taille réelle du marqueur en mm (défaut 80)
-   * @returns {{ heightMm: number, scaleH: number, apparentHeightPx: number, mode: string, angleDeg: number }}
-   */
-  function estimateHeightFrom34View(preprocessed, marker, markerSizeMm) {
-    var w    = preprocessed.width;
-    var h    = preprocessed.height;
-    var gray = preprocessed._gray;
-
-    var mCx   = marker.cx;
-    var mCy   = marker.cy;
-    var mSide = marker.side;
-
-    /* --- Calcul automatique de l'angle depuis la déformation du marqueur --- */
-
-    /* Hauteur apparente du marqueur : taille détectée (dimension sur l'axe vertical) */
-    var markerHeightPx = mSide;
-
-    /* Largeur apparente du marqueur : mesurée par scan horizontal */
-    var markerWidthPx = measureMarkerWidthPx(gray, w, h, marker);
-
-    /* Ratio déformation : si le marqueur est vu de face → ratio ≈ 1.
-     * Si vu en biais → la hauteur est compressée → ratio < 1. */
-    var ratio = markerHeightPx / markerWidthPx;
-
-    /* Seuil pour détecter le mode vertical : rapport h/l entre 0.85 et 1.15 */
-    var IS_VERTICAL_MODE = (ratio >= 0.85 && ratio <= 1.15);
-
-    /* Angle de vue (tilt depuis la verticale) : cos(angle) = ratio → angle = acos(ratio)
-     * Valide uniquement en mode incliné. Plafonné entre 15° et 75° pour robustesse. */
-    var angleDeg;
-    var cosAngle;
-    if (IS_VERTICAL_MODE) {
-      angleDeg = 0;
-      cosAngle = 1;
-    } else {
-      /* Clamp ratio à [0.17, 0.97] pour éviter acos(>1) ou angle trop rasant */
-      var ratioC = Math.max(0.17, Math.min(0.97, ratio));
-      angleDeg = Math.acos(ratioC) * (180 / Math.PI);
-      cosAngle = ratioC;
-    }
-
-    /* Facteur d'échelle vertical : px/mm basé sur la hauteur apparente du marqueur */
-    var scaleHPxPerMm = markerHeightPx / markerSizeMm;
-
-    /* --- Seuil métal pour scan de l'outillage --- */
-    var metalRef = 0;
-    var refCount = 0;
-    var refRadius = Math.round(mSide * 0.3);
-    for (var ry = -refRadius; ry <= refRadius; ry++) {
-      var refPx = Math.round(mCx + mSide * 0.8);
-      var refPy = Math.round(mCy + ry);
-      if (refPx >= 0 && refPx < w && refPy >= 0 && refPy < h) {
-        metalRef += gray[refPy * w + refPx];
-        refCount++;
-      }
-    }
-    metalRef = refCount > 0 ? metalRef / refCount : 150;
-    var LIGHT_THRESHOLD = Math.max(60, metalRef * 0.55);
-
-    var topEdge    = Math.round(mCy - mSide * 0.5);
-    var bottomEdge = Math.round(mCy + mSide * 0.5);
-    var colX = Math.round(mCx);
-
-    if (IS_VERTICAL_MODE) {
-      /* MODE VERTICAL : le marqueur est dressé contre le côté de l'outillage.
-       * Le marqueur est vu de face — sa hauteur en px donne directement l'échelle.
-       * On cherche le bord supérieur de l'outillage en remontant depuis le haut du marqueur,
-       * et le bas de l'outillage est le bas du marqueur (posé sur l'établi). */
-
-      /* Bord bas = bas du marqueur */
-      bottomEdge = Math.round(mCy + mSide * 0.5);
-
-      /* Chercher le bord supérieur de l'outillage en remontant */
-      for (var py = Math.round(mCy - mSide * 0.5); py >= 0; py--) {
-        if (colX >= 0 && colX < w) {
-          var g = gray[py * w + colX];
-          if (g < LIGHT_THRESHOLD) { topEdge = py; break; }
-        }
-      }
-
-      var apparentHeightPxV = Math.abs(bottomEdge - topEdge);
-      /* En mode vertical, pas de correction d'angle — échelle directe */
-      var heightMmV = apparentHeightPxV / scaleHPxPerMm;
-      heightMmV = Math.max(10, Math.min(heightMmV, 500));
-
-      return {
-        heightMm:         heightMmV,
-        scaleH:           scaleHPxPerMm,
-        apparentHeightPx: apparentHeightPxV,
-        mode:             'vertical',
-        angleDeg:         0
-      };
-
-    } else {
-      /* MODE INCLINE : marqueur au sol vu en biais.
-       * Correction de perspective : H_réelle = H_apparente / scaleH / cos(angle)
-       * cos(angle) est mesuré directement depuis la déformation du marqueur. */
-
-      /* Chercher le bord supérieur */
-      for (var py3 = Math.round(mCy - mSide * 0.5); py3 >= 0; py3--) {
-        if (colX >= 0 && colX < w) {
-          var g3 = gray[py3 * w + colX];
-          if (g3 < LIGHT_THRESHOLD) { topEdge = py3; break; }
-        }
-      }
-
-      /* Chercher le bord inférieur */
-      for (var py4 = Math.round(mCy + mSide * 0.5); py4 < h; py4++) {
-        if (colX >= 0 && colX < w) {
-          var g4 = gray[py4 * w + colX];
-          if (g4 < LIGHT_THRESHOLD) { bottomEdge = py4; break; }
-        }
-      }
-
-      var apparentHeightPxI = Math.abs(bottomEdge - topEdge);
-      /* Correction automatique : diviser par cos(angle) = ratioC */
-      var heightMmI = (apparentHeightPxI / scaleHPxPerMm) / cosAngle;
-      heightMmI = Math.max(10, Math.min(heightMmI, 500));
-
-      return {
-        heightMm:         heightMmI,
-        scaleH:           scaleHPxPerMm,
-        apparentHeightPx: apparentHeightPxI,
-        mode:             'incline',
-        angleDeg:         Math.round(angleDeg)
-      };
-    }
-  }
-
-  /* ================================================================
      API PUBLIQUE
      ================================================================ */
 
@@ -807,105 +616,13 @@
     });
   }
 
-  /**
-   * Traite la photo vue 3/4 pour estimer la hauteur.
-   * @param {File} imageFile
-   * @param {number} markerSizeMm
-   * @returns {Promise<{ heightMm: number, canvas: HTMLCanvasElement, debugInfo: string }>}
-   */
-  function processSideView(imageFile, markerSizeMm) {
-    markerSizeMm = markerSizeMm || 80;
-
-    return loadImageData(imageFile).then(function (loaded) {
-      var preprocessed = preprocessGrayscale(loaded.imageData);
-      preprocessed.width  = loaded.imageData.width;
-      preprocessed.height = loaded.imageData.height;
-
-      var markers = detectMarkers(preprocessed, root.ArucoMarker ? root.ArucoMarker.DICT_5X5_100 : []);
-
-      if (markers.length === 0) {
-        return {
-          heightMm:  60,
-          canvas:    loaded.canvas,
-          debugInfo: 'Marqueur non détecté sur vue 3/4 — hauteur par défaut (60 mm)'
-        };
-      }
-
-      var bestMarker = markers[0];
-      var heightResult = estimateHeightFrom34View(preprocessed, bestMarker, markerSizeMm);
-
-      /* Annotation */
-      var ctx = loaded.canvas.getContext('2d');
-      ctx.strokeStyle = '#00ff00';
-      ctx.lineWidth   = 3;
-      ctx.strokeRect(
-        bestMarker.cx - bestMarker.side / 2,
-        bestMarker.cy - bestMarker.side / 2,
-        bestMarker.side, bestMarker.side
-      );
-
-      /* Flèche de hauteur */
-      var arrowX = bestMarker.cx + bestMarker.side * 0.8;
-      ctx.strokeStyle = '#ff00ff';
-      ctx.lineWidth   = 2;
-      ctx.beginPath();
-      ctx.moveTo(arrowX, bestMarker.cy - heightResult.apparentHeightPx / 2);
-      ctx.lineTo(arrowX, bestMarker.cy + heightResult.apparentHeightPx / 2);
-      ctx.stroke();
-      ctx.fillStyle = '#ff00ff';
-      ctx.font = 'bold ' + Math.round(bestMarker.side * 0.18) + 'px sans-serif';
-      ctx.fillText('H: ' + Math.round(heightResult.heightMm) + ' mm', arrowX + 4, bestMarker.cy);
-
-      var debugMsg;
-      if (heightResult.mode === 'vertical') {
-        debugMsg = 'H estimée: ' + Math.round(heightResult.heightMm) + ' mm (mode marqueur vertical — échelle directe)';
-      } else {
-        debugMsg = 'H estimée: ' + Math.round(heightResult.heightMm) + ' mm (angle mesuré: ' + heightResult.angleDeg + '°)';
-      }
-
-      return {
-        heightMm:  Math.round(heightResult.heightMm),
-        canvas:    loaded.canvas,
-        debugInfo: debugMsg,
-        mode:      heightResult.mode,
-        angleDeg:  heightResult.angleDeg
-      };
-    });
-  }
-
-  /**
-   * Calcule le volume outillage à partir des résultats des deux vues.
-   * @param {Object} topResult  — résultat de processTopView
-   * @param {Object} sideResult — résultat de processSideView
-   * @returns {{ lengthMm, widthMm, heightMm, volumeLiters, volumeM3 }}
-   */
-  function estimateVolume(topResult, sideResult) {
-    var L = topResult.lengthMm  || 0;
-    var l = topResult.widthMm   || 0;
-    var H = sideResult.heightMm || 0;
-
-    var volumeMm3    = L * l * H;
-    var volumeLiters = volumeMm3 / 1e6;
-    var volumeM3     = volumeMm3 / 1e9;
-
-    return {
-      lengthMm:     Math.round(L),
-      widthMm:      Math.round(l),
-      heightMm:     Math.round(H),
-      volumeLiters: parseFloat(volumeLiters.toFixed(3)),
-      volumeM3:     parseFloat(volumeM3.toFixed(6))
-    };
-  }
-
   /* Export global */
   root.ArucoVision = {
     processTopView:  processTopView,
-    processSideView: processSideView,
-    estimateVolume:  estimateVolume,
     /* Exposés pour tests */
-    _loadImageData:   loadImageData,
-    _preprocessGrayscale: preprocessGrayscale,
-    _detectMarkers:   detectMarkers
+    _loadImageData:        loadImageData,
+    _preprocessGrayscale:  preprocessGrayscale,
+    _detectMarkers:        detectMarkers
   };
 
 })(window);
