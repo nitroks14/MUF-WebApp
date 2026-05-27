@@ -510,42 +510,104 @@
      ================================================================ */
 
   /**
-   * Estime la hauteur de l'outillage à partir de la vue 3/4.
-   * Matériau : aluminium anodisé gris clair — l'objet est PLUS CLAIR que le fond.
-   * Méthode :
-   *   - On mesure la hauteur apparente du marqueur dans la vue 3/4 → facteur de compression
-   *   - On scan verticalement depuis le marqueur pour trouver les limites claires de l'objet
-   *   - On s'arrête quand les pixels deviennent sombres (transition métal → fond atelier)
+   * Mesure la largeur apparente du marqueur dans l'image en scannant horizontalement
+   * depuis son centre — cherche les bords de la zone sombre (marqueur noir).
+   * Utilisé pour calculer l'angle de vue réel depuis la déformation du marqueur.
    *
-   * @param {ImageData} preprocessed — vue 3/4 prétraitée
-   * @param {Object} marker          — marqueur détecté dans la vue 3/4
-   * @param {number} markerSizeMm    — taille réelle du marqueur en mm
-   * @returns {{ heightMm: number, scaleH: number, canvas: HTMLCanvasElement }}
+   * @param {Uint8Array} gray  — image en niveaux de gris
+   * @param {number} w         — largeur image
+   * @param {number} h         — hauteur image
+   * @param {Object} marker    — { cx, cy, side }
+   * @returns {number}         — largeur apparente en pixels
+   */
+  function measureMarkerWidthPx(gray, w, h, marker) {
+    var cx   = Math.round(marker.cx);
+    var cy   = Math.round(marker.cy);
+    /* Chercher les bords gauche et droit de la zone noire à la hauteur du centre */
+    var leftEdge  = cx;
+    var rightEdge = cx;
+    var DARK_THRESHOLD = 80;
+    /* Vers la gauche */
+    for (var x = cx; x >= 0; x--) {
+      if (cy >= 0 && cy < h && gray[cy * w + x] < DARK_THRESHOLD) {
+        leftEdge = x;
+      } else if (x < cx - 2) { break; } /* sortir dès qu'on quitte la zone noire */
+    }
+    /* Vers la droite */
+    for (var x2 = cx; x2 < w; x2++) {
+      if (cy >= 0 && cy < h && gray[cy * w + x2] < DARK_THRESHOLD) {
+        rightEdge = x2;
+      } else if (x2 > cx + 2) { break; }
+    }
+    var measuredWidth = rightEdge - leftEdge;
+    /* Si la mesure est trop petite ou incohérente, retourner marker.side */
+    return measuredWidth > marker.side * 0.3 ? measuredWidth : marker.side;
+  }
+
+  /**
+   * Estime la hauteur de l'outillage à partir de la vue de côté.
+   *
+   * Deux modes détectés automatiquement :
+   *
+   * MODE INCLINE (cas normal) :
+   *   Le marqueur au sol est vu en biais → il apparaît compressé verticalement.
+   *   La déformation encode l'angle de vue : cos(angle) = hauteurApparente / largeurApparente.
+   *   L'angle réel est calculé depuis les dimensions du marqueur détecté, sans saisie utilisateur.
+   *   H_réelle = H_apparente_px / scaleH_vertical × (1 / cos(angle))
+   *
+   * MODE VERTICAL (fallback outillage haut) :
+   *   Si le marqueur est vu de face (rapport h/l ≈ 1 — pas de déformation), le marqueur
+   *   est posé debout contre le côté de l'outillage.
+   *   L'échelle est directement px/mm sans correction d'angle.
+   *   H est mesurée sur l'image entre le bas de l'outillage et son sommet.
+   *
+   * @param {ImageData} preprocessed — vue de côté prétraitée
+   * @param {Object} marker          — marqueur détecté dans la vue de côté
+   * @param {number} markerSizeMm    — taille réelle du marqueur en mm (défaut 80)
+   * @returns {{ heightMm: number, scaleH: number, apparentHeightPx: number, mode: string, angleDeg: number }}
    */
   function estimateHeightFrom34View(preprocessed, marker, markerSizeMm) {
     var w    = preprocessed.width;
     var h    = preprocessed.height;
     var gray = preprocessed._gray;
 
-    /* Hauteur apparente du marqueur dans l'image */
-    var markerHeightPx = marker.side; /* approximation */
-
-    /* Facteur d'échelle vertical : px par mm */
-    var scaleHPxPerMm = markerHeightPx / markerSizeMm;
-
-    /* Chercher l'outillage au-dessus/en-dessous du marqueur */
     var mCx   = marker.cx;
     var mCy   = marker.cy;
     var mSide = marker.side;
 
-    /* Scan vertical centré sur le marqueur pour trouver la hauteur totale de l'objet.
-     * L'aluminium anodisé gris clair a une luminosité nettement supérieure au fond
-     * (établi sombre, sol atelier). On cherche la limite où les pixels deviennent
-     * sombres (= bord de l'outillage / transition vers le fond). */
-    var colX = Math.round(mCx);
+    /* --- Calcul automatique de l'angle depuis la déformation du marqueur --- */
 
-    /* Seuil métal : luminosité de référence prise dans la zone du marqueur voisin
-     * On utilise la luminosité mesurée juste à côté du marqueur comme référence métal. */
+    /* Hauteur apparente du marqueur : taille détectée (dimension sur l'axe vertical) */
+    var markerHeightPx = mSide;
+
+    /* Largeur apparente du marqueur : mesurée par scan horizontal */
+    var markerWidthPx = measureMarkerWidthPx(gray, w, h, marker);
+
+    /* Ratio déformation : si le marqueur est vu de face → ratio ≈ 1.
+     * Si vu en biais → la hauteur est compressée → ratio < 1. */
+    var ratio = markerHeightPx / markerWidthPx;
+
+    /* Seuil pour détecter le mode vertical : rapport h/l entre 0.85 et 1.15 */
+    var IS_VERTICAL_MODE = (ratio >= 0.85 && ratio <= 1.15);
+
+    /* Angle de vue (tilt depuis la verticale) : cos(angle) = ratio → angle = acos(ratio)
+     * Valide uniquement en mode incliné. Plafonné entre 15° et 75° pour robustesse. */
+    var angleDeg;
+    var cosAngle;
+    if (IS_VERTICAL_MODE) {
+      angleDeg = 0;
+      cosAngle = 1;
+    } else {
+      /* Clamp ratio à [0.17, 0.97] pour éviter acos(>1) ou angle trop rasant */
+      var ratioC = Math.max(0.17, Math.min(0.97, ratio));
+      angleDeg = Math.acos(ratioC) * (180 / Math.PI);
+      cosAngle = ratioC;
+    }
+
+    /* Facteur d'échelle vertical : px/mm basé sur la hauteur apparente du marqueur */
+    var scaleHPxPerMm = markerHeightPx / markerSizeMm;
+
+    /* --- Seuil métal pour scan de l'outillage --- */
     var metalRef = 0;
     var refCount = 0;
     var refRadius = Math.round(mSide * 0.3);
@@ -558,41 +620,76 @@
       }
     }
     metalRef = refCount > 0 ? metalRef / refCount : 150;
-
-    /* Seuil de transition : en dessous de ce niveau, c'est le fond (pas métal) */
     var LIGHT_THRESHOLD = Math.max(60, metalRef * 0.55);
 
     var topEdge    = Math.round(mCy - mSide * 0.5);
     var bottomEdge = Math.round(mCy + mSide * 0.5);
+    var colX = Math.round(mCx);
 
-    /* Chercher le bord supérieur — remonter jusqu'à ce que les pixels deviennent sombres */
-    for (var py = Math.round(mCy - mSide * 0.5); py >= 0; py--) {
-      if (colX >= 0 && colX < w) {
-        var g = gray[py * w + colX];
-        if (g < LIGHT_THRESHOLD) { topEdge = py; break; } /* fin du métal clair → fond sombre */
+    if (IS_VERTICAL_MODE) {
+      /* MODE VERTICAL : le marqueur est dressé contre le côté de l'outillage.
+       * Le marqueur est vu de face — sa hauteur en px donne directement l'échelle.
+       * On cherche le bord supérieur de l'outillage en remontant depuis le haut du marqueur,
+       * et le bas de l'outillage est le bas du marqueur (posé sur l'établi). */
+
+      /* Bord bas = bas du marqueur */
+      bottomEdge = Math.round(mCy + mSide * 0.5);
+
+      /* Chercher le bord supérieur de l'outillage en remontant */
+      for (var py = Math.round(mCy - mSide * 0.5); py >= 0; py--) {
+        if (colX >= 0 && colX < w) {
+          var g = gray[py * w + colX];
+          if (g < LIGHT_THRESHOLD) { topEdge = py; break; }
+        }
       }
-    }
 
-    /* Chercher le bord inférieur — descendre jusqu'à ce que les pixels deviennent sombres */
-    for (var py2 = Math.round(mCy + mSide * 0.5); py2 < h; py2++) {
-      if (colX >= 0 && colX < w) {
-        var g2 = gray[py2 * w + colX];
-        if (g2 < LIGHT_THRESHOLD) { bottomEdge = py2; break; } /* fin du métal clair → fond sombre */
+      var apparentHeightPxV = Math.abs(bottomEdge - topEdge);
+      /* En mode vertical, pas de correction d'angle — échelle directe */
+      var heightMmV = apparentHeightPxV / scaleHPxPerMm;
+      heightMmV = Math.max(10, Math.min(heightMmV, 500));
+
+      return {
+        heightMm:         heightMmV,
+        scaleH:           scaleHPxPerMm,
+        apparentHeightPx: apparentHeightPxV,
+        mode:             'vertical',
+        angleDeg:         0
+      };
+
+    } else {
+      /* MODE INCLINE : marqueur au sol vu en biais.
+       * Correction de perspective : H_réelle = H_apparente / scaleH / cos(angle)
+       * cos(angle) est mesuré directement depuis la déformation du marqueur. */
+
+      /* Chercher le bord supérieur */
+      for (var py3 = Math.round(mCy - mSide * 0.5); py3 >= 0; py3--) {
+        if (colX >= 0 && colX < w) {
+          var g3 = gray[py3 * w + colX];
+          if (g3 < LIGHT_THRESHOLD) { topEdge = py3; break; }
+        }
       }
+
+      /* Chercher le bord inférieur */
+      for (var py4 = Math.round(mCy + mSide * 0.5); py4 < h; py4++) {
+        if (colX >= 0 && colX < w) {
+          var g4 = gray[py4 * w + colX];
+          if (g4 < LIGHT_THRESHOLD) { bottomEdge = py4; break; }
+        }
+      }
+
+      var apparentHeightPxI = Math.abs(bottomEdge - topEdge);
+      /* Correction automatique : diviser par cos(angle) = ratioC */
+      var heightMmI = (apparentHeightPxI / scaleHPxPerMm) / cosAngle;
+      heightMmI = Math.max(10, Math.min(heightMmI, 500));
+
+      return {
+        heightMm:         heightMmI,
+        scaleH:           scaleHPxPerMm,
+        apparentHeightPx: apparentHeightPxI,
+        mode:             'incline',
+        angleDeg:         Math.round(angleDeg)
+      };
     }
-
-    var apparentHeightPx = Math.abs(bottomEdge - topEdge);
-
-    /* Correction de perspective 3/4 :
-     * Modèle simplifié : l'angle de vue ~45° compresse la hauteur d'un facteur √2
-     * H_réelle = H_apparente_px / scaleH × cos(45°)^-1 ≈ H_px / scaleH × 1.41 */
-    var ANGLE_CORRECTION = 1.41; /* cos(45°)^-1 */
-    var heightMm = (apparentHeightPx / scaleHPxPerMm) * ANGLE_CORRECTION;
-
-    /* Plafonner à des valeurs raisonnables pour un outillage Multivac */
-    heightMm = Math.max(10, Math.min(heightMm, 300));
-
-    return { heightMm: heightMm, scaleH: scaleHPxPerMm, apparentHeightPx: apparentHeightPx };
   }
 
   /* ================================================================
@@ -759,10 +856,19 @@
       ctx.font = 'bold ' + Math.round(bestMarker.side * 0.18) + 'px sans-serif';
       ctx.fillText('H: ' + Math.round(heightResult.heightMm) + ' mm', arrowX + 4, bestMarker.cy);
 
+      var debugMsg;
+      if (heightResult.mode === 'vertical') {
+        debugMsg = 'H estimée: ' + Math.round(heightResult.heightMm) + ' mm (mode marqueur vertical — échelle directe)';
+      } else {
+        debugMsg = 'H estimée: ' + Math.round(heightResult.heightMm) + ' mm (angle mesuré: ' + heightResult.angleDeg + '°)';
+      }
+
       return {
         heightMm:  Math.round(heightResult.heightMm),
         canvas:    loaded.canvas,
-        debugInfo: 'H estimée: ' + Math.round(heightResult.heightMm) + ' mm (angle 45° supposé)'
+        debugInfo: debugMsg,
+        mode:      heightResult.mode,
+        angleDeg:  heightResult.angleDeg
       };
     });
   }
