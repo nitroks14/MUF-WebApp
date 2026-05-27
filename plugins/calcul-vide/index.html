@@ -1022,17 +1022,31 @@
   /*
    * Volume de la cavité outillage.
    *
-   * Sans cales : V = laize × (pitch − 20) × depth
+   * Mode standard (areaMm2Override = 0) :
+   *   Sans cales : V = laize × (pitch − 20) × depth
+   *   Avec cales : cavité brute − volume_cales (jeu 10 mm de chaque côté)
    *
-   * Avec cales : les cales ne remplissent PAS toute la surface — jeu de 10 mm
-   * de chaque côté (côté laize et côté pas d'avance).
-   *   Dimensions réelles des cales :
-   *     largeur = laize − 20 mm   (−10 mm de chaque côté)
-   *     longueur = effPitch − 20 mm (−10 mm de chaque côté)
-   *   Volume déplacé par les cales = largeur × longueur × épaisseurCales
-   *   Volume final = cavité totale − volume_cales
+   * Mode ArUco (areaMm2Override > 0) :
+   *   La surface est remplacée par l'aire réelle segmentée.
+   *   V = areaMm2Override × depth (sans soustraction du cadre — l'aire ArUco
+   *   mesure déjà la surface visible de l'outillage, pas un rectangle fictif).
+   *   Avec cales : on retranche le volume des cales calculé sur la même aire.
+   *     caleVol = areaMm2Override × (fillerThickness / depth) × fillerThickness
+   *     (approche conservative : les cales occupent la même proportion de surface)
    */
-  function calculateToolingVolume(laize, pitch, depth, hasFillers, fillerThickness) {
+  function calculateToolingVolume(laize, pitch, depth, hasFillers, fillerThickness, areaMm2Override) {
+    if (areaMm2Override > 0) {
+      /* Mode ArUco : aire réelle × profondeur */
+      var cavityAruco = areaMm2Override * depth; /* mm³ */
+      if (!hasFillers || fillerThickness <= 0) {
+        return cavityAruco / 1e9; /* m³ */
+      }
+      /* Volume cales proportionnel à l'aire ArUco */
+      var caleT2 = Math.min(fillerThickness, depth);
+      var caleVol2 = areaMm2Override * (caleT2 / depth) * caleT2;
+      return Math.max(cavityAruco - caleVol2, 0) / 1e9;
+    }
+
     var effPitch  = pitch - 20;                /* soustraction cadre outillage */
     var cavityVol = laize * effPitch * depth;  /* mm³, cavité brute */
 
@@ -1477,14 +1491,23 @@
     var fillerT = parseFloat(st.fillerThickness) || 0;
 
     var volOutillage = 0;
-    if (laize > 0 && pitch > 20 && depth > 0) {
-      volOutillage = calculateToolingVolume(laize, pitch, depth, st.hasFillers, fillerT);
+    if (arucoAreaMm2Active > 0 && depth > 0) {
+      /* Mode ArUco actif : l'aire segmentée pilote le volume outillage */
+      volOutillage = calculateToolingVolume(laize, pitch, depth, st.hasFillers, fillerT, arucoAreaMm2Active);
+    } else if (laize > 0 && pitch > 20 && depth > 0) {
+      volOutillage = calculateToolingVolume(laize, pitch, depth, st.hasFillers, fillerT, 0);
     }
 
     /* Affichage volume outillage en temps réel */
-    elVolOutillage.textContent = volOutillage > 0
-      ? (volOutillage * 1000).toFixed(3) + ' L'
-      : '—';
+    if (volOutillage > 0) {
+      var volTxt = (volOutillage * 1000).toFixed(3) + ' L';
+      if (arucoAreaMm2Active > 0) {
+        volTxt += ' (ArUco)';
+      }
+      elVolOutillage.textContent = volTxt;
+    } else {
+      elVolOutillage.textContent = '—';
+    }
 
     /* --- Volume aval et amont --- */
     var volAval  = calculateDownstreamVolume(st, volOutillage);
@@ -1710,6 +1733,10 @@
   inputs.forEach(function (el) {
     el.addEventListener('input', onInput);
   });
+
+  /* Désactiver l'aire ArUco si l'utilisateur retouche Laize ou Pas d'avance manuellement */
+  if (elLaize) elLaize.addEventListener('input', arucoResetAreaOnManualEdit);
+  if (elPitch) elPitch.addEventListener('input', arucoResetAreaOnManualEdit);
 
   var selects = [
     elNetworkInletDiameter, elPumpModel, elRootsModel,
@@ -2050,6 +2077,7 @@
   var ARUCO_MARKER_ID  = 0;   /* ID du marqueur utilisé (DICT_5X5_100 #0) */
   var ARUCO_MARKER_MM  = 80;  /* Taille physique réelle du marqueur en mm */
   var arucoLastResult  = null; /* Dernier résultat de processTopView */
+  var arucoAreaMm2Active = 0; /* Aire ArUco validée et active dans le calcul (0 = désactivée) */
 
   /* Références DOM ArUco */
   var elArucoEnabled    = document.getElementById('cv-aruco-enabled');
@@ -2117,6 +2145,12 @@
     var enabled = elArucoEnabled.checked;
     elArucoPanel.style.display = enabled ? 'block' : 'none';
 
+    /* Désactiver l'aire ArUco si l'option est décochée */
+    if (!enabled && arucoAreaMm2Active > 0) {
+      arucoAreaMm2Active = 0;
+      onInput();
+    }
+
     /* Sauvegarder la préférence */
     try { localStorage.setItem('muf_aruco_enabled', enabled ? '1' : '0'); } catch (e) { /* ignore */ }
   }
@@ -2163,10 +2197,13 @@
 
           var elapsed = ((Date.now() - t0) / 1000).toFixed(1);
 
-          /* Afficher les résultats — Laize et Pas d'avance uniquement */
+          /* Afficher les résultats — Laize, Pas d'avance et Aire réelle */
           if (elArucoDimsText) {
+            var areaCm2 = (topResult.areaMm2 / 100).toFixed(1);
+            var rectAreaCm2 = (topResult.widthMm * topResult.lengthMm / 100).toFixed(1);
             elArucoDimsText.textContent =
-              'Laize = ' + topResult.lengthMm + ' mm  ·  Pas d\'avance = ' + topResult.widthMm + ' mm';
+              'Laize = ' + topResult.widthMm + ' mm  ·  Pas d\'avance = ' + topResult.lengthMm + ' mm' +
+              '  ·  Aire réelle = ' + areaCm2 + ' cm² (bbox = ' + rectAreaCm2 + ' cm²)';
           }
           if (elArucoDebugText) {
             elArucoDebugText.textContent = topResult.debugInfo + ' | Durée : ' + elapsed + ' s';
@@ -2183,24 +2220,96 @@
     }, 50); /* yield pour que le navigateur affiche le message "loading" d'abord */
   }
 
-  /* Appliquer Laize et Pas d'avance dans le formulaire (profondeur non touchée) */
+  /* Appliquer l'aire ArUco dans le calcul de vide.
+   *
+   * Logique :
+   *   1. Validation : areaMm2 doit être ≤ widthMm × lengthMm (bounding box).
+   *      Si supérieure → estimation incohérente, on bloque et on affiche une erreur.
+   *   2. Calcul des deux volumes de comparaison (avec la profondeur saisie) :
+   *      - volumeRect  = laize × pasAvance × profondeur  (champs cv-laize, cv-pitch, cv-depth)
+   *      - volumeAruco = areaMm2 × profondeur
+   *   3. Affichage comparatif dans le statut.
+   *   4. Injection : arucoAreaMm2Active ← areaMm2 → pilotera calculateToolingVolume.
+   *      Laize et Pas d'avance (bounding box) sont injectés pour information uniquement.
+   */
   function arucoApplyToForm() {
     if (!arucoLastResult) return;
     var top = arucoLastResult;
 
-    /* cv-laize  ← widthMm  (dimension transversale = laize)
-     * cv-pitch  ← lengthMm + 20 mm (le calcul soustrait 20 mm pour le cadre outillage)
+    /* Récupérer la profondeur déjà saisie manuellement */
+    var depth = parseFloat(elDepth ? elDepth.value : '') || 0;
+
+    /* --- Validation --- */
+    var rectArea = top.widthMm * top.lengthMm;
+    if (top.areaMm2 > rectArea) {
+      arucoSetStatus(
+        'Estimation ArUco incohérente (aire supérieure au rectangle) — vérifiez la photo ou saisissez les dimensions manuellement.',
+        'error'
+      );
+      return;
+    }
+
+    /* --- Comparaison des volumes (si profondeur disponible) --- */
+    if (depth > 0) {
+      var volumeArucoCm3  = (top.areaMm2 * depth) / 1000;
+      /* Volume rectangulaire brut = widthMm × lengthMm × depth (bounding box pure, sans soustraction cadre) */
+      var volumeRectCm3   = (rectArea * depth) / 1000;
+      var diffPct = rectArea > 0
+        ? Math.round(Math.abs(volumeArucoCm3 - volumeRectCm3) / volumeRectCm3 * 100)
+        : 0;
+
+      arucoSetStatus(
+        'Volume ArUco : ' + volumeArucoCm3.toFixed(1) + ' cm³' +
+        ' | Volume rectangulaire : ' + volumeRectCm3.toFixed(1) + ' cm³' +
+        ' — Différence : ' + diffPct + ' %',
+        'ok'
+      );
+    } else {
+      arucoSetStatus(
+        'Aire ArUco appliquée (' + top.areaMm2 + ' mm²). Saisissez la profondeur pour calculer le volume.',
+        'ok'
+      );
+    }
+
+    /* --- Activer l'aire ArUco dans le calcul --- */
+    arucoAreaMm2Active = top.areaMm2;
+
+    /* --- Injecter Laize et Pas d'avance (bounding box) pour information ---
+     * cv-laize  ← widthMm  (dimension transversale)
+     * cv-pitch  ← lengthMm + 20 mm (le calcul soustrait 20 mm pour le cadre)
      * cv-depth  — non modifié, saisi manuellement */
-    if (elLaize && top.widthMm  > 0) elLaize.value = top.widthMm;
-    if (elPitch && top.lengthMm > 0) elPitch.value = top.lengthMm + 20;
+    if (elLaize && top.widthMm > 0) {
+      elLaize.value = top.widthMm;
+      arucoMarkAutofilled(elLaize);
+    }
+    if (elPitch && top.lengthMm > 0) {
+      elPitch.value = top.lengthMm + 20;
+      arucoMarkAutofilled(elPitch);
+    }
 
-    /* Déclencher le recalcul */
+    /* Déclencher le recalcul avec la nouvelle aire active */
     onInput();
+  }
 
-    arucoSetStatus(
-      'Appliqué : Laize = ' + top.widthMm + ' mm, Pas d\'avance = ' + (top.lengthMm + 20) + ' mm — Profondeur à saisir manuellement.',
-      'ok'
-    );
+  /* Réinitialiser l'aire ArUco active quand l'utilisateur modifie Laize ou Pas d'avance manuellement
+   * (évite que l'ArUco continue à piloter le calcul après une correction manuelle) */
+  function arucoResetAreaOnManualEdit() {
+    if (arucoAreaMm2Active > 0) {
+      arucoAreaMm2Active = 0;
+      arucoSetStatus('Aire ArUco désactivée — calcul basé sur les dimensions saisies.', 'info');
+    }
+  }
+
+  /* Marquer un champ comme auto-rempli (bordure bleue) — disparaît à la première saisie manuelle */
+  function arucoMarkAutofilled(el) {
+    el.style.borderColor = '#3b82f6';
+    el.style.boxShadow   = '0 0 0 3px rgba(59,130,246,0.18)';
+    function clearMark() {
+      el.style.borderColor = '';
+      el.style.boxShadow   = '';
+      el.removeEventListener('input', clearMark);
+    }
+    el.addEventListener('input', clearMark);
   }
 
   /* Attacher les événements ArUco */

@@ -495,10 +495,10 @@
 
     if (metalPixels < 100 || maxX <= minX || maxY <= minY) {
       /* Fallback : utiliser la zone de recherche entière */
-      return { x: sx0, y: sy0, w: sx1 - sx0, h: sy1 - sy0 };
+      return { x: sx0, y: sy0, w: sx1 - sx0, h: sy1 - sy0, metalPixels: 0 };
     }
 
-    return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+    return { x: minX, y: minY, w: maxX - minX, h: maxY - minY, metalPixels: metalPixels };
   }
 
   /* ================================================================
@@ -511,13 +511,21 @@
    * @param {number} markerSizeMm
    * @returns {Promise<{
    *   scalePixPerMm: number,
-   *   toolingRectPx: {x,y,w,h},
+   *   toolingRectPx: {x,y,w,h,metalPixels},
    *   lengthMm: number,
    *   widthMm: number,
+   *   areaMm2: number,
    *   markerId: number,
    *   canvas: HTMLCanvasElement,
    *   debugInfo: string
    * }>}
+   *
+   * areaMm2 : aire réelle segmentée de l'outillage en mm².
+   *   Calculée en comptant les pixels "métal" (aluminium anodisé clair) détectés
+   *   dans la zone de segmentation, puis convertis via l'échelle ArUco (px/mm)².
+   *   Si la segmentation n'a pas trouvé de pixels métal (fallback), areaMm2 est
+   *   égal à widthMm × lengthMm (aire de la bounding box).
+   *   Cette valeur est toujours ≤ widthMm × lengthMm dans des conditions normales.
    */
   function processTopView(imageFile, markerSizeMm) {
     markerSizeMm = markerSizeMm || 80;
@@ -552,8 +560,23 @@
       var scale = computeScale(bestMarker, markerSizeMm) * loaded.scale; /* px/mm en coordonnées originales */
       var toolingRect = segmentToolingTopView(preprocessed, bestMarker);
 
-      var lengthMm = toolingRect ? (toolingRect.w / (scale / scaleFactor)) : 0;
-      var widthMm  = toolingRect ? (toolingRect.h / (scale / scaleFactor)) : 0;
+      var scaleAtOriginal = scale / scaleFactor; /* px/mm dans l'espace image redimensionnée */
+      var lengthMm = toolingRect ? (toolingRect.w / scaleAtOriginal) : 0;
+      var widthMm  = toolingRect ? (toolingRect.h / scaleAtOriginal) : 0;
+
+      /* Aire réelle segmentée en mm² :
+       * metalPixels est compté dans l'espace image redimensionnée (coordonnées px preprocessed).
+       * Conversion : 1 px² = (1 / scaleAtOriginal)² mm²
+       * Fallback (metalPixels=0) : utiliser l'aire de la bounding box. */
+      var areaMm2 = 0;
+      if (toolingRect) {
+        if (toolingRect.metalPixels > 0) {
+          var mmPerPx = 1 / scaleAtOriginal;
+          areaMm2 = Math.round(toolingRect.metalPixels * mmPerPx * mmPerPx);
+        } else {
+          areaMm2 = Math.round(lengthMm * widthMm);
+        }
+      }
 
       /* Dessiner les annotations sur le canvas */
       var ctx = loaded.canvas.getContext('2d');
@@ -602,6 +625,14 @@
           toolingRect.x - fontSize * 4 - 4,
           toolingRect.y + toolingRect.h / 2
         );
+        /* Aire réelle segmentée */
+        ctx.fillStyle = '#7c3aed';
+        ctx.font = 'bold ' + Math.round(fontSize * 0.9) + 'px sans-serif';
+        ctx.fillText(
+          'Aire: ' + areaMm2 + ' mm²',
+          toolingRect.x + toolingRect.w / 2 - 30,
+          toolingRect.y - fontSize - 4
+        );
       }
 
       return {
@@ -609,6 +640,7 @@
         toolingRectPx: toolingRect,
         lengthMm: Math.round(lengthMm),
         widthMm:  Math.round(widthMm),
+        areaMm2:  areaMm2,
         markerId: bestMarker.id,
         canvas:   loaded.canvas,
         debugInfo: 'Marqueur #' + bestMarker.id + ' détecté (confiance: ' + (bestMarker.confidence * 100).toFixed(0) + '%)'
