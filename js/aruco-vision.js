@@ -421,14 +421,15 @@
 
   /* ================================================================
      SEGMENTATION OUTILLAGE — vue dessus
-     Hypothèse : l'outillage est la zone métallique (grise/brillante)
-     adjacente au marqueur. On utilise une détection de bord simplifiée
-     sur le contenu autour du marqueur.
+     Matériau : aluminium anodisé gris clair.
+     L'outillage est PLUS CLAIR que le fond (établi, sol atelier).
+     On détecte les pixels à haute luminosité (métal) adjacents au marqueur.
      ================================================================ */
 
   /**
    * Estime le rectangle englobant de l'outillage à partir d'une image vue dessus.
-   * Méthode : flood-fill depuis la zone autour du marqueur sur pixels clairs (métal).
+   * Méthode : détection des pixels clairs (aluminium anodisé gris clair) autour
+   * du marqueur ArUco. Le fond (établi, sol atelier) est supposé plus sombre.
    *
    * @param {ImageData} preprocessed — imageData prétraitée
    * @param {Object} marker          — marqueur détecté {cx, cy, side}
@@ -441,32 +442,44 @@
 
     if (!gray) return null;
 
-    /* Zone de départ : à côté du marqueur (en supposant l'outillage adjacent) */
-    /* On cherche la zone non-marqueur la plus brillante dans les 4 quadrants */
     var mCx   = marker.cx;
     var mCy   = marker.cy;
     var mSide = marker.side;
 
-    /* Calculer les bornes de l'outillage par analyse de colonnes/lignes */
-    /* Approche simplifiée : chercher la transition métal/fond autour du marqueur */
-
-    /* Zone de recherche = rectangle 6×markerSide autour du centre */
+    /* Zone de recherche élargie autour du marqueur */
     var searchR = mSide * 3;
     var sx0 = Math.max(0, Math.round(mCx - searchR));
     var sx1 = Math.min(w - 1, Math.round(mCx + searchR));
     var sy0 = Math.max(0, Math.round(mCy - searchR));
     var sy1 = Math.min(h - 1, Math.round(mCy + searchR));
 
-    /* Trouver les pixels "outillage" : gris clair (métallique), pas noir */
-    var METAL_MIN = 100; /* seuil minimum pour pixel métal */
-    var METAL_MAX = 240; /* seuil max (éviter surexposition) */
+    /* Calculer la luminosité médiane de la zone hors marqueur pour définir
+     * dynamiquement le seuil métal. L'aluminium anodisé est significativement
+     * plus clair que le fond atelier. */
+    var samples = [];
+    var stepS = Math.max(1, Math.floor(mSide / 4));
+    for (var sy = sy0; sy <= sy1; sy += stepS) {
+      for (var sx = sx0; sx <= sx1; sx += stepS) {
+        var dCxS = Math.abs(sx - mCx);
+        var dCyS = Math.abs(sy - mCy);
+        if (dCxS < mSide * 0.7 && dCyS < mSide * 0.7) continue;
+        samples.push(gray[sy * w + sx]);
+      }
+    }
+    samples.sort(function (a, b) { return a - b; });
+    var medianG = samples.length > 0 ? samples[Math.floor(samples.length / 2)] : 128;
+
+    /* Seuil : on accepte les pixels nettement au-dessus de la médiane (métal clair)
+     * mais pas les surexposés (reflets spéculaires purs). */
+    var METAL_MIN = Math.max(80, medianG + 20); /* au moins 20 pts au-dessus de la médiane */
+    var METAL_MAX = 250;
 
     var minX = sx1, maxX = sx0, minY = sy1, maxY = sy0;
     var metalPixels = 0;
 
     for (var py = sy0; py <= sy1; py++) {
       for (var px = sx0; px <= sx1; px++) {
-        /* Ignorer la zone du marqueur lui-même */
+        /* Ignorer la zone du marqueur lui-même (dark square) */
         var dCx = Math.abs(px - mCx);
         var dCy = Math.abs(py - mCy);
         if (dCx < mSide * 0.6 && dCy < mSide * 0.6) continue;
@@ -498,9 +511,11 @@
 
   /**
    * Estime la hauteur de l'outillage à partir de la vue 3/4.
+   * Matériau : aluminium anodisé gris clair — l'objet est PLUS CLAIR que le fond.
    * Méthode :
    *   - On mesure la hauteur apparente du marqueur dans la vue 3/4 → facteur de compression
-   *   - On mesure la hauteur apparente de l'outillage → hauteur réelle par ratio
+   *   - On scan verticalement depuis le marqueur pour trouver les limites claires de l'objet
+   *   - On s'arrête quand les pixels deviennent sombres (transition métal → fond atelier)
    *
    * @param {ImageData} preprocessed — vue 3/4 prétraitée
    * @param {Object} marker          — marqueur détecté dans la vue 3/4
@@ -523,24 +538,46 @@
     var mCy   = marker.cy;
     var mSide = marker.side;
 
-    /* Scan vertical centré sur le marqueur pour trouver la hauteur totale de l'objet */
+    /* Scan vertical centré sur le marqueur pour trouver la hauteur totale de l'objet.
+     * L'aluminium anodisé gris clair a une luminosité nettement supérieure au fond
+     * (établi sombre, sol atelier). On cherche la limite où les pixels deviennent
+     * sombres (= bord de l'outillage / transition vers le fond). */
     var colX = Math.round(mCx);
-    var topEdge    = mCy;
-    var bottomEdge = mCy;
 
-    /* Chercher le bord supérieur */
-    for (var py = Math.round(mCy - mSide); py >= 0; py--) {
+    /* Seuil métal : luminosité de référence prise dans la zone du marqueur voisin
+     * On utilise la luminosité mesurée juste à côté du marqueur comme référence métal. */
+    var metalRef = 0;
+    var refCount = 0;
+    var refRadius = Math.round(mSide * 0.3);
+    for (var ry = -refRadius; ry <= refRadius; ry++) {
+      var refPx = Math.round(mCx + mSide * 0.8);
+      var refPy = Math.round(mCy + ry);
+      if (refPx >= 0 && refPx < w && refPy >= 0 && refPy < h) {
+        metalRef += gray[refPy * w + refPx];
+        refCount++;
+      }
+    }
+    metalRef = refCount > 0 ? metalRef / refCount : 150;
+
+    /* Seuil de transition : en dessous de ce niveau, c'est le fond (pas métal) */
+    var LIGHT_THRESHOLD = Math.max(60, metalRef * 0.55);
+
+    var topEdge    = Math.round(mCy - mSide * 0.5);
+    var bottomEdge = Math.round(mCy + mSide * 0.5);
+
+    /* Chercher le bord supérieur — remonter jusqu'à ce que les pixels deviennent sombres */
+    for (var py = Math.round(mCy - mSide * 0.5); py >= 0; py--) {
       if (colX >= 0 && colX < w) {
         var g = gray[py * w + colX];
-        if (g < 60) { topEdge = py; break; } /* bord sombre de l'objet */
+        if (g < LIGHT_THRESHOLD) { topEdge = py; break; } /* fin du métal clair → fond sombre */
       }
     }
 
-    /* Chercher le bord inférieur */
-    for (var py2 = Math.round(mCy + mSide); py2 < h; py2++) {
+    /* Chercher le bord inférieur — descendre jusqu'à ce que les pixels deviennent sombres */
+    for (var py2 = Math.round(mCy + mSide * 0.5); py2 < h; py2++) {
       if (colX >= 0 && colX < w) {
         var g2 = gray[py2 * w + colX];
-        if (g2 < 60) { bottomEdge = py2; break; }
+        if (g2 < LIGHT_THRESHOLD) { bottomEdge = py2; break; } /* fin du métal clair → fond sombre */
       }
     }
 
