@@ -197,7 +197,216 @@
     background: var(--color-primary, #003A70);
     color: #fff;
   }
+
+  /* ============================================================
+     Styles — Module ArUco
+     ============================================================ */
+
+  .cv-aruco-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 8px 10px;
+    background: var(--color-bg-alt, #f0f4f8);
+    border-radius: var(--radius-sm, 6px);
+    border: 1px solid var(--color-border, #d0d5dd);
+  }
+
+  .cv-aruco-toggle-row input[type="checkbox"] {
+    width: 18px; height: 18px;
+    accent-color: var(--color-primary, #003A70);
+    cursor: pointer; flex-shrink: 0;
+  }
+
+  .cv-aruco-toggle-row label {
+    font-size: var(--font-size-sm, 13px);
+    font-weight: 600;
+    color: var(--color-primary, #003A70);
+    cursor: pointer;
+    margin: 0;
+  }
+
+  #cv-aruco-panel {
+    border: 2px solid var(--color-primary, #003A70);
+    border-radius: var(--radius, 8px);
+    padding: 14px;
+    margin-bottom: 14px;
+    background: #f8fafd;
+  }
+
+  .cv-aruco-panel-title {
+    font-size: var(--font-size-sm, 13px);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-primary, #003A70);
+    margin: 0 0 12px 0;
+  }
+
+  .cv-aruco-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .cv-aruco-step-num {
+    flex-shrink: 0;
+    width: 22px; height: 22px;
+    background: var(--color-primary, #003A70);
+    color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    margin-top: 1px;
+  }
+
+  .cv-aruco-step-body {
+    flex: 1;
+    font-size: var(--font-size-sm, 13px);
+    color: var(--color-text, #111);
+  }
+
+  .cv-aruco-step-body small {
+    display: block;
+    color: var(--color-text-muted, #888);
+    font-size: 11px;
+    margin-top: 2px;
+  }
+
+  .cv-aruco-btn {
+    width: 100%;
+    padding: 9px 14px;
+    background: var(--color-primary, #003A70);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm, 6px);
+    font-size: var(--font-size-sm, 13px);
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+  }
+
+  .cv-aruco-btn:hover { background: #00274d; }
+  .cv-aruco-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .cv-aruco-btn-outline {
+    background: transparent;
+    color: var(--color-primary, #003A70);
+    border: 1.5px solid var(--color-primary, #003A70);
+  }
+
+  .cv-aruco-btn-outline:hover { background: rgba(0,58,112,0.06); }
+
+  .cv-aruco-photo-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .cv-aruco-photo-slot {
+    position: relative;
+  }
+
+  .cv-aruco-photo-slot input[type="file"] {
+    display: none;
+  }
+
+  .cv-aruco-photo-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 14px 8px;
+    border: 2px dashed var(--color-border, #d0d5dd);
+    border-radius: var(--radius-sm, 6px);
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--color-text-muted, #888);
+    transition: border-color 0.15s, background 0.15s;
+    text-align: center;
+    min-height: 80px;
+    background: #fff;
+  }
+
+  .cv-aruco-photo-label:hover,
+  .cv-aruco-photo-label.has-photo {
+    border-color: var(--color-primary, #003A70);
+    color: var(--color-primary, #003A70);
+  }
+
+  .cv-aruco-photo-label.has-photo {
+    background: rgba(0,58,112,0.05);
+  }
+
+  .cv-aruco-photo-icon {
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .cv-aruco-preview-canvas {
+    width: 100%;
+    max-height: 160px;
+    object-fit: contain;
+    border-radius: var(--radius-sm, 6px);
+    border: 1px solid var(--color-border, #d0d5dd);
+    margin-top: 6px;
+    display: none;
+  }
+
+  .cv-aruco-status {
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm, 6px);
+    margin-bottom: 8px;
+    display: none;
+  }
+
+  .cv-aruco-status.info  { background: #e8f0fe; color: #1a56a0; }
+  .cv-aruco-status.ok    { background: #d1fae5; color: #065f46; }
+  .cv-aruco-status.error { background: #fee2e2; color: #991b1b; }
+  .cv-aruco-status.loading { background: #fef3c7; color: #92400e; }
+
+  .cv-aruco-result-box {
+    background: rgba(0,58,112,0.06);
+    border: 1px solid var(--color-primary, #003A70);
+    border-radius: var(--radius-sm, 6px);
+    padding: 10px 12px;
+    font-size: var(--font-size-sm, 13px);
+    margin-top: 8px;
+    display: none;
+  }
+
+  .cv-aruco-result-box .cv-aruco-dims {
+    font-weight: 700;
+    color: var(--color-primary, #003A70);
+    font-size: var(--font-size-base, 14px);
+  }
 </style>
+
+<!-- Scripts ArUco (chargés une seule fois, chemin relatif à la racine de l'app) -->
+<script>
+(function() {
+  function loadScriptOnce(src) {
+    if (document.querySelector('script[data-muf-src="' + src + '"]')) return;
+    var s = document.createElement('script');
+    s.src = src;
+    s.dataset.mufSrc = src;
+    document.head.appendChild(s);
+  }
+  loadScriptOnce('./js/aruco-marker.js');
+  loadScriptOnce('./js/aruco-vision.js');
+})();
+</script>
 
 <!-- Section Outillage -->
 <div class="card mb-24">
@@ -205,6 +414,88 @@
     <h2 class="card-title cv-section-title">1 — Outillage</h2>
   </div>
   <div class="card-body">
+
+    <!-- Option ArUco -->
+    <div class="cv-aruco-toggle-row">
+      <input type="checkbox" id="cv-aruco-enabled">
+      <label for="cv-aruco-enabled">Estimer les dimensions par photo (marqueur ArUco)</label>
+    </div>
+
+    <!-- Panneau ArUco (masqué par défaut) -->
+    <div id="cv-aruco-panel" style="display:none;">
+      <p class="cv-aruco-panel-title">Estimation par photo ArUco</p>
+
+      <!-- Étape 1 : Imprimer le marqueur -->
+      <div class="cv-aruco-step">
+        <div class="cv-aruco-step-num">1</div>
+        <div class="cv-aruco-step-body">
+          Imprimer le marqueur de référence
+          <small>Le coller à plat à côté de l'outillage lors de la prise de vue</small>
+          <button type="button" id="cv-aruco-btn-print" class="cv-aruco-btn cv-aruco-btn-outline" style="margin-top:8px;width:auto;padding:7px 14px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Télécharger le marqueur PDF (80 mm)
+          </button>
+        </div>
+      </div>
+
+      <!-- Étape 2 : Photos -->
+      <div class="cv-aruco-step">
+        <div class="cv-aruco-step-num">2</div>
+        <div class="cv-aruco-step-body">
+          Prendre les 2 photos avec le marqueur visible
+          <small>Vue dessus (90°) pour L et l — Vue 3/4 (~45°) pour la hauteur H</small>
+          <div class="cv-aruco-photo-row" style="margin-top:8px;">
+            <!-- Photo vue dessus -->
+            <div class="cv-aruco-photo-slot">
+              <input type="file" id="cv-aruco-photo-top" accept="image/*" capture="environment">
+              <label for="cv-aruco-photo-top" class="cv-aruco-photo-label" id="cv-aruco-label-top">
+                <span class="cv-aruco-photo-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="4"/><path d="M12 3v1M12 20v1M3 12h1M20 12h1"/></svg>
+                </span>
+                Vue dessus (90°)
+              </label>
+              <canvas id="cv-aruco-canvas-top" class="cv-aruco-preview-canvas"></canvas>
+            </div>
+            <!-- Photo vue 3/4 -->
+            <div class="cv-aruco-photo-slot">
+              <input type="file" id="cv-aruco-photo-side" accept="image/*" capture="environment">
+              <label for="cv-aruco-photo-side" class="cv-aruco-photo-label" id="cv-aruco-label-side">
+                <span class="cv-aruco-photo-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                </span>
+                Vue 3/4 (~45°)
+              </label>
+              <canvas id="cv-aruco-canvas-side" class="cv-aruco-preview-canvas"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Étape 3 : Analyser -->
+      <div class="cv-aruco-step">
+        <div class="cv-aruco-step-num">3</div>
+        <div class="cv-aruco-step-body">
+          Lancer l'analyse
+          <small>Traitement en local sur l'appareil — environ 3 à 8 secondes</small>
+          <button type="button" id="cv-aruco-btn-analyze" class="cv-aruco-btn" style="margin-top:8px;" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Analyser les photos
+          </button>
+        </div>
+      </div>
+
+      <!-- Statut / résultat -->
+      <div id="cv-aruco-status" class="cv-aruco-status"></div>
+
+      <div id="cv-aruco-result-box" class="cv-aruco-result-box">
+        <div class="cv-aruco-dims" id="cv-aruco-dims-text">—</div>
+        <div style="font-size:11px;color:#555;margin-top:4px;" id="cv-aruco-debug-text"></div>
+        <button type="button" id="cv-aruco-btn-apply" class="cv-aruco-btn" style="margin-top:10px;">
+          Appliquer les dimensions dans le formulaire
+        </button>
+      </div>
+    </div>
+    <!-- Fin panneau ArUco -->
 
     <div class="cv-field">
       <label for="cv-laize">Laize (mm)</label>
@@ -1757,6 +2048,220 @@
       };
       document.body.appendChild(script);
     }
+  }
+
+  /* ============================================================
+     MODULE ARUCO — Estimation volume par photo
+     ============================================================ */
+
+  var ARUCO_MARKER_ID   = 0;   /* ID du marqueur utilisé (DICT_5X5_100 #0) */
+  var ARUCO_MARKER_MM   = 80;  /* Taille physique réelle du marqueur en mm */
+  var arucoLastVolume   = null; /* Dernier résultat d'estimation */
+
+  /* Références DOM ArUco */
+  var elArucoEnabled    = document.getElementById('cv-aruco-enabled');
+  var elArucoPanel      = document.getElementById('cv-aruco-panel');
+  var elArucoBtnPrint   = document.getElementById('cv-aruco-btn-print');
+  var elArucoPhotoTop   = document.getElementById('cv-aruco-photo-top');
+  var elArucoPhotoSide  = document.getElementById('cv-aruco-photo-side');
+  var elArucoLabelTop   = document.getElementById('cv-aruco-label-top');
+  var elArucoLabelSide  = document.getElementById('cv-aruco-label-side');
+  var elArucoCanvasTop  = document.getElementById('cv-aruco-canvas-top');
+  var elArucoCanvasSide = document.getElementById('cv-aruco-canvas-side');
+  var elArucoBtnAnalyze = document.getElementById('cv-aruco-btn-analyze');
+  var elArucoStatus     = document.getElementById('cv-aruco-status');
+  var elArucoResultBox  = document.getElementById('cv-aruco-result-box');
+  var elArucoDimsText   = document.getElementById('cv-aruco-dims-text');
+  var elArucoDebugText  = document.getElementById('cv-aruco-debug-text');
+  var elArucoBtnApply   = document.getElementById('cv-aruco-btn-apply');
+
+  var arucoFileTop  = null;
+  var arucoFileSide = null;
+
+  /* Afficher / masquer le statut */
+  function arucoSetStatus(msg, type) {
+    if (!elArucoStatus) return;
+    elArucoStatus.textContent = msg;
+    elArucoStatus.className   = 'cv-aruco-status ' + (type || 'info');
+    elArucoStatus.style.display = msg ? 'block' : 'none';
+  }
+
+  /* Mise à jour du bouton Analyser selon présence des photos */
+  function arucoUpdateAnalyzeBtn() {
+    if (!elArucoBtnAnalyze) return;
+    elArucoBtnAnalyze.disabled = !(arucoFileTop && arucoFileSide);
+  }
+
+  /* Afficher un aperçu miniature dans le canvas dédié */
+  function arucoShowPreview(file, canvasEl, labelEl) {
+    if (!file || !canvasEl) return;
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      URL.revokeObjectURL(url);
+      /* Redimensionner pour l'aperçu (max 300px) */
+      var maxW = 300, maxH = 160;
+      var scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
+      canvasEl.width  = Math.round(img.naturalWidth  * scale);
+      canvasEl.height = Math.round(img.naturalHeight * scale);
+      canvasEl.getContext('2d').drawImage(img, 0, 0, canvasEl.width, canvasEl.height);
+      canvasEl.style.display = 'block';
+    };
+    img.src = url;
+    if (labelEl) labelEl.classList.add('has-photo');
+  }
+
+  /* Copier les pixels d'un canvas de résultat vers le canvas d'aperçu */
+  function arucoUpdatePreviewFromCanvas(sourceCanvas, targetCanvas) {
+    if (!sourceCanvas || !targetCanvas) return;
+    var maxW = 300, maxH = 160;
+    var scale = Math.min(maxW / sourceCanvas.width, maxH / sourceCanvas.height, 1);
+    targetCanvas.width  = Math.round(sourceCanvas.width  * scale);
+    targetCanvas.height = Math.round(sourceCanvas.height * scale);
+    targetCanvas.getContext('2d').drawImage(sourceCanvas, 0, 0, targetCanvas.width, targetCanvas.height);
+    targetCanvas.style.display = 'block';
+  }
+
+  /* Activer / désactiver le panneau ArUco */
+  function arucoTogglePanel() {
+    if (!elArucoEnabled || !elArucoPanel) return;
+    var enabled = elArucoEnabled.checked;
+    elArucoPanel.style.display = enabled ? 'block' : 'none';
+
+    /* Sauvegarder la préférence */
+    try { localStorage.setItem('muf_aruco_enabled', enabled ? '1' : '0'); } catch (e) { /* ignore */ }
+  }
+
+  /* Télécharger le PDF du marqueur */
+  function arucoDownloadMarker() {
+    if (!window.ArucoMarker) {
+      arucoSetStatus('Module ArUco non chargé. Vérifiez votre connexion.', 'error');
+      return;
+    }
+    try {
+      ArucoMarker.downloadPDF(ARUCO_MARKER_ID, ARUCO_MARKER_MM);
+    } catch (e) {
+      arucoSetStatus('Erreur lors de la génération du PDF : ' + e.message, 'error');
+    }
+  }
+
+  /* Pipeline d'analyse complet */
+  function arucoAnalyze() {
+    if (!arucoFileTop || !arucoFileSide) {
+      arucoSetStatus('Veuillez d\'abord sélectionner les 2 photos.', 'error');
+      return;
+    }
+    if (!window.ArucoVision) {
+      arucoSetStatus('Module de vision non chargé.', 'error');
+      return;
+    }
+
+    elArucoBtnAnalyze.disabled = true;
+    if (elArucoResultBox) elArucoResultBox.style.display = 'none';
+    arucoLastVolume = null;
+    arucoSetStatus('Analyse en cours... (3 à 8 secondes)', 'loading');
+
+    var t0 = Date.now();
+
+    /* Traitement asynchrone séquentiel pour ne pas bloquer le thread UI */
+    setTimeout(function () {
+      ArucoVision.processTopView(arucoFileTop, ARUCO_MARKER_MM)
+        .then(function (topResult) {
+          /* Afficher l'aperçu annoté */
+          arucoUpdatePreviewFromCanvas(topResult.canvas, elArucoCanvasTop);
+
+          return ArucoVision.processSideView(arucoFileSide, ARUCO_MARKER_MM)
+            .then(function (sideResult) {
+              arucoUpdatePreviewFromCanvas(sideResult.canvas, elArucoCanvasSide);
+
+              var vol = ArucoVision.estimateVolume(topResult, sideResult);
+              arucoLastVolume = { topResult: topResult, sideResult: sideResult, vol: vol };
+
+              var elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+
+              /* Afficher les résultats */
+              if (elArucoDimsText) {
+                elArucoDimsText.textContent =
+                  'L = ' + vol.lengthMm + ' mm  ·  l = ' + vol.widthMm + ' mm  ·  H = ' + vol.heightMm + ' mm' +
+                  '  →  Volume ≈ ' + vol.volumeLiters.toFixed(3) + ' L';
+              }
+              if (elArucoDebugText) {
+                elArucoDebugText.textContent =
+                  topResult.debugInfo + ' | ' + sideResult.debugInfo + ' | Durée : ' + elapsed + ' s';
+              }
+              if (elArucoResultBox) elArucoResultBox.style.display = 'block';
+
+              arucoSetStatus('Analyse terminée en ' + elapsed + ' s', 'ok');
+              elArucoBtnAnalyze.disabled = false;
+            });
+        })
+        .catch(function (err) {
+          arucoSetStatus('Erreur d\'analyse : ' + (err.message || err), 'error');
+          elArucoBtnAnalyze.disabled = false;
+        });
+    }, 50); /* yield pour que le navigateur affiche le message "loading" d'abord */
+  }
+
+  /* Appliquer les dimensions estimées dans les champs du formulaire */
+  function arucoApplyToForm() {
+    if (!arucoLastVolume) return;
+    var vol = arucoLastVolume.vol;
+
+    /* laize → largeur outillage (l du volume)
+     * pitch → longueur + 20 mm (le calcul soustrait 20 mm pour le cadre)
+     * depth → hauteur H */
+    if (elLaize  && vol.widthMm  > 0) elLaize.value  = vol.widthMm;
+    if (elPitch  && vol.lengthMm > 0) elPitch.value  = vol.lengthMm + 20; /* compensate frame subtraction */
+    if (elDepth  && vol.heightMm > 0) elDepth.value  = vol.heightMm;
+
+    /* Déclencher le recalcul */
+    onInput();
+
+    arucoSetStatus(
+      'Dimensions appliquées : L=' + vol.lengthMm + ' mm, l=' + vol.widthMm + ' mm, H=' + vol.heightMm + ' mm',
+      'ok'
+    );
+  }
+
+  /* Attacher les événements ArUco */
+  if (elArucoEnabled) {
+    elArucoEnabled.addEventListener('change', arucoTogglePanel);
+    /* Restaurer la préférence sauvegardée */
+    try {
+      var savedAruco = localStorage.getItem('muf_aruco_enabled');
+      if (savedAruco === '1') {
+        elArucoEnabled.checked = true;
+        arucoTogglePanel();
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  if (elArucoBtnPrint) {
+    elArucoBtnPrint.addEventListener('click', arucoDownloadMarker);
+  }
+
+  if (elArucoPhotoTop) {
+    elArucoPhotoTop.addEventListener('change', function () {
+      arucoFileTop = this.files[0] || null;
+      if (arucoFileTop) arucoShowPreview(arucoFileTop, elArucoCanvasTop, elArucoLabelTop);
+      arucoUpdateAnalyzeBtn();
+    });
+  }
+
+  if (elArucoPhotoSide) {
+    elArucoPhotoSide.addEventListener('change', function () {
+      arucoFileSide = this.files[0] || null;
+      if (arucoFileSide) arucoShowPreview(arucoFileSide, elArucoCanvasSide, elArucoLabelSide);
+      arucoUpdateAnalyzeBtn();
+    });
+  }
+
+  if (elArucoBtnAnalyze) {
+    elArucoBtnAnalyze.addEventListener('click', arucoAnalyze);
+  }
+
+  if (elArucoBtnApply) {
+    elArucoBtnApply.addEventListener('click', arucoApplyToForm);
   }
 
   /* ============================================================
