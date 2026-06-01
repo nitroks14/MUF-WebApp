@@ -187,6 +187,15 @@
                placeholder="Ex. PN123456" autocomplete="off">
       </div>
     </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label class="form-label" for="brg-num-garantie">
+        N° de garantie d'origine
+        <span class="text-muted" style="font-weight:400; font-size:0.85em;">&nbsp;— référence transmise par Multivac lors de l'accord de garantie</span>
+      </label>
+      <input class="form-control" id="brg-num-garantie" type="text"
+             placeholder="Ex. GAR-2026-00123" autocomplete="off"
+             style="border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary)20;">
+    </div>
   </div>
 
   <!-- Type de retour -->
@@ -203,7 +212,7 @@
   <div class="brg-section">
     <div class="brg-section-title">Pièces commandées sous garantie — Multivac</div>
     <p class="text-muted text-sm" style="margin-bottom:10px;">
-      Pièces neuves envoyées par Multivac en remplacement.
+      Pièces neuves envoyées par Multivac en remplacement des pièces défectueuses.
     </p>
     <table class="brg-table">
       <thead>
@@ -221,7 +230,10 @@
 
   <!-- Pièces retournées HS -->
   <div class="brg-section">
-    <div class="brg-section-title">Pièces retournées HS — À remplir par le client / technicien</div>
+    <div class="brg-section-title">Pièces retournées HS — À remplir par le technicien</div>
+    <p class="text-muted text-sm" style="margin-bottom:10px;">
+      Pièces défectueuses retirées de la machine, à renvoyer à Multivac pour expertise.
+    </p>
     <table class="brg-table">
       <thead>
         <tr>
@@ -350,6 +362,7 @@
   var domTypeMachine  = el('brg-type-machine');
   var domNumMachine   = el('brg-num-machine');
   var domPN           = el('brg-pn');
+  var domNumGarantie  = el('brg-num-garantie');
   var domDefaut       = el('brg-defaut');
   var domConstat      = el('brg-constat');
   var domDate         = el('brg-date');
@@ -584,9 +597,10 @@
      Génération du bon PDF via jsPDF
      ---------------------------------------------------------- */
   function construirePDF(jsPDF, logoPng, typeRetour) {
-    var client  = domClient.value.trim();
-    var machine = domTypeMachine.value.trim() + ' n°' + domNumMachine.value.trim();
-    var pn      = domPN.value.trim();
+    var client      = domClient.value.trim();
+    var machine     = domTypeMachine.value.trim() + ' n°' + domNumMachine.value.trim();
+    var pn          = domPN.value.trim();
+    var numGarantie = domNumGarantie ? domNumGarantie.value.trim() : '';
     var defaut  = domDefaut.value.trim();
     var constat = domConstat.value.trim();
     var dateVal = domDate.value
@@ -638,6 +652,7 @@
     doc.setTextColor('#222222');
     var headerParts = ['CLIENT : ' + client, 'TYPE ET N° MACHINE : ' + machine];
     if (pn) { headerParts.push('N° PROJET : ' + pn); }
+    if (numGarantie) { headerParts.push('N° GARANTIE : ' + numGarantie); }
     var colW = larg / headerParts.length;
     headerParts.forEach(function (txt, idx) {
       doc.text(txt, mG + idx * colW, y, { maxWidth: colW - 2 });
@@ -745,7 +760,7 @@
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(6.5);
     doc.setTextColor('#ffffff');
-    doc.text('A REMPLIR PAR LE CLIENT / TECHNICIEN', mG + labelW2 / 2, y + sectionH2 / 2, {
+    doc.text('A REMPLIR PAR LE TECHNICIEN', mG + labelW2 / 2, y + sectionH2 / 2, {
       align: 'center',
       angle: 90,
       maxWidth: sectionH2 - 4
@@ -952,10 +967,11 @@
         try {
           var doc = construirePDF(jsPDF, logoPng, typeRetour);
 
-          var client  = domClient.value.trim();
-          var machine = domTypeMachine.value.trim() + ' n°' + domNumMachine.value.trim();
-          var pn      = domPN.value.trim();
-          var to      = domEmailTo.value.trim();
+          var client      = domClient.value.trim();
+          var machine     = domTypeMachine.value.trim() + ' n°' + domNumMachine.value.trim();
+          var pn          = domPN.value.trim();
+          var numGarantie = domNumGarantie ? domNumGarantie.value.trim() : '';
+          var to          = domEmailTo.value.trim();
           var cc      = domEmailCc.value.trim().replace(/;/g, ',');
           var tech    = domTech.value.trim() || '';
           var dateVal = domDate.value
@@ -969,6 +985,7 @@
             '  Client  : ' + client + '\r\n' +
             '  Machine : ' + machine + '\r\n' +
             (pn ? '  N° Projet : ' + pn + '\r\n' : '') +
+            (numGarantie ? '  N° Garantie : ' + numGarantie + '\r\n' : '') +
             '  Date    : ' + dateVal + '\r\n\r\n' +
             'Merci de bien vouloir traiter ce retour.\r\n\r\n' +
             'Cordialement,\r\n' + tech;
@@ -1071,6 +1088,7 @@
         typeMachine: domTypeMachine.value,
         numMachine:  domNumMachine.value,
         pn:          domPN.value,
+        numGarantie: domNumGarantie ? domNumGarantie.value : '',
         defaut:      domDefaut.value,
         constat:     domConstat.value,
         date:        domDate.value,
@@ -1094,6 +1112,7 @@
       if (data.typeMachine) { domTypeMachine.value = data.typeMachine; }
       if (data.numMachine)  { domNumMachine.value  = data.numMachine; }
       if (data.pn)          { domPN.value          = data.pn; }
+      if (data.numGarantie && domNumGarantie) { domNumGarantie.value = data.numGarantie; }
       if (data.defaut)      { domDefaut.value      = data.defaut; }
       if (data.constat)     { domConstat.value     = data.constat; }
       if (data.date)        { domDate.value        = data.date; }
@@ -1143,6 +1162,7 @@
   ecouterSaisie(domTypeMachine);
   ecouterSaisie(domNumMachine);
   ecouterSaisie(domPN);
+  ecouterSaisie(domNumGarantie);
   ecouterSaisie(domDefaut);
   ecouterSaisie(domConstat);
   ecouterSaisie(domDate);
@@ -1164,6 +1184,7 @@
     domTypeMachine.value = '';
     domNumMachine.value  = '';
     domPN.value          = '';
+    if (domNumGarantie) { domNumGarantie.value = ''; }
     domDefaut.value      = '';
     domConstat.value     = '';
     domDate.value        = dateDuJour();
