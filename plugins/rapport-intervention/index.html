@@ -1,46 +1,284 @@
 <!--
   Plugin : Rapport d'intervention
   Plugin 5 — MUF-WebApp
-  Coquille minimale — la structure détaillée du rapport sera dérivée
-  de vrais rapports d'intervention fournis ultérieurement.
-  Structure IIFE + localStorage
-  Compatible Safari iOS (pas de modules ES6, pas de fetch sans polyfill)
+  IIFE strict — localStorage clé ri_brouillon — debounce 600ms
+  Compatible Safari iOS — pas de modules ES6
+  Préfixe CSS : .ri-
 -->
 
 <style>
   /* ============================================================
-     Styles spécifiques au plugin Rapport d'intervention
-     Utilise exclusivement les variables CSS de main.css
+     Styles spécifiques — Rapport d'intervention
+     Hérite des variables CSS de main.css
      ============================================================ */
 
-  /* En-tête du rapport */
-  .ri-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  @media (min-width: 600px) {
-    .ri-grid { grid-template-columns: 1fr 1fr; }
+  /* ---- En-tête / toggle Solo/Binôme ---- */
+  .ri-toggle-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
   }
 
-  /* Séparateur de section formulaire */
-  .ri-form-sep {
-    margin-top: 16px;
-  }
-
-  /* Placeholder « champs à définir » */
-  .ri-placeholder {
-    background-color: var(--color-bg);
-    border: 1px dashed var(--color-border);
+  .ri-toggle-btn {
+    padding: 8px 20px;
     border-radius: var(--radius);
-    padding: 20px 16px;
-    text-align: center;
+    border: 2px solid var(--color-border);
+    background: var(--color-surface);
     color: var(--color-text-muted);
-    font-style: italic;
+    font-family: var(--font-family);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color var(--transition), background-color var(--transition), color var(--transition);
+    min-height: 44px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .ri-toggle-btn.ri-active {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: var(--color-white);
+  }
+
+  .ri-binome-field {
+    margin-top: 12px;
+    display: none;
+  }
+
+  .ri-binome-field.ri-visible {
+    display: block;
+  }
+
+  /* ---- Cards machine ---- */
+  .ri-machine-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  @media (max-width: 599px) {
+    .ri-machine-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .ri-machine-card {
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 16px 12px;
+    text-align: center;
+    cursor: pointer;
+    background: var(--color-surface);
+    transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  .ri-machine-card:hover {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+
+  .ri-machine-card.ri-selected {
+    border-color: var(--color-primary);
+    background: rgba(0, 58, 112, 0.06);
+  }
+
+  .ri-machine-card-icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .ri-machine-card-name {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--color-primary);
+    display: block;
+  }
+
+  .ri-machine-card-serie {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    display: block;
+    margin-top: 2px;
+  }
+
+  /* ---- Checklists — accordéons ---- */
+  .ri-checklists {
+    margin-top: 8px;
+  }
+
+  .ri-accordion {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+
+  .ri-accordion-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--color-bg);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
+    border: none;
+    width: 100%;
+    text-align: left;
+    font-family: var(--font-family);
+    min-height: 44px;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color var(--transition);
+  }
+
+  .ri-accordion-header:hover {
+    background: rgba(0, 58, 112, 0.06);
+  }
+
+  .ri-accordion-arrow {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 5px 0 5px 7px;
+    border-color: transparent transparent transparent var(--color-primary);
+    transition: transform 0.25s ease;
+    flex-shrink: 0;
+    margin-left: 8px;
+  }
+
+  .ri-accordion.ri-open .ri-accordion-arrow {
+    transform: rotate(90deg);
+  }
+
+  .ri-accordion-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+
+  .ri-accordion.ri-open .ri-accordion-body {
+    max-height: 2000px;
+  }
+
+  .ri-accordion-inner {
+    padding: 12px 16px 16px;
+  }
+
+  /* ---- Sous-catégorie titre ---- */
+  .ri-subcat-title {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--color-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 12px;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .ri-subcat-title:first-child {
+    margin-top: 0;
+  }
+
+  /* ---- Tableau 3 colonnes ---- */
+  .ri-table {
+    width: 100%;
+    border-collapse: collapse;
     font-size: var(--font-size-sm);
   }
 
-  /* Boutons actions */
+  .ri-table th {
+    background: var(--color-primary);
+    color: var(--color-white);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 6px 10px;
+    border: 1px solid var(--color-primary);
+    text-align: center;
+  }
+
+  .ri-table th:first-child {
+    text-align: left;
+    width: 40%;
+  }
+
+  .ri-table td {
+    border: 1px solid var(--color-border);
+    padding: 6px 10px;
+    vertical-align: middle;
+  }
+
+  .ri-table td:first-child {
+    color: var(--color-text);
+    font-size: var(--font-size-sm);
+  }
+
+  .ri-table td.ri-check-cell {
+    text-align: center;
+    width: 20%;
+  }
+
+  .ri-table tbody tr:nth-child(even) td {
+    background: rgba(0, 58, 112, 0.03);
+  }
+
+  /* Checkbox stylée */
+  .ri-check {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--color-primary);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ---- Responsive tableau mobile ---- */
+  @media (max-width: 599px) {
+    .ri-table thead { display: none; }
+    .ri-table, .ri-table tbody, .ri-table tr, .ri-table td { display: block; width: 100%; }
+    .ri-table tr { border: 1px solid var(--color-border); margin-bottom: 8px; border-radius: var(--radius); }
+    .ri-table td { border: none; border-bottom: 1px solid var(--color-border); padding: 6px 10px; }
+    .ri-table td:last-child { border-bottom: none; }
+    .ri-table td::before { content: attr(data-label); font-size: 0.7rem; color: var(--color-text-muted); display: block; margin-bottom: 2px; }
+    .ri-table td.ri-check-cell { text-align: left; }
+  }
+
+  /* ---- Tests et validations ---- */
+  .ri-tests-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .ri-test-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
+    min-height: 36px;
+  }
+
+  .ri-test-item label {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* ---- Actions ---- */
   .ri-actions {
     display: flex;
     gap: 12px;
@@ -48,25 +286,22 @@
     align-items: center;
     margin-top: 4px;
   }
+
   @media (max-width: 599px) {
     .ri-actions { flex-direction: column; }
     .ri-actions .btn { width: 100%; }
   }
 
-  /* Statut / feedback */
-  .ri-archive-status {
-    font-size: var(--font-size-sm);
+  /* ---- Machine non sélectionnée ---- */
+  .ri-no-machine {
+    background: var(--color-bg);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius);
+    padding: 24px;
+    text-align: center;
     color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
     font-style: italic;
-    margin-top: 8px;
-  }
-  .ri-archive-status.ri-ok {
-    color: #2F855A;
-    font-style: normal;
-  }
-  .ri-archive-status.ri-err {
-    color: #E53E3E;
-    font-style: normal;
   }
 </style>
 
@@ -76,63 +311,139 @@
 <div class="card mb-24">
   <div class="card-header">
     <h2 class="card-title">Rapport d'intervention</h2>
+    <span class="badge badge-secondary">Checklist + copie</span>
   </div>
   <div class="card-body">
     <p class="text-muted text-sm">
-      Renseignez les informations d'identification de l'intervention.
-      Le rapport est sauvegardé automatiquement sur cet appareil.
+      Cochez les travaux effectués station par station. Le rapport est sauvegardé automatiquement et peut être copié en texte structuré.
     </p>
   </div>
 </div>
 
 <!-- ============================================================
-     SECTION 1 — INFORMATIONS INTERVENTION (formulaire minimal)
+     SECTION 1 — EN-TÊTE : Solo / Binôme
      ============================================================ -->
 <div class="card mb-24">
   <div class="card-header">
-    <h3 class="card-title">Informations intervention</h3>
+    <h3 class="card-title">Type d'intervention</h3>
   </div>
   <div class="card-body">
 
-    <!-- Date -->
-    <div class="form-group">
-      <label class="form-label" for="ri-date">Date d'intervention</label>
-      <input class="form-control" id="ri-date" type="date">
+    <div class="ri-toggle-group" id="ri-toggle-group" role="group" aria-label="Type d'intervention">
+      <button class="ri-toggle-btn ri-active" type="button" data-value="solo" id="ri-btn-solo">Solo</button>
+      <button class="ri-toggle-btn" type="button" data-value="binome" id="ri-btn-binome">Binôme</button>
     </div>
 
-    <!-- Client + Machine -->
-    <div class="ri-grid ri-form-sep">
-      <div class="form-group">
-        <label class="form-label" for="ri-client">Client</label>
-        <input class="form-control" id="ri-client" type="text"
-               placeholder="Nom de l'entreprise" autocomplete="off">
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="ri-machine">Référence machine</label>
-        <input class="form-control" id="ri-machine" type="text"
-               placeholder="Ex. R230 924" autocomplete="off">
-      </div>
+    <div class="ri-binome-field" id="ri-binome-field">
+      <label class="form-label" for="ri-binome-nom">Nom du binôme</label>
+      <input class="form-control" id="ri-binome-nom" type="text"
+             placeholder="Prénom Nom du binôme" autocomplete="off">
     </div>
 
   </div>
 </div>
 
 <!-- ============================================================
-     SECTION 2 — DÉTAILS DU RAPPORT (placeholder)
+     SECTION 2 — SÉLECTION DE LA MACHINE
      ============================================================ -->
 <div class="card mb-24">
   <div class="card-header">
-    <h3 class="card-title">Détails du rapport</h3>
+    <h3 class="card-title">Machine</h3>
   </div>
   <div class="card-body">
-    <div class="ri-placeholder" id="ri-placeholder">
-      Détails du rapport — champs à définir à partir des rapports réels
+
+    <div class="ri-machine-grid" id="ri-machine-grid" role="group" aria-label="Sélectionner le type de machine">
+
+      <div class="ri-machine-card" data-machine="cloche" id="ri-card-cloche" role="button" tabindex="0" aria-pressed="false">
+        <span class="ri-machine-card-icon" aria-hidden="true">&#x1F514;</span>
+        <span class="ri-machine-card-name">Cloche</span>
+        <span class="ri-machine-card-serie">Série C</span>
+      </div>
+
+      <div class="ri-machine-card" data-machine="operculeuse" id="ri-card-operculeuse" role="button" tabindex="0" aria-pressed="false">
+        <span class="ri-machine-card-icon" aria-hidden="true">&#x1F4E6;</span>
+        <span class="ri-machine-card-name">Operculeuse</span>
+        <span class="ri-machine-card-serie">Série T</span>
+      </div>
+
+      <div class="ri-machine-card" data-machine="thermoformeuse" id="ri-card-thermoformeuse" role="button" tabindex="0" aria-pressed="false">
+        <span class="ri-machine-card-icon" aria-hidden="true">&#x2699;&#xFE0F;</span>
+        <span class="ri-machine-card-name">Thermoformeuse</span>
+        <span class="ri-machine-card-serie">Série R</span>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION 3 — CHECKLISTS TRAVAUX (contenu dynamique)
+     ============================================================ -->
+<div class="card mb-24" id="ri-checklists-card">
+  <div class="card-header">
+    <h3 class="card-title" id="ri-checklists-title">Travaux effectués</h3>
+  </div>
+  <div class="card-body">
+    <div id="ri-checklists-container">
+      <div class="ri-no-machine" id="ri-no-machine">
+        Sélectionnez un type de machine ci-dessus pour afficher les checklists.
+      </div>
     </div>
   </div>
 </div>
 
 <!-- ============================================================
-     SECTION 3 — ACTIONS
+     SECTION 4 — TESTS ET VALIDATIONS (toutes machines)
+     ============================================================ -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h3 class="card-title">Tests et validations</h3>
+  </div>
+  <div class="card-body">
+    <ul class="ri-tests-list" id="ri-tests-list">
+      <li class="ri-test-item">
+        <label>
+          <input class="ri-check" type="checkbox" data-test="Test de vide" id="ri-test-0">
+          Test de vide
+        </label>
+      </li>
+      <li class="ri-test-item">
+        <label>
+          <input class="ri-check" type="checkbox" data-test="Test soudure / operculage" id="ri-test-1">
+          Test soudure / operculage
+        </label>
+      </li>
+      <li class="ri-test-item">
+        <label>
+          <input class="ri-check" type="checkbox" data-test="Test découpe" id="ri-test-2">
+          Test découpe
+        </label>
+      </li>
+      <li class="ri-test-item">
+        <label>
+          <input class="ri-check" type="checkbox" data-test="Centrage film correct" id="ri-test-3">
+          Centrage film correct
+        </label>
+      </li>
+      <li class="ri-test-item">
+        <label>
+          <input class="ri-check" type="checkbox" data-test="Validation production" id="ri-test-4">
+          Validation production
+        </label>
+      </li>
+      <li class="ri-test-item">
+        <label>
+          <input class="ri-check" type="checkbox" data-test="Formation opérateur" id="ri-test-5">
+          Formation opérateur
+        </label>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION 5 — ACTIONS
      ============================================================ -->
 <div class="card mb-24">
   <div class="card-header">
@@ -148,186 +459,779 @@
             d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0
                002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
         </svg>
-        Copier
+        Copier le rapport
       </button>
-
-      <button class="btn btn-outline btn-sm" id="ri-btn-nouveau" type="button">
-        Nouveau rapport
-      </button>
+      <button class="btn btn-outline btn-sm" id="ri-btn-reset" type="button">Réinitialiser</button>
     </div>
 
-    <p class="ri-archive-status" id="ri-archive-status"></p>
+    <p class="ri-archive-status" id="ri-archive-status" aria-live="polite"></p>
 
   </div>
 </div>
 
 <!-- ============================================================
-     LOGIQUE DU PLUGIN
+     LOGIQUE IIFE
      ============================================================ -->
 <script>
 (function () {
   'use strict';
 
-  var CLE_LS    = 'muf_rapport_v1';
+  /* ============================================================
+     Taxonomie complète des machines et stations
+     Structure : machine → stations → { label, subcats: [ { label, elements: [] } ] }
+     ============================================================ */
+  var TAXONOMIE = {
+    cloche: {
+      label: 'Cloche (Série C)',
+      stations: [
+        {
+          label: 'Vannes à vide',
+          subcats: [
+            {
+              label: 'Système de vide',
+              elements: ['Vanne principale', 'Vanne d\'atmosphère', 'Vanne de temporisation']
+            }
+          ]
+        },
+        {
+          label: 'Barres de soudure',
+          subcats: [
+            {
+              label: 'Éléments chauffants',
+              elements: ['Barre de soudure supérieure', 'Barre de soudure inférieure', 'Résistance']
+            },
+            {
+              label: 'Outillage soudure',
+              elements: ['Téflon', 'Joint de soudure']
+            }
+          ]
+        },
+        {
+          label: 'Couvercle',
+          subcats: [
+            {
+              label: 'Étanchéité',
+              elements: ['Joint couvercle', 'Charnières']
+            }
+          ]
+        },
+        {
+          label: 'Pompe à vide',
+          subcats: [
+            {
+              label: 'Pompe',
+              elements: ['Huile', 'Filtre d\'huile', 'Filtre à air', 'Courroie']
+            }
+          ]
+        },
+        {
+          label: 'Système électrique',
+          subcats: [
+            {
+              label: 'Électricité',
+              elements: ['Tableau électrique', 'Câblage', 'Temporisateurs']
+            }
+          ]
+        }
+      ]
+    },
+
+    operculeuse: {
+      label: 'Operculeuse (Série T)',
+      stations: [
+        {
+          label: 'Poste de soudure',
+          subcats: [
+            {
+              label: 'Embiellage',
+              elements: ['Bielles', 'Manivelles', 'Paliers', 'Ressorts de rappel']
+            },
+            {
+              label: 'Système de vide / gaz',
+              elements: ['Vannes de vide', 'Vannes de gaz', 'Tuyaux', 'Joints de raccord']
+            },
+            {
+              label: 'Outillage',
+              elements: ['Lames de découpe', 'Pavés de soudure', 'Membranes / diaphragmes', 'Joints d\'outillage', 'Douilles de guidage', 'Paliers d\'outillage', 'Ressorts d\'outillage']
+            }
+          ]
+        },
+        {
+          label: 'Avance film',
+          subcats: [
+            {
+              label: 'Déroulement',
+              elements: ['Rouleaux tendeurs', 'Douilles', 'Frein de bobine']
+            },
+            {
+              label: 'Chaîne d\'avance',
+              elements: ['Chaîne', 'Pignons', 'Pinces film']
+            }
+          ]
+        },
+        {
+          label: 'Découpe longitudinale',
+          subcats: [
+            {
+              label: 'Coupe',
+              elements: ['Lame longitudinale', 'Contre-lame', 'Réglage position']
+            }
+          ]
+        },
+        {
+          label: 'Électricité / chauffe',
+          subcats: [
+            {
+              label: 'Régulation',
+              elements: ['Contrôleurs de chauffe', 'Pyromètre', 'Câblage']
+            }
+          ]
+        }
+      ]
+    },
+
+    thermoformeuse: {
+      label: 'Thermoformeuse (Série R)',
+      stations: [
+        {
+          label: 'Formage',
+          subcats: [
+            {
+              label: 'Embiellage',
+              elements: ['Bielles', 'Manivelles', 'Paliers', 'Ressorts']
+            },
+            {
+              label: 'Système de vide',
+              elements: ['Vannes de vide', 'Tuyaux', 'Joints de raccord']
+            },
+            {
+              label: 'Outillage formage',
+              elements: ['Joints d\'outillage', 'Membranes', 'Plaque de formage', 'Douilles de guidage']
+            }
+          ]
+        },
+        {
+          label: 'Soudure',
+          subcats: [
+            {
+              label: 'Embiellage',
+              elements: ['Bielles', 'Manivelles', 'Paliers', 'Ressorts']
+            },
+            {
+              label: 'Système de vide / gaz',
+              elements: ['Vannes de vide', 'Vannes de gaz', 'Tuyaux', 'Joints de raccord']
+            },
+            {
+              label: 'Outillage soudure',
+              elements: ['Pavés de soudure', 'Membranes / diaphragmes', 'Joints d\'outillage', 'Douilles de guidage', 'Paliers', 'Ressorts d\'outillage']
+            }
+          ]
+        },
+        {
+          label: 'Découpe transversale',
+          subcats: [
+            {
+              label: 'Coupe',
+              elements: ['Lames transversales', 'Contre-lames', 'Presses flans', 'Coupelles']
+            }
+          ]
+        },
+        {
+          label: 'Découpe longitudinale',
+          subcats: [
+            {
+              label: 'Coupe',
+              elements: ['Lame longitudinale', 'Contre-lame', 'Réglage position']
+            }
+          ]
+        },
+        {
+          label: 'Avance film',
+          subcats: [
+            {
+              label: 'Déroulement',
+              elements: ['Rouleaux', 'Douilles', 'Frein bobine', 'Tension film']
+            },
+            {
+              label: 'Chaîne d\'avance',
+              elements: ['Chaînes', 'Pignons', 'Pinces', 'Ressorts de pince']
+            }
+          ]
+        },
+        {
+          label: 'Divers',
+          subcats: [
+            {
+              label: 'Thermique',
+              elements: ['Contrôleurs de chauffe', 'Pyromètre', 'Circuit de refroidissement']
+            }
+          ]
+        }
+      ]
+    }
+  };
+
+  /* ============================================================
+     Clé localStorage
+     ============================================================ */
+  var RI_KEY = 'ri_brouillon';
+
+  /* ============================================================
+     État en mémoire
+     ============================================================ */
+  var etat = {
+    typeIntervention: 'solo',
+    binome: '',
+    typeMachine: '',
+    travaux: {},
+    tests: []
+  };
+
+  /* ============================================================
+     Références DOM
+     ============================================================ */
+  function el(id) { return document.getElementById(id); }
+
+  var domBtnSolo        = el('ri-btn-solo');
+  var domBtnBinome      = el('ri-btn-binome');
+  var domBinomeField    = el('ri-binome-field');
+  var domBinomeNom      = el('ri-binome-nom');
+  var domMachineGrid    = el('ri-machine-grid');
+  var domContainer      = el('ri-checklists-container');
+  var domNoMachine      = el('ri-no-machine');
+  var domBtnCopier      = el('ri-btn-copier');
+  var domBtnReset       = el('ri-btn-reset');
+  var domStatut         = el('ri-archive-status');
+
+  /* ============================================================
+     Debounce sauvegarde
+     ============================================================ */
   var timerSave = null;
 
-  /* ----------------------------------------------------------
-     Références DOM
-     ---------------------------------------------------------- */
-  var champDate    = document.getElementById('ri-date');
-  var champClient  = document.getElementById('ri-client');
-  var champMachine = document.getElementById('ri-machine');
-
-  /* ----------------------------------------------------------
-     Récupération des données du formulaire (3 champs minimaux)
-     ---------------------------------------------------------- */
-  function lireDonnees() {
-    return {
-      date:    champDate    ? champDate.value    : '',
-      client:  champClient  ? champClient.value  : '',
-      machine: champMachine ? champMachine.value : '',
-    };
-  }
-
-  /* ----------------------------------------------------------
-     Restauration des données dans le formulaire
-     ---------------------------------------------------------- */
-  function appliquerDonnees(data) {
-    if (!data) return;
-    if (data.date    !== undefined && champDate)    champDate.value    = data.date;
-    if (data.client  !== undefined && champClient)  champClient.value  = data.client;
-    if (data.machine !== undefined && champMachine) champMachine.value = data.machine;
-  }
-
-  /* ----------------------------------------------------------
-     Sauvegarde localStorage (debounce 500ms)
-     ---------------------------------------------------------- */
-  function sauvegarder() {
+  function demanderSauvegarde() {
     clearTimeout(timerSave);
-    timerSave = setTimeout(function () {
-      try {
-        localStorage.setItem(CLE_LS, JSON.stringify(lireDonnees()));
-      } catch (e) {
-        console.warn('[RapportIntervention] Impossible de sauvegarder :', e);
-      }
-    }, 500);
+    timerSave = setTimeout(sauvegarder, 600);
+  }
+
+  /* ============================================================
+     Sauvegarde / restauration localStorage
+     ============================================================ */
+  function sauvegarder() {
+    try {
+      localStorage.setItem(RI_KEY, JSON.stringify(etat));
+    } catch (e) { /* quota — silencieux */ }
   }
 
   function chargerDepuisLS() {
     try {
-      var brut = localStorage.getItem(CLE_LS);
-      if (!brut) return null;
+      var brut = localStorage.getItem(RI_KEY);
+      if (!brut) { return null; }
       return JSON.parse(brut);
-    } catch (e) {
-      return null;
-    }
+    } catch (e) { return null; }
   }
 
-  /* ----------------------------------------------------------
-     Date du jour par défaut
-     ---------------------------------------------------------- */
-  function initialiserDate() {
-    if (!champDate || champDate.value) return;
-    var now   = new Date();
-    var annee = now.getFullYear();
-    var mois  = String(now.getMonth() + 1).padStart(2, '0');
-    var jour  = String(now.getDate()).padStart(2, '0');
-    champDate.value = annee + '-' + mois + '-' + jour;
-  }
+  /* ============================================================
+     Toggle Solo / Binôme
+     ============================================================ */
+  function appliquerTypeIntervention(type) {
+    etat.typeIntervention = type;
 
-  /* ----------------------------------------------------------
-     Formatage de la date pour l'affichage : DD/MM/YYYY
-     ---------------------------------------------------------- */
-  function dateVersAffichage(dateStr) {
-    if (!dateStr) return '';
-    var parts = dateStr.split('-');
-    if (parts.length === 3) return parts[2] + '/' + parts[1] + '/' + parts[0];
-    return dateStr;
-  }
-
-  /* ----------------------------------------------------------
-     Feedback dans la zone de statut
-     ---------------------------------------------------------- */
-  function afficherStatut(texte, type) {
-    var statusEl = document.getElementById('ri-archive-status');
-    if (!statusEl) return;
-    statusEl.textContent = texte;
-    if (type === 'ok') {
-      statusEl.className = 'ri-archive-status ri-ok';
-    } else if (type === 'err') {
-      statusEl.className = 'ri-archive-status ri-err';
+    if (type === 'binome') {
+      domBtnBinome.className = 'ri-toggle-btn ri-active';
+      domBtnSolo.className   = 'ri-toggle-btn';
+      domBinomeField.className = 'ri-binome-field ri-visible';
     } else {
-      statusEl.className = 'ri-archive-status';
+      domBtnSolo.className   = 'ri-toggle-btn ri-active';
+      domBtnBinome.className = 'ri-toggle-btn';
+      domBinomeField.className = 'ri-binome-field';
     }
   }
 
-  /* ----------------------------------------------------------
+  domBtnSolo.addEventListener('click', function () {
+    appliquerTypeIntervention('solo');
+    demanderSauvegarde();
+  });
+
+  domBtnBinome.addEventListener('click', function () {
+    appliquerTypeIntervention('binome');
+    demanderSauvegarde();
+  });
+
+  domBinomeNom.addEventListener('input', function () {
+    etat.binome = domBinomeNom.value;
+    demanderSauvegarde();
+  });
+
+  /* ============================================================
+     Sélection machine — cards
+     ============================================================ */
+  function appliquerMachine(machine) {
+    etat.typeMachine = machine;
+
+    /* Mise à jour visuelle des cards */
+    var cards = domMachineGrid.querySelectorAll('.ri-machine-card');
+    var i;
+    for (i = 0; i < cards.length; i++) {
+      var card = cards[i];
+      if (card.getAttribute('data-machine') === machine) {
+        card.className = 'ri-machine-card ri-selected';
+        card.setAttribute('aria-pressed', 'true');
+      } else {
+        card.className = 'ri-machine-card';
+        card.setAttribute('aria-pressed', 'false');
+      }
+    }
+
+    /* Rendu des checklists */
+    if (machine) {
+      rendreChecklists(machine);
+    }
+  }
+
+  function gererClicMachine(e) {
+    var target = e.target;
+    /* Remonter jusqu'à la card si clic sur un enfant */
+    while (target && !target.getAttribute('data-machine')) {
+      target = target.parentElement;
+    }
+    if (!target) { return; }
+    var machine = target.getAttribute('data-machine');
+    if (!machine) { return; }
+    appliquerMachine(machine);
+    demanderSauvegarde();
+  }
+
+  domMachineGrid.addEventListener('click', gererClicMachine);
+
+  /* Accessibilité clavier */
+  domMachineGrid.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      gererClicMachine(e);
+    }
+  });
+
+  /* ============================================================
+     Rendu des accordéons et tableaux de checklists
+     ============================================================ */
+  function rendreChecklists(machine) {
+    var data = TAXONOMIE[machine];
+    if (!data) { return; }
+
+    /* Vider le conteneur et supprimer le message "pas de machine" */
+    domContainer.innerHTML = '';
+
+    var stations = data.stations;
+    var si;
+    for (si = 0; si < stations.length; si++) {
+      var station = stations[si];
+      var accordeon = creerAccordeon(station, machine);
+      domContainer.appendChild(accordeon);
+    }
+  }
+
+  function creerAccordeon(station, machine) {
+    var divAccordeon = document.createElement('div');
+    divAccordeon.className = 'ri-accordion';
+
+    /* Bouton header */
+    var header = document.createElement('button');
+    header.type = 'button';
+    header.className = 'ri-accordion-header';
+    header.innerHTML =
+      '<span>' + escHtml(station.label) + '</span>' +
+      '<span class="ri-accordion-arrow" aria-hidden="true"></span>';
+    header.setAttribute('aria-expanded', 'false');
+
+    /* Corps */
+    var body = document.createElement('div');
+    body.className = 'ri-accordion-body';
+    var inner = document.createElement('div');
+    inner.className = 'ri-accordion-inner';
+
+    /* Sous-catégories */
+    var si;
+    for (si = 0; si < station.subcats.length; si++) {
+      var subcat = station.subcats[si];
+      inner.appendChild(creerSousCategorie(subcat, station.label, machine));
+    }
+
+    body.appendChild(inner);
+
+    /* Toggle accordéon */
+    header.addEventListener('click', function () {
+      var ouvert = divAccordeon.className.indexOf('ri-open') !== -1;
+      if (ouvert) {
+        divAccordeon.className = 'ri-accordion';
+        header.setAttribute('aria-expanded', 'false');
+      } else {
+        divAccordeon.className = 'ri-accordion ri-open';
+        header.setAttribute('aria-expanded', 'true');
+      }
+    });
+
+    divAccordeon.appendChild(header);
+    divAccordeon.appendChild(body);
+    return divAccordeon;
+  }
+
+  function creerSousCategorie(subcat, stationLabel, machine) {
+    var frag = document.createDocumentFragment();
+
+    var titreSubcat = document.createElement('div');
+    titreSubcat.className = 'ri-subcat-title';
+    titreSubcat.textContent = subcat.label;
+    frag.appendChild(titreSubcat);
+
+    var table = document.createElement('table');
+    table.className = 'ri-table';
+
+    /* En-tête */
+    var thead = document.createElement('thead');
+    thead.innerHTML =
+      '<tr>' +
+        '<th>Élément</th>' +
+        '<th>Contrôle</th>' +
+        '<th>Nettoyage</th>' +
+        '<th>Remplacement</th>' +
+      '</tr>';
+    table.appendChild(thead);
+
+    /* Corps */
+    var tbody = document.createElement('tbody');
+    var ei;
+    for (ei = 0; ei < subcat.elements.length; ei++) {
+      var element = subcat.elements[ei];
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + escHtml(element) + '</td>' +
+        '<td class="ri-check-cell" data-label="Contrôle">' +
+          '<input type="checkbox" class="ri-check"' +
+          ' data-station="' + escAttr(stationLabel) + '"' +
+          ' data-subcat="' + escAttr(subcat.label) + '"' +
+          ' data-element="' + escAttr(element) + '"' +
+          ' data-action="Contrôle"' +
+          ' aria-label="' + escAttr(element) + ' — Contrôle">' +
+        '</td>' +
+        '<td class="ri-check-cell" data-label="Nettoyage">' +
+          '<input type="checkbox" class="ri-check"' +
+          ' data-station="' + escAttr(stationLabel) + '"' +
+          ' data-subcat="' + escAttr(subcat.label) + '"' +
+          ' data-element="' + escAttr(element) + '"' +
+          ' data-action="Nettoyage"' +
+          ' aria-label="' + escAttr(element) + ' — Nettoyage">' +
+        '</td>' +
+        '<td class="ri-check-cell" data-label="Remplacement">' +
+          '<input type="checkbox" class="ri-check"' +
+          ' data-station="' + escAttr(stationLabel) + '"' +
+          ' data-subcat="' + escAttr(subcat.label) + '"' +
+          ' data-element="' + escAttr(element) + '"' +
+          ' data-action="Remplacement"' +
+          ' aria-label="' + escAttr(element) + ' — Remplacement">' +
+        '</td>';
+
+      /* Restaurer l'état des checkboxes depuis etat.travaux */
+      var checkboxes = tr.querySelectorAll('input[type="checkbox"]');
+      var ci;
+      for (ci = 0; ci < checkboxes.length; ci++) {
+        var cb = checkboxes[ci];
+        var actionsEtat = obtenirActionsEtat(stationLabel, subcat.label, element);
+        if (actionsEtat.indexOf(cb.getAttribute('data-action')) !== -1) {
+          cb.checked = true;
+        }
+        cb.addEventListener('change', gererChangementChecklist);
+      }
+
+      tbody.appendChild(tr);
+    }
+
+    table.appendChild(tbody);
+    frag.appendChild(table);
+    return frag;
+  }
+
+  /* ============================================================
+     Gestion de l'état travaux
+     ============================================================ */
+  function obtenirActionsEtat(station, subcat, element) {
+    if (!etat.travaux[station]) { return []; }
+    if (!etat.travaux[station][subcat]) { return []; }
+    return etat.travaux[station][subcat][element] || [];
+  }
+
+  function gererChangementChecklist(e) {
+    var cb = e.target;
+    var station  = cb.getAttribute('data-station');
+    var subcat   = cb.getAttribute('data-subcat');
+    var element  = cb.getAttribute('data-element');
+    var action   = cb.getAttribute('data-action');
+
+    /* Initialiser la structure si nécessaire */
+    if (!etat.travaux[station]) { etat.travaux[station] = {}; }
+    if (!etat.travaux[station][subcat]) { etat.travaux[station][subcat] = {}; }
+    if (!etat.travaux[station][subcat][element]) { etat.travaux[station][subcat][element] = []; }
+
+    var actions = etat.travaux[station][subcat][element];
+    var idx = actions.indexOf(action);
+
+    if (cb.checked && idx === -1) {
+      actions.push(action);
+    } else if (!cb.checked && idx !== -1) {
+      actions.splice(idx, 1);
+    }
+
+    /* Nettoyer les entrées vides */
+    if (actions.length === 0) { delete etat.travaux[station][subcat][element]; }
+    if (Object.keys(etat.travaux[station][subcat]).length === 0) { delete etat.travaux[station][subcat]; }
+    if (Object.keys(etat.travaux[station]).length === 0) { delete etat.travaux[station]; }
+
+    demanderSauvegarde();
+  }
+
+  /* ============================================================
+     Tests et validations
+     ============================================================ */
+  var testsInputs = el('ri-tests-list').querySelectorAll('input[type="checkbox"]');
+  var ti;
+  for (ti = 0; ti < testsInputs.length; ti++) {
+    testsInputs[ti].addEventListener('change', function (e) {
+      var testLabel = e.target.getAttribute('data-test');
+      var idx = etat.tests.indexOf(testLabel);
+      if (e.target.checked && idx === -1) {
+        etat.tests.push(testLabel);
+      } else if (!e.target.checked && idx !== -1) {
+        etat.tests.splice(idx, 1);
+      }
+      demanderSauvegarde();
+    });
+  }
+
+  function restaurerTests() {
+    var inputs = el('ri-tests-list').querySelectorAll('input[type="checkbox"]');
+    var i;
+    for (i = 0; i < inputs.length; i++) {
+      var testLabel = inputs[i].getAttribute('data-test');
+      inputs[i].checked = etat.tests.indexOf(testLabel) !== -1;
+    }
+  }
+
+  /* ============================================================
+     Génération du texte du rapport
+     ============================================================ */
+  function genererTexteRapport() {
+    var lignes = [];
+
+    lignes.push('RAPPORT D\'INTERVENTION — Multivac France');
+    lignes.push('========================================');
+
+    var typeLabel = etat.typeIntervention === 'binome'
+      ? 'Binôme' + (etat.binome ? ' (' + etat.binome + ')' : '')
+      : 'Solo';
+    lignes.push('Intervention : ' + typeLabel);
+
+    if (etat.typeMachine && TAXONOMIE[etat.typeMachine]) {
+      lignes.push('Machine : ' + TAXONOMIE[etat.typeMachine].label);
+    }
+
+    lignes.push('');
+
+    /* Travaux effectués */
+    var stations = Object.keys(etat.travaux);
+    if (stations.length > 0) {
+      lignes.push('TRAVAUX EFFECTUÉS');
+      lignes.push('-----------------');
+
+      var si;
+      for (si = 0; si < stations.length; si++) {
+        var stationLabel = stations[si];
+        lignes.push('[' + stationLabel + ']');
+
+        var subcats = Object.keys(etat.travaux[stationLabel]);
+        var sci;
+        for (sci = 0; sci < subcats.length; sci++) {
+          var subcatLabel = subcats[sci];
+          lignes.push('  [' + subcatLabel + ']');
+
+          var elements = Object.keys(etat.travaux[stationLabel][subcatLabel]);
+          var ei;
+          for (ei = 0; ei < elements.length; ei++) {
+            var elementLabel = elements[ei];
+            var actions = etat.travaux[stationLabel][subcatLabel][elementLabel];
+            var ai;
+            for (ai = 0; ai < actions.length; ai++) {
+              lignes.push('    ✔ ' + elementLabel + ' — ' + actions[ai]);
+            }
+          }
+        }
+      }
+    }
+
+    /* Tests */
+    if (etat.tests.length > 0) {
+      lignes.push('');
+      lignes.push('TESTS ET VALIDATIONS');
+      lignes.push('--------------------');
+      var testi;
+      for (testi = 0; testi < etat.tests.length; testi++) {
+        lignes.push('  ✔ ' + etat.tests[testi]);
+      }
+    }
+
+    return lignes.join('\n');
+  }
+
+  /* ============================================================
      Copier dans le presse-papier
-     Assemble un texte formaté des 3 champs et le copie.
-     Compatible Safari iOS : déclenché par un clic utilisateur.
-     ---------------------------------------------------------- */
-  function copierPressePapier() {
-    var data = lireDonnees();
-    var texte =
-      "Rapport d'intervention\n" +
-      'Date : '    + (dateVersAffichage(data.date) || '—') + '\n' +
-      'Client : '  + (data.client  || '—') + '\n' +
-      'Machine : ' + (data.machine || '—');
+     Compatible Safari iOS : fallback textarea
+     ============================================================ */
+  domBtnCopier.addEventListener('click', function () {
+    var texte = genererTexteRapport();
+
+    function fallbackCopy(txt) {
+      var area = document.createElement('textarea');
+      area.value = txt;
+      area.style.position = 'fixed';
+      area.style.top = '-9999px';
+      area.style.left = '-9999px';
+      document.body.appendChild(area);
+      area.focus();
+      area.select();
+      try {
+        document.execCommand('copy');
+        afficherStatut('Copié !', 'ok');
+      } catch (e) {
+        afficherStatut('Impossible de copier sur cet appareil.', 'err');
+      }
+      document.body.removeChild(area);
+    }
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(texte).then(function () {
-        afficherStatut('Rapport copié dans le presse-papier.', 'ok');
-      }).catch(function (err) {
-        console.warn('[RapportIntervention] Échec copie :', err);
-        afficherStatut('Impossible de copier le rapport.', 'err');
+        afficherStatut('Copié !', 'ok');
+        setTimeout(function () { afficherStatut('', ''); }, 2000);
+      }).catch(function () {
+        fallbackCopy(texte);
+        setTimeout(function () { afficherStatut('', ''); }, 2000);
       });
     } else {
-      afficherStatut('Copie non supportée sur ce navigateur.', 'err');
+      fallbackCopy(texte);
+      setTimeout(function () { afficherStatut('', ''); }, 2000);
+    }
+
+    /* Feedback visuel sur le bouton */
+    var labelOriginal = domBtnCopier.innerHTML;
+    domBtnCopier.textContent = 'Copié !';
+    domBtnCopier.disabled = true;
+    setTimeout(function () {
+      domBtnCopier.innerHTML = labelOriginal;
+      domBtnCopier.disabled = false;
+    }, 2000);
+  });
+
+  /* ============================================================
+     Réinitialisation
+     ============================================================ */
+  domBtnReset.addEventListener('click', function () {
+    if (!confirm('Réinitialiser le rapport ? Toutes les cases cochées seront effacées.')) { return; }
+
+    etat.typeIntervention = 'solo';
+    etat.binome = '';
+    etat.typeMachine = '';
+    etat.travaux = {};
+    etat.tests = [];
+
+    appliquerTypeIntervention('solo');
+    domBinomeNom.value = '';
+
+    /* Dé-sélectionner toutes les cards machine */
+    var cards = domMachineGrid.querySelectorAll('.ri-machine-card');
+    var i;
+    for (i = 0; i < cards.length; i++) {
+      cards[i].className = 'ri-machine-card';
+      cards[i].setAttribute('aria-pressed', 'false');
+    }
+
+    /* Vider les checklists */
+    domContainer.innerHTML = '';
+    var noMachine = document.createElement('div');
+    noMachine.className = 'ri-no-machine';
+    noMachine.id = 'ri-no-machine';
+    noMachine.textContent = 'Sélectionnez un type de machine ci-dessus pour afficher les checklists.';
+    domContainer.appendChild(noMachine);
+
+    /* Décocher les tests */
+    restaurerTests();
+
+    afficherStatut('', '');
+    try { localStorage.removeItem(RI_KEY); } catch (e) {}
+  });
+
+  /* ============================================================
+     Feedback statut
+     ============================================================ */
+  function afficherStatut(texte, type) {
+    if (!domStatut) { return; }
+    domStatut.textContent = texte;
+    if (type === 'ok') {
+      domStatut.style.color = '#2F855A';
+      domStatut.style.fontStyle = 'normal';
+    } else if (type === 'err') {
+      domStatut.style.color = '#E53E3E';
+      domStatut.style.fontStyle = 'normal';
+    } else {
+      domStatut.style.color = '';
+      domStatut.style.fontStyle = '';
     }
   }
 
-  /* ----------------------------------------------------------
-     Nouveau rapport (reset des 3 champs)
-     ---------------------------------------------------------- */
-  function nouveauRapport() {
-    if (!confirm('Créer un nouveau rapport ? Le rapport actuel sera effacé de cet appareil.')) return;
-
-    if (champDate)    champDate.value    = '';
-    if (champClient)  champClient.value  = '';
-    if (champMachine) champMachine.value = '';
-
-    afficherStatut('', '');
-
-    try { localStorage.removeItem(CLE_LS); } catch (e) {}
-
-    initialiserDate();
+  /* ============================================================
+     Utilitaires d'échappement HTML / attributs
+     ============================================================ */
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
-  /* ----------------------------------------------------------
-     Branchement des événements
-     ---------------------------------------------------------- */
-  [champDate, champClient, champMachine].forEach(function (champ) {
-    if (!champ) return;
-    champ.addEventListener('input', sauvegarder);
-    champ.addEventListener('change', sauvegarder);
-  });
+  function escAttr(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;');
+  }
 
-  var btnCopier  = document.getElementById('ri-btn-copier');
-  var btnNouveau = document.getElementById('ri-btn-nouveau');
+  /* ============================================================
+     Restauration complète depuis localStorage
+     ============================================================ */
+  function restaurerDepuisEtat() {
+    /* Toggle Solo/Binôme */
+    appliquerTypeIntervention(etat.typeIntervention);
+    if (etat.binome) { domBinomeNom.value = etat.binome; }
 
-  if (btnCopier)  btnCopier.addEventListener('click', copierPressePapier);
-  if (btnNouveau) btnNouveau.addEventListener('click', nouveauRapport);
+    /* Machine et checklists */
+    if (etat.typeMachine) {
+      appliquerMachine(etat.typeMachine);
+    }
 
-  /* ----------------------------------------------------------
+    /* Tests */
+    restaurerTests();
+  }
+
+  /* ============================================================
      Initialisation
-     ---------------------------------------------------------- */
-  var donneesSauvegardees = chargerDepuisLS();
-  if (donneesSauvegardees) {
-    appliquerDonnees(donneesSauvegardees);
-    initialiserDate();
-  } else {
-    initialiserDate();
+     ============================================================ */
+  var donnees = chargerDepuisLS();
+  if (donnees) {
+    /* Fusionner les données restaurées dans etat */
+    if (donnees.typeIntervention) { etat.typeIntervention = donnees.typeIntervention; }
+    if (donnees.binome)           { etat.binome           = donnees.binome; }
+    if (donnees.typeMachine)      { etat.typeMachine      = donnees.typeMachine; }
+    if (donnees.travaux && typeof donnees.travaux === 'object') { etat.travaux = donnees.travaux; }
+    if (Array.isArray(donnees.tests)) { etat.tests = donnees.tests; }
   }
+
+  restaurerDepuisEtat();
 
 })();
 </script>
