@@ -301,6 +301,12 @@ function router() {
     return;
   }
 
+  if (hash === '#editeur-taxonomie') {
+    mettreAJourNavActive(null);
+    chargerPlugin('editeur-taxonomie');
+    return;
+  }
+
   /* Hash inconnu → accueil */
   mettreAJourNavActive(null);
   afficherAccueil();
@@ -329,6 +335,16 @@ function enregistrerServiceWorker() {
    ============================================================ */
 function init() {
   construireNavigation();
+
+  /* Déclencheur éditeur taxonomie caché — double-clic logo quand plugin RI actif */
+  function ouvrirVerrouSiRI() {
+    if (window.location.hash !== '#plugin-rapport-intervention') return;
+    if (typeof window.__ouvrirVerrouTaxo === 'function') window.__ouvrirVerrouTaxo();
+  }
+  var logoSidebar = document.querySelector('.sidebar-logo');
+  var logoMobile  = document.querySelector('.mobile-header-logo');
+  if (logoSidebar) logoSidebar.addEventListener('dblclick', ouvrirVerrouSiRI);
+  if (logoMobile)  logoMobile.addEventListener('dblclick', ouvrirVerrouSiRI);
 
   /* Écoute des changements de hash (navigation) */
   window.addEventListener('hashchange', router);

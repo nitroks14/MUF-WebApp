@@ -1,0 +1,930 @@
+<style>
+/* Reset + base */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Inter, Roboto, sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+/* Layout */
+.te-wrapper { display: flex; flex-direction: column; height: 100vh; }
+.te-toolbar {
+  display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+  background: #003A70; color: #fff; flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.te-toolbar-title { flex: 1; font-size: 1rem; font-weight: 700; }
+.te-body { display: flex; flex: 1; overflow: hidden; }
+.te-tree { flex: 1; overflow-y: auto; padding: 20px; }
+.te-sidebar { width: 300px; overflow-y: auto; padding: 20px; background: #fff; border-left: 1px solid #e2e8f0; flex-shrink: 0; }
+
+/* Boutons toolbar */
+.te-btn {
+  padding: 7px 14px; border-radius: 8px; border: none; cursor: pointer;
+  font-size: 0.85rem; font-weight: 600; font-family: inherit; transition: all 0.15s;
+}
+.te-btn-ghost { background: rgba(255,255,255,0.15); color: #fff; }
+.te-btn-ghost:hover { background: rgba(255,255,255,0.25); }
+.te-btn-accent { background: #f59e0b; color: #1a1a1a; }
+.te-btn-accent:hover { background: #d97706; }
+.te-btn-danger { background: #ef4444; color: #fff; }
+.te-btn-danger:hover { background: #dc2626; }
+.te-btn-success { background: #10b981; color: #fff; }
+.te-btn-success:hover { background: #059669; }
+
+/* Niveaux arbres */
+/* Machine — bleu Multivac */
+.te-machine {
+  background: #fff; border-radius: 12px; margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0,58,112,0.12); overflow: visible;
+  border: 2px solid #003A70;
+}
+.te-machine-header {
+  background: #003A70; color: #fff; padding: 12px 16px;
+  display: flex; align-items: center; gap: 8px; border-radius: 10px 10px 0 0;
+}
+.te-machine-body { padding: 12px 16px 16px; }
+
+/* Station — vert */
+.te-station {
+  background: #f0fdf4; border-radius: 8px; margin-bottom: 10px;
+  border: 1.5px solid #2D6A4F;
+}
+.te-station-header {
+  background: #2D6A4F; color: #fff; padding: 8px 12px;
+  display: flex; align-items: center; gap: 8px; border-radius: 6px 6px 0 0;
+}
+.te-station-body { padding: 10px 12px 12px; }
+.te-station.collapsed .te-station-body { display: none; }
+
+/* Sous-categorie — orange */
+.te-subcat {
+  background: #fff7ed; border-radius: 6px; margin-bottom: 8px;
+  border: 1.5px solid #E07B39;
+}
+.te-subcat-header {
+  background: #E07B39; color: #fff; padding: 6px 10px;
+  display: flex; align-items: center; gap: 6px; border-radius: 4px 4px 0 0;
+  font-size: 0.85rem;
+}
+.te-subcat-body { padding: 8px 10px; }
+.te-subcat.collapsed .te-subcat-body { display: none; }
+
+/* Elements — chips gris */
+.te-elements { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.te-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #4A5568; color: #fff; border-radius: 20px;
+  padding: 4px 10px; font-size: 0.78rem; cursor: grab;
+  user-select: none; transition: opacity 0.15s;
+}
+.te-chip:active { cursor: grabbing; opacity: 0.7; }
+.te-chip-del {
+  background: none; border: none; color: rgba(255,255,255,0.7);
+  cursor: pointer; font-size: 1rem; line-height: 1; padding: 0;
+  margin-left: 2px; transition: color 0.1s;
+}
+.te-chip-del:hover { color: #fff; }
+
+/* Drag handle */
+.te-drag {
+  cursor: grab; opacity: 0.5; font-size: 1.1rem; flex-shrink: 0;
+}
+.te-drag:active { cursor: grabbing; }
+
+/* Labels editables */
+.te-label {
+  flex: 1; cursor: text; outline: none; border-bottom: 1px solid transparent;
+  transition: border-color 0.15s; min-width: 40px;
+}
+.te-label:focus { border-bottom-color: rgba(255,255,255,0.5); }
+
+/* Boutons d'action dans les niveaux */
+.te-add-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 10px; border-radius: 6px; border: 1.5px dashed;
+  background: transparent; cursor: pointer; font-size: 0.8rem; font-family: inherit;
+  transition: all 0.15s; margin-top: 6px;
+}
+.te-add-btn-machine { border-color: #003A70; color: #003A70; }
+.te-add-btn-machine:hover { background: #003A70; color: #fff; }
+.te-add-btn-station { border-color: #2D6A4F; color: #2D6A4F; }
+.te-add-btn-station:hover { background: #2D6A4F; color: #fff; }
+.te-add-btn-subcat { border-color: #E07B39; color: #E07B39; }
+.te-add-btn-subcat:hover { background: #E07B39; color: #fff; }
+.te-add-btn-element { border-color: #4A5568; color: #4A5568; }
+.te-add-btn-element:hover { background: #4A5568; color: #fff; }
+
+/* Bouton supprimer niveau */
+.te-del-btn {
+  background: rgba(255,255,255,0.2); border: none; color: #fff;
+  border-radius: 4px; cursor: pointer; padding: 2px 6px; font-size: 0.85rem;
+  line-height: 1.4; transition: background 0.15s; flex-shrink: 0;
+}
+.te-del-btn:hover { background: rgba(239,68,68,0.8); }
+
+/* Chevron collapse */
+.te-chevron {
+  background: none; border: none; color: #fff; cursor: pointer;
+  font-size: 0.9rem; padding: 0; flex-shrink: 0; transition: transform 0.2s;
+}
+.collapsed .te-chevron { transform: rotate(-90deg); }
+
+/* Sidebar panels */
+.te-panel { margin-bottom: 20px; }
+.te-panel-title {
+  font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: #64748b; margin-bottom: 10px;
+}
+.te-field { margin-bottom: 10px; }
+.te-field label { display: block; font-size: 0.8rem; color: #475569; margin-bottom: 4px; }
+.te-field input {
+  width: 100%; padding: 8px 10px; border: 1.5px solid #e2e8f0;
+  border-radius: 6px; font-size: 0.85rem; font-family: inherit; outline: none;
+  transition: border-color 0.2s;
+}
+.te-field input:focus { border-color: #003A70; }
+
+/* Toast */
+.te-toast {
+  position: fixed; bottom: 24px; right: 24px; padding: 12px 20px;
+  border-radius: 10px; color: #fff; font-size: 0.9rem; font-weight: 600;
+  font-family: Inter, Roboto, sans-serif;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25); z-index: 9999;
+  transform: translateY(80px); opacity: 0; transition: all 0.3s;
+  pointer-events: none;
+}
+.te-toast.show { transform: translateY(0); opacity: 1; }
+.te-toast.success { background: #10b981; }
+.te-toast.error { background: #ef4444; }
+.te-toast.info { background: #003A70; }
+
+/* Drag over indicator */
+.te-drag-over { outline: 2px dashed #f59e0b; outline-offset: 2px; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .te-body { flex-direction: column; }
+  .te-sidebar { width: 100%; border-left: none; border-top: 1px solid #e2e8f0; max-height: 300px; }
+}
+</style>
+
+<div class="te-wrapper">
+  <!-- Toolbar -->
+  <div class="te-toolbar">
+    <button class="te-btn te-btn-ghost" id="te-back">&larr; Retour</button>
+    <span class="te-toolbar-title">Editeur Taxonomie</span>
+    <button class="te-btn te-btn-ghost" id="te-reset" title="Reinitialiser depuis la sauvegarde">&#8635; Reset</button>
+    <button class="te-btn te-btn-accent" id="te-copy-json">Copier JSON</button>
+    <button class="te-btn te-btn-accent" id="te-copy-js">Copier JS</button>
+    <button class="te-btn te-btn-success" id="te-push">&#8593; Push GitHub</button>
+  </div>
+
+  <!-- Corps -->
+  <div class="te-body">
+    <!-- Arbre -->
+    <div class="te-tree" id="te-tree"></div>
+
+    <!-- Sidebar config -->
+    <div class="te-sidebar">
+      <div class="te-panel">
+        <div class="te-panel-title">Config GitHub</div>
+        <div class="te-field">
+          <label>Token (ghp_...)</label>
+          <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
+        </div>
+        <div class="te-field">
+          <label>Proprietaire (owner)</label>
+          <input type="text" id="gh-owner" placeholder="votre-username">
+        </div>
+        <div class="te-field">
+          <label>Repo</label>
+          <input type="text" id="gh-repo" placeholder="MUF-WebApp">
+        </div>
+        <div class="te-field">
+          <label>Branche</label>
+          <input type="text" id="gh-branch" placeholder="main">
+        </div>
+        <div class="te-field">
+          <label>Chemin fichier</label>
+          <input type="text" id="gh-path" placeholder="plugins/rapport-intervention/index.html">
+        </div>
+        <button class="te-btn" style="background:#003A70;color:#fff;width:100%;margin-top:6px;" id="gh-save-config">Sauvegarder config</button>
+      </div>
+
+      <div class="te-panel">
+        <div class="te-panel-title">Informations</div>
+        <p style="font-size:0.8rem;color:#64748b;line-height:1.5;">
+          Le push GitHub met a jour directement <code>TAXONOMIE</code> dans le fichier source.
+          Toute autre partie du fichier reste intacte.<br><br>
+          Token requis : permission <strong>contents: write</strong>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="te-toast" id="te-toast"></div>
+
+<script>
+(function() {
+'use strict';
+
+/* =====================================================
+   DONNEES PAR DEFAUT (copie TAXONOMIE plugin RI)
+   ===================================================== */
+var TAXO_DEFAUT = {
+  cloche: {
+    label: 'Cloche (Série C)',
+    stations: [
+      {
+        label: 'Vannes à vide',
+        subcats: [
+          {
+            label: 'Système de vide',
+            elements: ['Vanne principale', 'Vanne d\'atmosphère', 'Vanne de temporisation']
+          }
+        ]
+      },
+      {
+        label: 'Barres de soudure',
+        subcats: [
+          {
+            label: 'Éléments chauffants',
+            elements: ['Barre de soudure supérieure', 'Barre de soudure inférieure', 'Résistance']
+          },
+          {
+            label: 'Outillage soudure',
+            elements: ['Téflon', 'Joint de soudure']
+          }
+        ]
+      },
+      {
+        label: 'Couvercle',
+        subcats: [
+          {
+            label: 'Étanchéité',
+            elements: ['Joint couvercle', 'Charnières']
+          }
+        ]
+      },
+      {
+        label: 'Pompe à vide',
+        subcats: [
+          {
+            label: 'Pompe',
+            elements: ['Huile', 'Filtre d\'huile', 'Filtre à air', 'Courroie']
+          }
+        ]
+      },
+      {
+        label: 'Système électrique',
+        subcats: [
+          {
+            label: 'Électricité',
+            elements: ['Tableau électrique', 'Câblage', 'Temporisateurs']
+          }
+        ]
+      }
+    ]
+  },
+  operculeuse: {
+    label: 'Operculeuse (Série T)',
+    stations: [
+      {
+        label: 'Poste de soudure',
+        subcats: [
+          {
+            label: 'Embiellage',
+            elements: ['Bielles', 'Manivelles', 'Paliers', 'Ressorts de rappel']
+          },
+          {
+            label: 'Système de vide / gaz',
+            elements: ['Vannes de vide', 'Vannes de gaz', 'Tuyaux', 'Joints de raccord']
+          },
+          {
+            label: 'Outillage',
+            elements: ['Lames de découpe', 'Pavés de soudure', 'Membranes / diaphragmes', 'Joints d\'outillage', 'Douilles de guidage', 'Paliers d\'outillage', 'Ressorts d\'outillage']
+          }
+        ]
+      },
+      {
+        label: 'Avance film',
+        subcats: [
+          {
+            label: 'Déroulement',
+            elements: ['Rouleaux tendeurs', 'Douilles', 'Frein de bobine']
+          },
+          {
+            label: 'Chaîne d\'avance',
+            elements: ['Chaîne', 'Pignons', 'Pinces film']
+          }
+        ]
+      },
+      {
+        label: 'Découpe longitudinale',
+        subcats: [
+          {
+            label: 'Coupe',
+            elements: ['Lame longitudinale', 'Contre-lame', 'Réglage position']
+          }
+        ]
+      },
+      {
+        label: 'Électricité / chauffe',
+        subcats: [
+          {
+            label: 'Régulation',
+            elements: ['Contrôleurs de chauffe', 'Pyromètre', 'Câblage']
+          }
+        ]
+      }
+    ]
+  },
+  thermoformeuse: {
+    label: 'Thermoformeuse (Série R)',
+    stations: [
+      {
+        label: 'Formage',
+        subcats: [
+          {
+            label: 'Embiellage',
+            elements: ['Bielles', 'Manivelles', 'Paliers', 'Ressorts']
+          },
+          {
+            label: 'Système de vide',
+            elements: ['Vannes de vide', 'Tuyaux', 'Joints de raccord']
+          },
+          {
+            label: 'Outillage formage',
+            elements: ['Joints d\'outillage', 'Membranes', 'Plaque de formage', 'Douilles de guidage']
+          }
+        ]
+      },
+      {
+        label: 'Soudure',
+        subcats: [
+          {
+            label: 'Embiellage',
+            elements: ['Bielles', 'Manivelles', 'Paliers', 'Ressorts']
+          },
+          {
+            label: 'Système de vide / gaz',
+            elements: ['Vannes de vide', 'Vannes de gaz', 'Tuyaux', 'Joints de raccord']
+          },
+          {
+            label: 'Outillage soudure',
+            elements: ['Pavés de soudure', 'Membranes / diaphragmes', 'Joints d\'outillage', 'Douilles de guidage', 'Paliers', 'Ressorts d\'outillage']
+          }
+        ]
+      },
+      {
+        label: 'Découpe transversale',
+        subcats: [
+          {
+            label: 'Coupe',
+            elements: ['Lames transversales', 'Contre-lames', 'Presses flans', 'Coupelles']
+          }
+        ]
+      },
+      {
+        label: 'Découpe longitudinale',
+        subcats: [
+          {
+            label: 'Coupe',
+            elements: ['Lame longitudinale', 'Contre-lame', 'Réglage position']
+          }
+        ]
+      },
+      {
+        label: 'Avance film',
+        subcats: [
+          {
+            label: 'Déroulement',
+            elements: ['Rouleaux', 'Douilles', 'Frein bobine', 'Tension film']
+          },
+          {
+            label: 'Chaîne d\'avance',
+            elements: ['Chaînes', 'Pignons', 'Pinces', 'Ressorts de pince']
+          }
+        ]
+      },
+      {
+        label: 'Divers',
+        subcats: [
+          {
+            label: 'Thermique',
+            elements: ['Contrôleurs de chauffe', 'Pyromètre', 'Circuit de refroidissement']
+          }
+        ]
+      }
+    ]
+  }
+};
+
+/* =====================================================
+   ETAT
+   ===================================================== */
+var LS_KEY = 'taxo_editeur_draft';
+var LS_GH  = 'taxo_editeur_github';
+var taxo;   /* objet courant en memoire */
+
+/* Deep clone simple */
+function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+/* Chargement initial */
+function charger() {
+  var saved = localStorage.getItem(LS_KEY);
+  taxo = saved ? JSON.parse(saved) : clone(TAXO_DEFAUT);
+}
+
+/* Sauvegarde auto */
+function sauvegarder() {
+  localStorage.setItem(LS_KEY, JSON.stringify(taxo));
+}
+
+/* =====================================================
+   RENDER COMPLET DE L'ARBRE
+   ===================================================== */
+var tree = document.getElementById('te-tree');
+var dragSrc = null; /* source du drag en cours */
+
+function render() {
+  sauvegarder();
+  tree.innerHTML = '';
+
+  Object.keys(taxo).forEach(function(machineKey, mi) {
+    var machine = taxo[machineKey];
+    var machineEl = creerMachine(machineKey, machine, mi);
+    tree.appendChild(machineEl);
+  });
+
+  /* Bouton ajouter machine */
+  var addMachine = document.createElement('button');
+  addMachine.className = 'te-add-btn te-add-btn-machine';
+  addMachine.innerHTML = '+ Ajouter une machine';
+  addMachine.addEventListener('click', function() {
+    var key = 'machine_' + Date.now();
+    taxo[key] = { label: 'Nouvelle machine', stations: [] };
+    render();
+  });
+  tree.appendChild(addMachine);
+}
+
+function creerMachine(key, machine, mi) {
+  var el = document.createElement('div');
+  el.className = 'te-machine';
+  el.draggable = true;
+  el.dataset.key = key;
+
+  /* Header machine */
+  var header = document.createElement('div');
+  header.className = 'te-machine-header';
+
+  var drag = document.createElement('span');
+  drag.className = 'te-drag';
+  drag.textContent = '⠣';
+  drag.title = 'Glisser pour reordonner';
+
+  var label = document.createElement('span');
+  label.className = 'te-label';
+  label.contentEditable = 'true';
+  label.textContent = machine.label;
+  label.spellcheck = false;
+  label.addEventListener('blur', function() {
+    machine.label = label.textContent.trim() || machine.label;
+    sauvegarder();
+  });
+  label.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); label.blur(); }
+  });
+
+  var delBtn = document.createElement('button');
+  delBtn.className = 'te-del-btn';
+  delBtn.textContent = '×';
+  delBtn.title = 'Supprimer cette machine';
+  delBtn.addEventListener('click', function() {
+    if (confirm('Supprimer la machine "' + machine.label + '" et tout son contenu ?')) {
+      delete taxo[key];
+      render();
+    }
+  });
+
+  header.appendChild(drag);
+  header.appendChild(label);
+  header.appendChild(delBtn);
+  el.appendChild(header);
+
+  /* Body machine */
+  var body = document.createElement('div');
+  body.className = 'te-machine-body';
+
+  machine.stations.forEach(function(station, si) {
+    body.appendChild(creerStation(machine, station, si));
+  });
+
+  /* Bouton ajouter station */
+  var addStation = document.createElement('button');
+  addStation.className = 'te-add-btn te-add-btn-station';
+  addStation.innerHTML = '+ Ajouter une station';
+  addStation.addEventListener('click', function() {
+    machine.stations.push({ label: 'Nouvelle station', subcats: [] });
+    render();
+  });
+  body.appendChild(addStation);
+  el.appendChild(body);
+
+  /* Drag & drop machine */
+  setupDrag(el, function() { return Object.keys(taxo); }, function(newKeys) {
+    var newTaxo = {};
+    newKeys.forEach(function(k) { newTaxo[k] = taxo[k]; });
+    taxo = newTaxo;
+    render();
+  }, key);
+
+  return el;
+}
+
+function creerStation(machine, station, si) {
+  var el = document.createElement('div');
+  el.className = 'te-station';
+
+  /* Header station */
+  var header = document.createElement('div');
+  header.className = 'te-station-header';
+
+  var chevron = document.createElement('button');
+  chevron.className = 'te-chevron';
+  chevron.textContent = '▾';
+  chevron.title = 'Plier/Deplier';
+  chevron.addEventListener('click', function() {
+    el.classList.toggle('collapsed');
+  });
+
+  var drag = document.createElement('span');
+  drag.className = 'te-drag';
+  drag.textContent = '⠣';
+
+  var label = document.createElement('span');
+  label.className = 'te-label';
+  label.contentEditable = 'true';
+  label.textContent = station.label;
+  label.spellcheck = false;
+  label.addEventListener('blur', function() {
+    station.label = label.textContent.trim() || station.label;
+    sauvegarder();
+  });
+  label.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); label.blur(); }
+  });
+
+  var delBtn = document.createElement('button');
+  delBtn.className = 'te-del-btn';
+  delBtn.textContent = '×';
+  delBtn.addEventListener('click', function() {
+    if (confirm('Supprimer la station "' + station.label + '" ?')) {
+      machine.stations.splice(si, 1);
+      render();
+    }
+  });
+
+  header.appendChild(chevron);
+  header.appendChild(drag);
+  header.appendChild(label);
+  header.appendChild(delBtn);
+  el.appendChild(header);
+
+  /* Body station */
+  var body = document.createElement('div');
+  body.className = 'te-station-body';
+
+  station.subcats.forEach(function(subcat, sci) {
+    body.appendChild(creerSubcat(station, subcat, sci));
+  });
+
+  var addSubcat = document.createElement('button');
+  addSubcat.className = 'te-add-btn te-add-btn-subcat';
+  addSubcat.innerHTML = '+ Ajouter une sous-catégorie';
+  addSubcat.addEventListener('click', function() {
+    station.subcats.push({ label: 'Nouvelle sous-catégorie', elements: [] });
+    render();
+  });
+  body.appendChild(addSubcat);
+  el.appendChild(body);
+
+  return el;
+}
+
+function creerSubcat(station, subcat, sci) {
+  var el = document.createElement('div');
+  el.className = 'te-subcat';
+
+  /* Header subcat */
+  var header = document.createElement('div');
+  header.className = 'te-subcat-header';
+
+  var chevron = document.createElement('button');
+  chevron.className = 'te-chevron';
+  chevron.textContent = '▾';
+  chevron.addEventListener('click', function() {
+    el.classList.toggle('collapsed');
+  });
+
+  var label = document.createElement('span');
+  label.className = 'te-label';
+  label.contentEditable = 'true';
+  label.textContent = subcat.label;
+  label.spellcheck = false;
+  label.addEventListener('blur', function() {
+    subcat.label = label.textContent.trim() || subcat.label;
+    sauvegarder();
+  });
+  label.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); label.blur(); }
+  });
+
+  var delBtn = document.createElement('button');
+  delBtn.className = 'te-del-btn';
+  delBtn.textContent = '×';
+  delBtn.addEventListener('click', function() {
+    if (confirm('Supprimer la sous-catégorie "' + subcat.label + '" ?')) {
+      station.subcats.splice(sci, 1);
+      render();
+    }
+  });
+
+  header.appendChild(chevron);
+  header.appendChild(label);
+  header.appendChild(delBtn);
+  el.appendChild(header);
+
+  /* Body subcat — elements en chips */
+  var body = document.createElement('div');
+  body.className = 'te-subcat-body';
+
+  var chipsEl = document.createElement('div');
+  chipsEl.className = 'te-elements';
+
+  subcat.elements.forEach(function(elem, ei) {
+    chipsEl.appendChild(creerChip(subcat, elem, ei));
+  });
+
+  /* Input ajouter element */
+  var addEl = document.createElement('button');
+  addEl.className = 'te-add-btn te-add-btn-element';
+  addEl.style.cssText = 'font-size:0.75rem;padding:3px 8px;margin-top:4px;';
+  addEl.innerHTML = '+ Élément';
+  addEl.addEventListener('click', function() {
+    var nom = prompt('Nom du nouvel élément :');
+    if (nom && nom.trim()) {
+      subcat.elements.push(nom.trim());
+      render();
+    }
+  });
+
+  body.appendChild(chipsEl);
+  body.appendChild(addEl);
+  el.appendChild(body);
+
+  return el;
+}
+
+function creerChip(subcat, elem, ei) {
+  var chip = document.createElement('span');
+  chip.className = 'te-chip';
+  chip.draggable = true;
+  chip.dataset.index = ei;
+
+  var txt = document.createElement('span');
+  txt.textContent = elem;
+  txt.contentEditable = 'true';
+  txt.spellcheck = false;
+  txt.style.cssText = 'outline:none;cursor:text;';
+  txt.addEventListener('blur', function() {
+    var v = txt.textContent.trim();
+    if (v) { subcat.elements[ei] = v; sauvegarder(); }
+    else { txt.textContent = elem; }
+  });
+  txt.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); txt.blur(); }
+  });
+
+  var del = document.createElement('button');
+  del.className = 'te-chip-del';
+  del.textContent = '×';
+  del.title = 'Supprimer';
+  del.addEventListener('click', function() {
+    subcat.elements.splice(ei, 1);
+    render();
+  });
+
+  chip.appendChild(txt);
+  chip.appendChild(del);
+  return chip;
+}
+
+/* =====================================================
+   DRAG & DROP (HTML5 natif) pour machines
+   ===================================================== */
+function setupDrag(el, getKeys, setKeys, myKey) {
+  el.addEventListener('dragstart', function(e) {
+    dragSrc = myKey;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(function() { el.style.opacity = '0.4'; }, 0);
+  });
+  el.addEventListener('dragend', function() {
+    el.style.opacity = '';
+    tree.querySelectorAll('.te-drag-over').forEach(function(d) {
+      d.classList.remove('te-drag-over');
+    });
+  });
+  el.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    el.classList.add('te-drag-over');
+  });
+  el.addEventListener('dragleave', function() {
+    el.classList.remove('te-drag-over');
+  });
+  el.addEventListener('drop', function(e) {
+    e.preventDefault();
+    el.classList.remove('te-drag-over');
+    if (dragSrc && dragSrc !== myKey) {
+      var keys = getKeys();
+      var fromIdx = keys.indexOf(dragSrc);
+      var toIdx   = keys.indexOf(myKey);
+      if (fromIdx !== -1 && toIdx !== -1) {
+        keys.splice(fromIdx, 1);
+        keys.splice(toIdx, 0, dragSrc);
+        setKeys(keys);
+      }
+      dragSrc = null;
+    }
+  });
+}
+
+/* =====================================================
+   SERIALISATION JS
+   ===================================================== */
+function serializerTaxoJS(t) {
+  var lines = ['  var TAXONOMIE = {'];
+  Object.keys(t).forEach(function(k, ki, arr) {
+    var m = t[k];
+    lines.push('    ' + k + ': {');
+    lines.push('      label: ' + JSON.stringify(m.label) + ',');
+    lines.push('      stations: [');
+    m.stations.forEach(function(s, si, sarr) {
+      lines.push('        {');
+      lines.push('          label: ' + JSON.stringify(s.label) + ',');
+      lines.push('          subcats: [');
+      s.subcats.forEach(function(sc, sci, scarr) {
+        var elemStr = sc.elements.map(function(e) { return JSON.stringify(e); }).join(', ');
+        var comma = sci < scarr.length - 1 ? ',' : '';
+        lines.push('            { label: ' + JSON.stringify(sc.label) + ', elements: [' + elemStr + '] }' + comma);
+      });
+      lines.push('          ]');
+      lines.push('        }' + (si < sarr.length - 1 ? ',' : ''));
+    });
+    lines.push('      ]');
+    lines.push('    }' + (ki < arr.length - 1 ? ',' : ''));
+  });
+  lines.push('  };');
+  return lines.join('\n');
+}
+
+/* =====================================================
+   TOAST
+   ===================================================== */
+var toast = document.getElementById('te-toast');
+function showToast(msg, type) {
+  toast.textContent = msg;
+  toast.className = 'te-toast ' + (type || 'info');
+  toast.classList.add('show');
+  setTimeout(function() { toast.classList.remove('show'); }, 3000);
+}
+
+/* =====================================================
+   CONFIG GITHUB
+   ===================================================== */
+function chargerConfig() {
+  var saved = localStorage.getItem(LS_GH);
+  if (!saved) return;
+  var cfg = JSON.parse(saved);
+  document.getElementById('gh-token').value  = cfg.token  || '';
+  document.getElementById('gh-owner').value  = cfg.owner  || '';
+  document.getElementById('gh-repo').value   = cfg.repo   || '';
+  document.getElementById('gh-branch').value = cfg.branch || 'main';
+  document.getElementById('gh-path').value   = cfg.path   || 'plugins/rapport-intervention/index.html';
+}
+
+function lireConfig() {
+  return {
+    token:  document.getElementById('gh-token').value.trim(),
+    owner:  document.getElementById('gh-owner').value.trim(),
+    repo:   document.getElementById('gh-repo').value.trim(),
+    branch: document.getElementById('gh-branch').value.trim() || 'main',
+    path:   document.getElementById('gh-path').value.trim()
+  };
+}
+
+document.getElementById('gh-save-config').addEventListener('click', function() {
+  localStorage.setItem(LS_GH, JSON.stringify(lireConfig()));
+  showToast('Config GitHub sauvegardee', 'success');
+});
+
+/* =====================================================
+   PUSH GITHUB
+   ===================================================== */
+document.getElementById('te-push').addEventListener('click', async function() {
+  var cfg = lireConfig();
+  if (!cfg.token || !cfg.owner || !cfg.repo || !cfg.path) {
+    showToast('Config GitHub incomplete', 'error');
+    return;
+  }
+
+  showToast('Lecture du fichier en cours…', 'info');
+
+  var apiBase = 'https://api.github.com/repos/' + cfg.owner + '/' + cfg.repo + '/contents/' + cfg.path;
+  var headers = {
+    'Authorization': 'token ' + cfg.token,
+    'Accept': 'application/vnd.github+json',
+    'Content-Type': 'application/json'
+  };
+
+  try {
+    /* 1 — Lire le fichier actuel */
+    var getResp = await fetch(apiBase + '?ref=' + encodeURIComponent(cfg.branch), { headers: headers });
+    if (!getResp.ok) throw new Error('Lecture GitHub : ' + getResp.status + ' ' + getResp.statusText);
+    var fileData = await getResp.json();
+
+    /* 2 — Decoder */
+    var content = atob(fileData.content.replace(/\n/g, ''));
+    var sha = fileData.sha;
+
+    /* 3 — Remplacer TAXONOMIE */
+    var newBlock = serializerTaxoJS(taxo);
+    var regex = /var TAXONOMIE = \{[\s\S]*?\n  \};/;
+    if (!regex.test(content)) {
+      throw new Error('Bloc TAXONOMIE introuvable dans le fichier. Verifiez le chemin.');
+    }
+    var newContent = content.replace(regex, newBlock);
+
+    /* 4 — Encoder et pousser */
+    var encoded = btoa(unescape(encodeURIComponent(newContent)));
+    var putResp = await fetch(apiBase, {
+      method: 'PUT',
+      headers: headers,
+      body: JSON.stringify({
+        message: 'chore(taxonomie): mise a jour via editeur integre',
+        content: encoded,
+        sha: sha,
+        branch: cfg.branch
+      })
+    });
+    if (!putResp.ok) {
+      var errData = await putResp.json();
+      throw new Error('Push GitHub : ' + putResp.status + ' — ' + (errData.message || putResp.statusText));
+    }
+
+    showToast('Push GitHub reussi !', 'success');
+  } catch(err) {
+    console.error('[TaxoEditor] Push error:', err);
+    showToast('Erreur : ' + err.message, 'error');
+  }
+});
+
+/* =====================================================
+   BOUTONS TOOLBAR
+   ===================================================== */
+document.getElementById('te-back').addEventListener('click', function() {
+  window.location.hash = '#plugin-rapport-intervention';
+});
+
+document.getElementById('te-reset').addEventListener('click', function() {
+  if (confirm('Reinitialiser vers la taxonomie par defaut ? (les modifications non poussees seront perdues)')) {
+    taxo = clone(TAXO_DEFAUT);
+    sauvegarder();
+    render();
+    showToast('Taxonomie reinitialisee', 'info');
+  }
+});
+
+document.getElementById('te-copy-json').addEventListener('click', function() {
+  navigator.clipboard.writeText(JSON.stringify(taxo, null, 2)).then(function() {
+    showToast('JSON copie dans le presse-papier', 'success');
+  });
+});
+
+document.getElementById('te-copy-js').addEventListener('click', function() {
+  navigator.clipboard.writeText(serializerTaxoJS(taxo)).then(function() {
+    showToast('Bloc JS copie dans le presse-papier', 'success');
+  });
+});
+
+/* =====================================================
+   INIT
+   ===================================================== */
+charger();
+chargerConfig();
+render();
+
+})();
+</script>
