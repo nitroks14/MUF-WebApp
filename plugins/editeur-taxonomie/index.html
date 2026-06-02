@@ -116,7 +116,11 @@ var TAXO_DEFAUT = {
         subcats: [
           {
             label: 'Système de vide',
-            elements: ['Vanne principale', 'Vanne d\'atmosphère', 'Vanne de temporisation']
+            elements: [
+              { label: 'Vanne principale', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Vanne d\'atmosphère', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Vanne de temporisation', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           }
         ]
       },
@@ -125,11 +129,18 @@ var TAXO_DEFAUT = {
         subcats: [
           {
             label: 'Éléments chauffants',
-            elements: ['Barre de soudure supérieure', 'Barre de soudure inférieure', 'Résistance']
+            elements: [
+              { label: 'Barre de soudure supérieure', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Barre de soudure inférieure', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Résistance', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           },
           {
             label: 'Outillage soudure',
-            elements: ['Téflon', 'Joint de soudure']
+            elements: [
+              { label: 'Téflon', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Joint de soudure', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           }
         ]
       },
@@ -138,7 +149,10 @@ var TAXO_DEFAUT = {
         subcats: [
           {
             label: 'Étanchéité',
-            elements: ['Joint couvercle', 'Charnières']
+            elements: [
+              { label: 'Joint couvercle', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Charnières', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           }
         ]
       },
@@ -147,7 +161,12 @@ var TAXO_DEFAUT = {
         subcats: [
           {
             label: 'Pompe',
-            elements: ['Huile', 'Filtre d\'huile', 'Filtre à air', 'Courroie']
+            elements: [
+              { label: 'Huile', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Filtre d\'huile', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Filtre à air', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Courroie', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           }
         ]
       },
@@ -156,7 +175,11 @@ var TAXO_DEFAUT = {
         subcats: [
           {
             label: 'Électricité',
-            elements: ['Tableau électrique', 'Câblage', 'Temporisateurs']
+            elements: [
+              { label: 'Tableau électrique', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Câblage', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Temporisateurs', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           }
         ]
       }
@@ -170,15 +193,33 @@ var TAXO_DEFAUT = {
         subcats: [
           {
             label: 'Embiellage',
-            elements: ['Bielles', 'Manivelles', 'Paliers', 'Ressorts de rappel']
+            elements: [
+              { label: 'Bielles', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Manivelles', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Paliers', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Ressorts de rappel', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           },
           {
             label: 'Système de vide / gaz',
-            elements: ['Vannes de vide', 'Vannes de gaz', 'Tuyaux', 'Joints de raccord']
+            elements: [
+              { label: 'Vannes de vide', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Vannes de gaz', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Tuyaux', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Joints de raccord', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           },
           {
             label: 'Outillage',
-            elements: ['Lames de découpe', 'Pavés de soudure', 'Membranes / diaphragmes', 'Joints d\'outillage', 'Douilles de guidage', 'Paliers d\'outillage', 'Ressorts d\'outillage']
+            elements: [
+              { label: 'Lames de découpe', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Pavés de soudure', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Membranes / diaphragmes', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Joints d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Douilles de guidage', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Paliers d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Ressorts d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           }
         ]
       },
@@ -187,11 +228,19 @@ var TAXO_DEFAUT = {
         subcats: [
           {
             label: 'Déroulement',
-            elements: ['Rouleaux tendeurs', 'Douilles', 'Frein de bobine']
+            elements: [
+              { label: 'Rouleaux tendeurs', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Douilles', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Frein de bobine', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           },
           {
             label: 'Chaîne d\'avance',
-            elements: ['Chaîne', 'Pignons', 'Pinces film']
+            elements: [
+              { label: 'Chaîne', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Pignons', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Pinces film', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           }
         ]
       },
@@ -200,7 +249,11 @@ var TAXO_DEFAUT = {
         subcats: [
           {
             label: 'Coupe',
-            elements: ['Lame longitudinale', 'Contre-lame', 'Réglage position']
+            elements: [
+              { label: 'Lame longitudinale', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Contre-lame', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Réglage position', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           }
         ]
       },
@@ -209,7 +262,11 @@ var TAXO_DEFAUT = {
         subcats: [
           {
             label: 'Régulation',
-            elements: ['Contrôleurs de chauffe', 'Pyromètre', 'Câblage']
+            elements: [
+              { label: 'Contrôleurs de chauffe', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Pyromètre', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Câblage', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           }
         ]
       }
@@ -223,15 +280,29 @@ var TAXO_DEFAUT = {
         subcats: [
           {
             label: 'Embiellage',
-            elements: ['Bielles', 'Manivelles', 'Paliers', 'Ressorts']
+            elements: [
+              { label: 'Bielles', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Manivelles', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Paliers', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Ressorts', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           },
           {
             label: 'Système de vide',
-            elements: ['Vannes de vide', 'Tuyaux', 'Joints de raccord']
+            elements: [
+              { label: 'Vannes de vide', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Tuyaux', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Joints de raccord', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           },
           {
             label: 'Outillage formage',
-            elements: ['Joints d\'outillage', 'Membranes', 'Plaque de formage', 'Douilles de guidage']
+            elements: [
+              { label: 'Joints d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Membranes', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Plaque de formage', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Douilles de guidage', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           }
         ]
       },
@@ -240,15 +311,32 @@ var TAXO_DEFAUT = {
         subcats: [
           {
             label: 'Embiellage',
-            elements: ['Bielles', 'Manivelles', 'Paliers', 'Ressorts']
+            elements: [
+              { label: 'Bielles', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Manivelles', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Paliers', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Ressorts', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           },
           {
             label: 'Système de vide / gaz',
-            elements: ['Vannes de vide', 'Vannes de gaz', 'Tuyaux', 'Joints de raccord']
+            elements: [
+              { label: 'Vannes de vide', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Vannes de gaz', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Tuyaux', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Joints de raccord', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           },
           {
             label: 'Outillage soudure',
-            elements: ['Pavés de soudure', 'Membranes / diaphragmes', 'Joints d\'outillage', 'Douilles de guidage', 'Paliers', 'Ressorts d\'outillage']
+            elements: [
+              { label: 'Pavés de soudure', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Membranes / diaphragmes', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Joints d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Douilles de guidage', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Paliers', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Ressorts d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           }
         ]
       },
@@ -257,7 +345,12 @@ var TAXO_DEFAUT = {
         subcats: [
           {
             label: 'Coupe',
-            elements: ['Lames transversales', 'Contre-lames', 'Presses flans', 'Coupelles']
+            elements: [
+              { label: 'Lames transversales', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Contre-lames', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Presses flans', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Coupelles', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           }
         ]
       },
@@ -266,7 +359,11 @@ var TAXO_DEFAUT = {
         subcats: [
           {
             label: 'Coupe',
-            elements: ['Lame longitudinale', 'Contre-lame', 'Réglage position']
+            elements: [
+              { label: 'Lame longitudinale', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Contre-lame', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Réglage position', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           }
         ]
       },
@@ -275,11 +372,21 @@ var TAXO_DEFAUT = {
         subcats: [
           {
             label: 'Déroulement',
-            elements: ['Rouleaux', 'Douilles', 'Frein bobine', 'Tension film']
+            elements: [
+              { label: 'Rouleaux', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Douilles', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Frein bobine', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Tension film', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           },
           {
             label: 'Chaîne d\'avance',
-            elements: ['Chaînes', 'Pignons', 'Pinces', 'Ressorts de pince']
+            elements: [
+              { label: 'Chaînes', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Pignons', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Pinces', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Ressorts de pince', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           }
         ]
       },
@@ -288,7 +395,11 @@ var TAXO_DEFAUT = {
         subcats: [
           {
             label: 'Thermique',
-            elements: ['Contrôleurs de chauffe', 'Pyromètre', 'Circuit de refroidissement']
+            elements: [
+              { label: 'Contrôleurs de chauffe', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Pyromètre', actions: ['controle', 'nettoyage', 'remplacement'] },
+              { label: 'Circuit de refroidissement', actions: ['controle', 'nettoyage', 'remplacement'] }
+            ]
           }
         ]
       }
@@ -306,10 +417,27 @@ var taxo;
 /* Deep clone simple */
 function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
 
+/* Migration ancien format (strings -> objets {label, actions}) */
+function migrerSiNecessaire(t) {
+  Object.keys(t).forEach(function(mk) {
+    t[mk].stations.forEach(function(s) {
+      s.subcats.forEach(function(sc) {
+        sc.elements = sc.elements.map(function(e) {
+          if (typeof e === 'string') {
+            return { label: e, actions: ['controle', 'nettoyage', 'remplacement'] };
+          }
+          return e;
+        });
+      });
+    });
+  });
+  return t;
+}
+
 /* Chargement initial */
 function charger() {
   var saved = localStorage.getItem(LS_KEY);
-  taxo = saved ? JSON.parse(saved) : clone(TAXO_DEFAUT);
+  taxo = saved ? migrerSiNecessaire(JSON.parse(saved)) : clone(TAXO_DEFAUT);
 }
 
 /* Sauvegarde auto */
@@ -343,7 +471,10 @@ function serializerTaxoJS(t) {
       lines.push('          label: ' + JSON.stringify(s.label) + ',');
       lines.push('          subcats: [');
       s.subcats.forEach(function(sc, sci, scarr) {
-        var elemStr = sc.elements.map(function(e) { return JSON.stringify(e); }).join(', ');
+        var elemStr = sc.elements.map(function(e) {
+          var actionsStr = (e.actions || []).map(function(a) { return JSON.stringify(a); }).join(', ');
+          return '{ label: ' + JSON.stringify(e.label) + ', actions: [' + actionsStr + '] }';
+        }).join(', ');
         var comma = sci < scarr.length - 1 ? ',' : '';
         lines.push('            { label: ' + JSON.stringify(sc.label) + ', elements: [' + elemStr + '] }' + comma);
       });
@@ -513,12 +644,37 @@ var blockDefs = [
   },
   {
     "type": "taxo_element",
-    "message0": "Élément: %1",
+    "message0": "⚙ Élément: %1",
     "args0": [{"type": "field_input", "name": "LABEL", "text": "Nouvel élément"}],
+    "message1": "actions %1",
+    "args1": [{"type": "input_statement", "name": "ACTIONS", "check": "ACTION"}],
     "previousStatement": "ELEMENT",
     "nextStatement": "ELEMENT",
     "colour": 0,
-    "tooltip": "Bloc Élément (niveau 4)"
+    "tooltip": "Élément de maintenance (niveau 4)"
+  },
+  {
+    "type": "taxo_action",
+    "message0": "%1 %2",
+    "args0": [
+      {
+        "type": "field_dropdown",
+        "name": "ACTION_TYPE",
+        "options": [
+          ["✓ Contrôle", "controle"],
+          ["🧹 Nettoyage", "nettoyage"],
+          ["🔄 Remplacement", "remplacement"],
+          ["🟡 Graissage", "graissage"],
+          ["💧 Lubrification", "lubrification"],
+          ["⚙ Réglage", "reglage"]
+        ]
+      },
+      {"type": "field_input", "name": "NOTE", "text": ""}
+    ],
+    "previousStatement": "ACTION",
+    "nextStatement": "ACTION",
+    "colour": 65,
+    "tooltip": "Action applicable à cet élément"
   }
 ];
 
@@ -532,7 +688,9 @@ var toolbox = {
     {"kind": "block", "type": "taxo_machine", "fields": {"LABEL": "Nouvelle machine", "KEY": "machine_id"}},
     {"kind": "block", "type": "taxo_station", "fields": {"LABEL": "Nouvelle station"}},
     {"kind": "block", "type": "taxo_subcat", "fields": {"LABEL": "Nouvelle sous-catégorie"}},
-    {"kind": "block", "type": "taxo_element", "fields": {"LABEL": "Nouvel élément"}}
+    {"kind": "block", "type": "taxo_element", "fields": {"LABEL": "Nouvel élément"}},
+    {"kind": "label", "text": "Actions"},
+    {"kind": "block", "type": "taxo_action"}
   ]
 };
 
@@ -665,7 +823,7 @@ function chargerTaxoEnBlocs(workspace, taxo) {
         var prevElemBlock = null;
         subcat.elements.forEach(function(elem) {
           var eBlock = workspace.newBlock('taxo_element');
-          eBlock.setFieldValue(elem, 'LABEL');
+          eBlock.setFieldValue(elem.label || '', 'LABEL');
           eBlock.initSvg();
           eBlock.render();
 
@@ -676,6 +834,24 @@ function chargerTaxoEnBlocs(workspace, taxo) {
             var prevConn = prevElemBlock.nextConnection;
             if (prevConn && eBlock.previousConnection) prevConn.connect(eBlock.previousConnection);
           }
+
+          /* Blocs action */
+          var prevActionBlock = null;
+          (elem.actions || []).forEach(function(actionId) {
+            var aBlock = workspace.newBlock('taxo_action');
+            aBlock.setFieldValue(actionId, 'ACTION_TYPE');
+            aBlock.initSvg();
+            aBlock.render();
+
+            if (!prevActionBlock) {
+              var actionsConn = eBlock.getInput('ACTIONS').connection;
+              if (actionsConn && aBlock.previousConnection) actionsConn.connect(aBlock.previousConnection);
+            } else {
+              if (prevActionBlock.nextConnection && aBlock.previousConnection)
+                prevActionBlock.nextConnection.connect(aBlock.previousConnection);
+            }
+            prevActionBlock = aBlock;
+          });
 
           prevElemBlock = eBlock;
         });
@@ -733,7 +909,18 @@ function extraireTaxoDepuisWorkspace(workspace) {
                       var elemBlock = elemsInput.connection.targetBlock();
                       while (elemBlock) {
                         if (elemBlock.type === 'taxo_element') {
-                          elements.push(elemBlock.getFieldValue('LABEL') || '');
+                          var actions = [];
+                          var actionsInput = elemBlock.getInput('ACTIONS');
+                          if (actionsInput && actionsInput.connection && actionsInput.connection.targetBlock()) {
+                            var actionBlock = actionsInput.connection.targetBlock();
+                            while (actionBlock) {
+                              if (actionBlock.type === 'taxo_action') {
+                                actions.push(actionBlock.getFieldValue('ACTION_TYPE'));
+                              }
+                              actionBlock = actionBlock.nextConnection && actionBlock.nextConnection.targetBlock();
+                            }
+                          }
+                          elements.push({ label: elemBlock.getFieldValue('LABEL') || '', actions: actions });
                         }
                         elemBlock = elemBlock.nextConnection && elemBlock.nextConnection.targetBlock();
                       }

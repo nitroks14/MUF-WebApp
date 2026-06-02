@@ -515,7 +515,11 @@
           subcats: [
             {
               label: 'Système de vide',
-              elements: ['Vanne principale', 'Vanne d\'atmosphère', 'Vanne de temporisation']
+              elements: [
+                { label: 'Vanne principale', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Vanne d\'atmosphère', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Vanne de temporisation', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             }
           ]
         },
@@ -524,11 +528,18 @@
           subcats: [
             {
               label: 'Éléments chauffants',
-              elements: ['Barre de soudure supérieure', 'Barre de soudure inférieure', 'Résistance']
+              elements: [
+                { label: 'Barre de soudure supérieure', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Barre de soudure inférieure', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Résistance', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             },
             {
               label: 'Outillage soudure',
-              elements: ['Téflon', 'Joint de soudure']
+              elements: [
+                { label: 'Téflon', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Joint de soudure', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             }
           ]
         },
@@ -537,7 +548,10 @@
           subcats: [
             {
               label: 'Étanchéité',
-              elements: ['Joint couvercle', 'Charnières']
+              elements: [
+                { label: 'Joint couvercle', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Charnières', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             }
           ]
         },
@@ -546,7 +560,12 @@
           subcats: [
             {
               label: 'Pompe',
-              elements: ['Huile', 'Filtre d\'huile', 'Filtre à air', 'Courroie']
+              elements: [
+                { label: 'Huile', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Filtre d\'huile', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Filtre à air', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Courroie', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             }
           ]
         },
@@ -555,7 +574,11 @@
           subcats: [
             {
               label: 'Électricité',
-              elements: ['Tableau électrique', 'Câblage', 'Temporisateurs']
+              elements: [
+                { label: 'Tableau électrique', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Câblage', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Temporisateurs', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             }
           ]
         }
@@ -570,15 +593,33 @@
           subcats: [
             {
               label: 'Embiellage',
-              elements: ['Bielles', 'Manivelles', 'Paliers', 'Ressorts de rappel']
+              elements: [
+                { label: 'Bielles', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Manivelles', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Paliers', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Ressorts de rappel', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             },
             {
               label: 'Système de vide / gaz',
-              elements: ['Vannes de vide', 'Vannes de gaz', 'Tuyaux', 'Joints de raccord']
+              elements: [
+                { label: 'Vannes de vide', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Vannes de gaz', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Tuyaux', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Joints de raccord', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             },
             {
               label: 'Outillage',
-              elements: ['Lames de découpe', 'Pavés de soudure', 'Membranes / diaphragmes', 'Joints d\'outillage', 'Douilles de guidage', 'Paliers d\'outillage', 'Ressorts d\'outillage']
+              elements: [
+                { label: 'Lames de découpe', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Pavés de soudure', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Membranes / diaphragmes', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Joints d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Douilles de guidage', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Paliers d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Ressorts d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             }
           ]
         },
@@ -587,11 +628,19 @@
           subcats: [
             {
               label: 'Déroulement',
-              elements: ['Rouleaux tendeurs', 'Douilles', 'Frein de bobine']
+              elements: [
+                { label: 'Rouleaux tendeurs', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Douilles', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Frein de bobine', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             },
             {
               label: 'Chaîne d\'avance',
-              elements: ['Chaîne', 'Pignons', 'Pinces film']
+              elements: [
+                { label: 'Chaîne', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Pignons', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Pinces film', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             }
           ]
         },
@@ -600,7 +649,11 @@
           subcats: [
             {
               label: 'Coupe',
-              elements: ['Lame longitudinale', 'Contre-lame', 'Réglage position']
+              elements: [
+                { label: 'Lame longitudinale', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Contre-lame', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Réglage position', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             }
           ]
         },
@@ -609,7 +662,11 @@
           subcats: [
             {
               label: 'Régulation',
-              elements: ['Contrôleurs de chauffe', 'Pyromètre', 'Câblage']
+              elements: [
+                { label: 'Contrôleurs de chauffe', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Pyromètre', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Câblage', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             }
           ]
         }
@@ -624,15 +681,29 @@
           subcats: [
             {
               label: 'Embiellage',
-              elements: ['Bielles', 'Manivelles', 'Paliers', 'Ressorts']
+              elements: [
+                { label: 'Bielles', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Manivelles', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Paliers', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Ressorts', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             },
             {
               label: 'Système de vide',
-              elements: ['Vannes de vide', 'Tuyaux', 'Joints de raccord']
+              elements: [
+                { label: 'Vannes de vide', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Tuyaux', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Joints de raccord', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             },
             {
               label: 'Outillage formage',
-              elements: ['Joints d\'outillage', 'Membranes', 'Plaque de formage', 'Douilles de guidage']
+              elements: [
+                { label: 'Joints d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Membranes', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Plaque de formage', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Douilles de guidage', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             }
           ]
         },
@@ -641,15 +712,32 @@
           subcats: [
             {
               label: 'Embiellage',
-              elements: ['Bielles', 'Manivelles', 'Paliers', 'Ressorts']
+              elements: [
+                { label: 'Bielles', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Manivelles', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Paliers', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Ressorts', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             },
             {
               label: 'Système de vide / gaz',
-              elements: ['Vannes de vide', 'Vannes de gaz', 'Tuyaux', 'Joints de raccord']
+              elements: [
+                { label: 'Vannes de vide', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Vannes de gaz', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Tuyaux', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Joints de raccord', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             },
             {
               label: 'Outillage soudure',
-              elements: ['Pavés de soudure', 'Membranes / diaphragmes', 'Joints d\'outillage', 'Douilles de guidage', 'Paliers', 'Ressorts d\'outillage']
+              elements: [
+                { label: 'Pavés de soudure', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Membranes / diaphragmes', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Joints d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Douilles de guidage', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Paliers', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Ressorts d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             }
           ]
         },
@@ -658,7 +746,12 @@
           subcats: [
             {
               label: 'Coupe',
-              elements: ['Lames transversales', 'Contre-lames', 'Presses flans', 'Coupelles']
+              elements: [
+                { label: 'Lames transversales', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Contre-lames', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Presses flans', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Coupelles', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             }
           ]
         },
@@ -667,7 +760,11 @@
           subcats: [
             {
               label: 'Coupe',
-              elements: ['Lame longitudinale', 'Contre-lame', 'Réglage position']
+              elements: [
+                { label: 'Lame longitudinale', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Contre-lame', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Réglage position', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             }
           ]
         },
@@ -676,11 +773,21 @@
           subcats: [
             {
               label: 'Déroulement',
-              elements: ['Rouleaux', 'Douilles', 'Frein bobine', 'Tension film']
+              elements: [
+                { label: 'Rouleaux', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Douilles', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Frein bobine', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Tension film', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             },
             {
               label: 'Chaîne d\'avance',
-              elements: ['Chaînes', 'Pignons', 'Pinces', 'Ressorts de pince']
+              elements: [
+                { label: 'Chaînes', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Pignons', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Pinces', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Ressorts de pince', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             }
           ]
         },
@@ -689,7 +796,11 @@
           subcats: [
             {
               label: 'Thermique',
-              elements: ['Contrôleurs de chauffe', 'Pyromètre', 'Circuit de refroidissement']
+              elements: [
+                { label: 'Contrôleurs de chauffe', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Pyromètre', actions: ['controle', 'nettoyage', 'remplacement'] },
+                { label: 'Circuit de refroidissement', actions: ['controle', 'nettoyage', 'remplacement'] }
+              ]
             }
           ]
         }
@@ -916,56 +1027,88 @@
     var table = document.createElement('table');
     table.className = 'ri-table';
 
-    /* En-tête */
+    /* Libellés d'affichage par identifiant d'action */
+    var ACTION_LABELS = {
+      controle:      'Contrôle',
+      nettoyage:     'Nettoyage',
+      remplacement:  'Remplacement',
+      graissage:     'Graissage',
+      lubrification: 'Lubrification',
+      reglage:       'Réglage'
+    };
+
+    /* Ordre canonique des colonnes */
+    var ALL_ACTIONS = ['controle', 'nettoyage', 'remplacement', 'graissage', 'lubrification', 'reglage'];
+
+    /* Collecter l'union des actions présentes dans la sous-catégorie */
+    var actionsPresentes = [];
+    var ai;
+    for (ai = 0; ai < ALL_ACTIONS.length; ai++) {
+      var actionId = ALL_ACTIONS[ai];
+      var ei2;
+      for (ei2 = 0; ei2 < subcat.elements.length; ei2++) {
+        var elemCheck = subcat.elements[ei2];
+        var elemActions = typeof elemCheck === 'string'
+          ? ['controle', 'nettoyage', 'remplacement']
+          : (elemCheck.actions || []);
+        if (elemActions.indexOf(actionId) !== -1) {
+          actionsPresentes.push(actionId);
+          break;
+        }
+      }
+    }
+
+    /* En-tête dynamique */
     var thead = document.createElement('thead');
-    thead.innerHTML =
-      '<tr>' +
-        '<th>Élément</th>' +
-        '<th>Contrôle</th>' +
-        '<th>Nettoyage</th>' +
-        '<th>Remplacement</th>' +
-      '</tr>';
+    var theadHtml = '<tr><th>Élément</th>';
+    var hi;
+    for (hi = 0; hi < actionsPresentes.length; hi++) {
+      theadHtml += '<th>' + escHtml(ACTION_LABELS[actionsPresentes[hi]]) + '</th>';
+    }
+    theadHtml += '</tr>';
+    thead.innerHTML = theadHtml;
     table.appendChild(thead);
 
     /* Corps */
     var tbody = document.createElement('tbody');
     var ei;
     for (ei = 0; ei < subcat.elements.length; ei++) {
-      var element = subcat.elements[ei];
+      var elemObj = subcat.elements[ei];
+      var elementLabel = typeof elemObj === 'string' ? elemObj : (elemObj.label || '');
+      var elemActions  = typeof elemObj === 'string'
+        ? ['controle', 'nettoyage', 'remplacement']
+        : (elemObj.actions || []);
+
       var tr = document.createElement('tr');
-      tr.innerHTML =
-        '<td>' + escHtml(element) + '</td>' +
-        '<td class="ri-check-cell" data-label="Contrôle">' +
-          '<input type="checkbox" class="ri-check"' +
-          ' data-station="' + escAttr(stationLabel) + '"' +
-          ' data-subcat="' + escAttr(subcat.label) + '"' +
-          ' data-element="' + escAttr(element) + '"' +
-          ' data-action="Contrôle"' +
-          ' aria-label="' + escAttr(element) + ' — Contrôle">' +
-        '</td>' +
-        '<td class="ri-check-cell" data-label="Nettoyage">' +
-          '<input type="checkbox" class="ri-check"' +
-          ' data-station="' + escAttr(stationLabel) + '"' +
-          ' data-subcat="' + escAttr(subcat.label) + '"' +
-          ' data-element="' + escAttr(element) + '"' +
-          ' data-action="Nettoyage"' +
-          ' aria-label="' + escAttr(element) + ' — Nettoyage">' +
-        '</td>' +
-        '<td class="ri-check-cell" data-label="Remplacement">' +
-          '<input type="checkbox" class="ri-check"' +
-          ' data-station="' + escAttr(stationLabel) + '"' +
-          ' data-subcat="' + escAttr(subcat.label) + '"' +
-          ' data-element="' + escAttr(element) + '"' +
-          ' data-action="Remplacement"' +
-          ' aria-label="' + escAttr(element) + ' — Remplacement">' +
-        '</td>';
+      var trHtml = '<td>' + escHtml(elementLabel) + '</td>';
+
+      var ci2;
+      for (ci2 = 0; ci2 < actionsPresentes.length; ci2++) {
+        var aId = actionsPresentes[ci2];
+        var aLabel = ACTION_LABELS[aId];
+        if (elemActions.indexOf(aId) !== -1) {
+          trHtml +=
+            '<td class="ri-check-cell" data-label="' + escAttr(aLabel) + '">' +
+              '<input type="checkbox" class="ri-check"' +
+              ' data-station="' + escAttr(stationLabel) + '"' +
+              ' data-subcat="' + escAttr(subcat.label) + '"' +
+              ' data-element="' + escAttr(elementLabel) + '"' +
+              ' data-action="' + escAttr(aLabel) + '"' +
+              ' aria-label="' + escAttr(elementLabel) + ' — ' + escAttr(aLabel) + '">' +
+            '</td>';
+        } else {
+          trHtml += '<td class="ri-check-cell" data-label="' + escAttr(aLabel) + '"></td>';
+        }
+      }
+
+      tr.innerHTML = trHtml;
 
       /* Restaurer l'état des checkboxes depuis etat.travaux */
       var checkboxes = tr.querySelectorAll('input[type="checkbox"]');
       var ci;
       for (ci = 0; ci < checkboxes.length; ci++) {
         var cb = checkboxes[ci];
-        var actionsEtat = obtenirActionsEtat(stationLabel, subcat.label, element);
+        var actionsEtat = obtenirActionsEtat(stationLabel, subcat.label, elementLabel);
         if (actionsEtat.indexOf(cb.getAttribute('data-action')) !== -1) {
           cb.checked = true;
         }
