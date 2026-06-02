@@ -30,6 +30,10 @@
   --radius:    6px;   /* Border-radius boutons / cards */
   --radius-lg: 12px;
 
+  --input-height:  44px;          /* Touch-friendly iOS Safari */
+  --input-padding: 10px 14px;     /* Padding standard inputs/selects/textarea */
+  --btn-padding:   10px 20px;     /* Padding standard boutons */
+
   --sidebar-width:     240px;
   --bottom-nav-height: 60px;
   --header-height:     56px;
@@ -152,7 +156,7 @@ img {
   font-weight: 500;
   transition: background-color var(--transition), color var(--transition);
   border-left: 3px solid transparent;
-  min-height: 44px; /* Touch-friendly */
+  min-height: var(--input-height); /* Touch-friendly */
   text-decoration: none;
 }
 
@@ -247,7 +251,7 @@ img {
   font-weight: 500;
   text-decoration: none;
   transition: color var(--transition);
-  min-height: 44px; /* Touch-friendly */
+  min-height: var(--input-height); /* Touch-friendly */
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -331,7 +335,7 @@ img {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 20px;
+  padding: var(--btn-padding);
   border-radius: var(--radius);
   font-family: var(--font-family);
   font-size: var(--font-size-base);
@@ -339,7 +343,7 @@ img {
   cursor: pointer;
   border: 1px solid transparent;
   transition: background-color var(--transition), border-color var(--transition), color var(--transition), box-shadow var(--transition);
-  min-height: 44px; /* Touch-friendly */
+  min-height: var(--input-height); /* Touch-friendly */
   text-decoration: none;
   white-space: nowrap;
   user-select: none;
@@ -440,7 +444,7 @@ img {
   text-decoration: none;
   color: var(--color-text);
   -webkit-tap-highlight-color: transparent;
-  min-height: 44px;
+  min-height: var(--input-height);
 }
 
 .plugin-card:hover {
@@ -490,7 +494,7 @@ img {
 .form-control {
   display: block;
   width: 100%;
-  padding: 10px 14px;
+  padding: var(--input-padding);
   font-family: var(--font-family);
   font-size: var(--font-size-base);
   color: var(--color-text);
@@ -498,7 +502,7 @@ img {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   transition: border-color var(--transition), box-shadow var(--transition);
-  min-height: 44px; /* Touch-friendly */
+  min-height: var(--input-height); /* Touch-friendly */
   appearance: none;
   -webkit-appearance: none;
 }
