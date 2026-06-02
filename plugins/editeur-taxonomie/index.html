@@ -1,7 +1,7 @@
 <style>
 /* Reset + base */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: Inter, Roboto, sans-serif; background: #f0f4f8; min-height: 100vh; }
+body { font-family: Inter, Roboto, sans-serif; background: #e8edf2; min-height: 100vh; }
 
 /* Layout */
 .te-wrapper { display: flex; flex-direction: column; height: 100vh; }
@@ -12,8 +12,14 @@ body { font-family: Inter, Roboto, sans-serif; background: #f0f4f8; min-height: 
 }
 .te-toolbar-title { flex: 1; font-size: 1rem; font-weight: 700; }
 .te-body { display: flex; flex: 1; overflow: hidden; }
-.te-tree { flex: 1; overflow-y: auto; padding: 20px; }
-.te-sidebar { width: 300px; overflow-y: auto; padding: 20px; background: #fff; border-left: 1px solid #e2e8f0; flex-shrink: 0; }
+.te-tree {
+  flex: 1; overflow-y: auto; padding: 28px 32px;
+  background: #e8edf2;
+}
+.te-sidebar {
+  width: 300px; overflow-y: auto; padding: 20px;
+  background: #fff; border-left: 1px solid #e2e8f0; flex-shrink: 0;
+}
 
 /* Boutons toolbar */
 .te-btn {
@@ -29,105 +35,356 @@ body { font-family: Inter, Roboto, sans-serif; background: #f0f4f8; min-height: 
 .te-btn-success { background: #10b981; color: #fff; }
 .te-btn-success:hover { background: #059669; }
 
-/* Niveaux arbres */
-/* Machine — bleu Multivac */
-.te-machine {
-  background: #fff; border-radius: 12px; margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0,58,112,0.12); overflow: visible;
-  border: 2px solid #003A70;
-}
-.te-machine-header {
-  background: #003A70; color: #fff; padding: 12px 16px;
-  display: flex; align-items: center; gap: 8px; border-radius: 10px 10px 0 0;
-}
-.te-machine-body { padding: 12px 16px 16px; }
+/* =====================================================
+   SYSTEME DE BLOCS PUZZLE
+   ===================================================== */
 
-/* Station — vert */
-.te-station {
-  background: #f0fdf4; border-radius: 8px; margin-bottom: 10px;
-  border: 1.5px solid #2D6A4F;
+/* Conteneur racine des machines */
+.te-machines-root {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
-.te-station-header {
-  background: #2D6A4F; color: #fff; padding: 8px 12px;
-  display: flex; align-items: center; gap: 8px; border-radius: 6px 6px 0 0;
-}
-.te-station-body { padding: 10px 12px 12px; }
-.te-station.collapsed .te-station-body { display: none; }
 
-/* Sous-categorie — orange */
-.te-subcat {
-  background: #fff7ed; border-radius: 6px; margin-bottom: 8px;
-  border: 1.5px solid #E07B39;
+/* ── MACHINE (niveau 0) ── */
+.te-machine-block {
+  position: relative;
+  margin-bottom: 20px;
 }
-.te-subcat-header {
-  background: #E07B39; color: #fff; padding: 6px 10px;
-  display: flex; align-items: center; gap: 6px; border-radius: 4px 4px 0 0;
-  font-size: 0.85rem;
-}
-.te-subcat-body { padding: 8px 10px; }
-.te-subcat.collapsed .te-subcat-body { display: none; }
 
-/* Elements — chips gris */
-.te-elements { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.te-machine-block .te-block-head {
+  position: relative;
+  background: #003A70;
+  color: #fff;
+  border-radius: 10px 10px 0 10px;
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-left: 6px solid #001f40;
+  box-shadow: 0 3px 10px rgba(0,58,112,0.35);
+  cursor: grab;
+  user-select: none;
+  transition: box-shadow 0.15s, transform 0.15s;
+  min-height: 46px;
+  z-index: 1;
+}
+.te-machine-block .te-block-head:hover {
+  box-shadow: 0 5px 16px rgba(0,58,112,0.5);
+}
+
+/* Tenon bas machine (connecteur mâle vers les enfants) */
+.te-machine-block .te-block-head::after {
+  content: '';
+  position: absolute;
+  bottom: -12px;
+  left: 28px;
+  width: 20px;
+  height: 12px;
+  background: #003A70;
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 3px 6px rgba(0,58,112,0.3);
+  z-index: 2;
+}
+
+.te-machine-block .te-block-children {
+  position: relative;
+  margin-left: 28px;
+  padding: 14px 0 8px 20px;
+  border-left: 3px solid #003A70;
+  border-bottom: 3px solid #003A70;
+  border-radius: 0 0 0 8px;
+}
+
+/* Pas de border-bottom si pas d'enfants */
+.te-machine-block .te-block-children:empty {
+  padding: 0;
+  border: none;
+}
+
+/* ── STATION (niveau 1) ── */
+.te-station-block {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.te-station-block .te-block-head {
+  position: relative;
+  background: #2D6A4F;
+  color: #fff;
+  border-radius: 8px 8px 0 8px;
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-left: 5px solid #1a4032;
+  box-shadow: 0 2px 8px rgba(45,106,79,0.35);
+  cursor: grab;
+  user-select: none;
+  transition: box-shadow 0.15s, transform 0.15s;
+  min-height: 40px;
+  z-index: 1;
+}
+.te-station-block .te-block-head:hover {
+  box-shadow: 0 4px 12px rgba(45,106,79,0.5);
+}
+
+/* Encoche femelle en haut (emboîtement dans le parent) */
+.te-station-block .te-block-head::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 20px;
+  width: 20px;
+  height: 10px;
+  background: #e8edf2;
+  border-radius: 6px 6px 0 0;
+}
+
+/* Tenon bas */
+.te-station-block .te-block-head::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 20px;
+  width: 20px;
+  height: 10px;
+  background: #2D6A4F;
+  border-radius: 0 0 5px 5px;
+  box-shadow: 0 3px 5px rgba(45,106,79,0.25);
+  z-index: 2;
+}
+
+.te-station-block.collapsed .te-block-head::after {
+  display: none;
+}
+
+.te-station-block .te-block-children {
+  position: relative;
+  margin-left: 20px;
+  padding: 12px 0 6px 18px;
+  border-left: 3px solid #2D6A4F;
+  border-bottom: 3px solid #2D6A4F;
+  border-radius: 0 0 0 6px;
+}
+
+.te-station-block.collapsed .te-block-children { display: none; }
+
+/* ── SOUS-CATEGORIE (niveau 2) ── */
+.te-subcat-block {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.te-subcat-block .te-block-head {
+  position: relative;
+  background: #C05621;
+  color: #fff;
+  border-radius: 6px 6px 0 6px;
+  padding: 7px 10px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border-left: 4px solid #8B3D17;
+  box-shadow: 0 2px 6px rgba(192,86,33,0.35);
+  cursor: grab;
+  user-select: none;
+  transition: box-shadow 0.15s, transform 0.15s;
+  font-size: 0.88rem;
+  min-height: 36px;
+  z-index: 1;
+}
+.te-subcat-block .te-block-head:hover {
+  box-shadow: 0 3px 10px rgba(192,86,33,0.5);
+}
+
+.te-subcat-block .te-block-head::before {
+  content: '';
+  position: absolute;
+  top: -9px;
+  left: 16px;
+  width: 18px;
+  height: 9px;
+  background: #e8edf2;
+  border-radius: 5px 5px 0 0;
+}
+
+.te-subcat-block .te-block-head::after {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  left: 16px;
+  width: 18px;
+  height: 9px;
+  background: #C05621;
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 2px 4px rgba(192,86,33,0.25);
+  z-index: 2;
+}
+
+.te-subcat-block.collapsed .te-block-head::after {
+  display: none;
+}
+
+.te-subcat-block .te-block-children {
+  position: relative;
+  padding: 10px 10px 8px;
+  background: #fff5ee;
+  border: 2px solid #C05621;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+}
+
+.te-subcat-block.collapsed .te-block-children { display: none; }
+
+/* Pastille niveau subcat */
+.te-subcat-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.6);
+  flex-shrink: 0;
+}
+
+/* ── ELEMENTS (niveau 3, chips) ── */
+.te-elements {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
 .te-chip {
-  display: inline-flex; align-items: center; gap: 4px;
-  background: #4A5568; color: #fff; border-radius: 20px;
-  padding: 4px 10px; font-size: 0.78rem; cursor: grab;
-  user-select: none; transition: opacity 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #4A5568;
+  color: #fff;
+  border-radius: 6px;
+  padding: 5px 10px 5px 8px;
+  font-size: 0.78rem;
+  cursor: grab;
+  user-select: none;
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+  box-shadow: 0 1px 4px rgba(74,85,104,0.3);
+  border-left: 3px solid #2d3748;
+  position: relative;
 }
-.te-chip:active { cursor: grabbing; opacity: 0.7; }
+.te-chip::before {
+  content: '⬡';
+  font-size: 0.65rem;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+.te-chip:hover {
+  box-shadow: 0 2px 8px rgba(74,85,104,0.5);
+  transform: translateY(-1px);
+}
+.te-chip:active { cursor: grabbing; opacity: 0.7; transform: scale(0.97); }
+
 .te-chip-del {
-  background: none; border: none; color: rgba(255,255,255,0.7);
+  background: none; border: none; color: rgba(255,255,255,0.6);
   cursor: pointer; font-size: 1rem; line-height: 1; padding: 0;
   margin-left: 2px; transition: color 0.1s;
 }
 .te-chip-del:hover { color: #fff; }
 
-/* Drag handle */
+/* ── DRAG HANDLE ── */
 .te-drag {
-  cursor: grab; opacity: 0.5; font-size: 1.1rem; flex-shrink: 0;
+  cursor: grab;
+  opacity: 0.5;
+  font-size: 1rem;
+  flex-shrink: 0;
+  letter-spacing: -1px;
 }
 .te-drag:active { cursor: grabbing; }
 
-/* Labels editables */
+/* ── LABELS EDITABLES ── */
 .te-label {
-  flex: 1; cursor: text; outline: none; border-bottom: 1px solid transparent;
-  transition: border-color 0.15s; min-width: 40px;
+  flex: 1;
+  cursor: text;
+  outline: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s;
+  min-width: 40px;
+  font-weight: 600;
 }
 .te-label:focus { border-bottom-color: rgba(255,255,255,0.5); }
 
-/* Boutons d'action dans les niveaux */
+/* ── BOUTONS D'ACTION ── */
 .te-add-btn {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 5px 10px; border-radius: 6px; border: 1.5px dashed;
-  background: transparent; cursor: pointer; font-size: 0.8rem; font-family: inherit;
-  transition: all 0.15s; margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1.5px dashed;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-family: inherit;
+  transition: all 0.15s;
+  margin-top: 6px;
 }
 .te-add-btn-machine { border-color: #003A70; color: #003A70; }
 .te-add-btn-machine:hover { background: #003A70; color: #fff; }
 .te-add-btn-station { border-color: #2D6A4F; color: #2D6A4F; }
 .te-add-btn-station:hover { background: #2D6A4F; color: #fff; }
-.te-add-btn-subcat { border-color: #E07B39; color: #E07B39; }
-.te-add-btn-subcat:hover { background: #E07B39; color: #fff; }
+.te-add-btn-subcat { border-color: #C05621; color: #C05621; }
+.te-add-btn-subcat:hover { background: #C05621; color: #fff; }
 .te-add-btn-element { border-color: #4A5568; color: #4A5568; }
 .te-add-btn-element:hover { background: #4A5568; color: #fff; }
 
-/* Bouton supprimer niveau */
+/* ── BOUTON SUPPRIMER ── */
 .te-del-btn {
-  background: rgba(255,255,255,0.2); border: none; color: #fff;
-  border-radius: 4px; cursor: pointer; padding: 2px 6px; font-size: 0.85rem;
-  line-height: 1.4; transition: background 0.15s; flex-shrink: 0;
+  background: rgba(255,255,255,0.18);
+  border: none;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px 7px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  transition: background 0.15s;
+  flex-shrink: 0;
 }
-.te-del-btn:hover { background: rgba(239,68,68,0.8); }
+.te-del-btn:hover { background: rgba(239,68,68,0.85); }
 
-/* Chevron collapse */
+/* ── CHEVRON COLLAPSE ── */
 .te-chevron {
-  background: none; border: none; color: #fff; cursor: pointer;
-  font-size: 0.9rem; padding: 0; flex-shrink: 0; transition: transform 0.2s;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.8);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+  line-height: 1;
 }
 .collapsed .te-chevron { transform: rotate(-90deg); }
 
-/* Sidebar panels */
+/* ── DRAG OVER ── */
+.te-drag-over .te-block-head {
+  outline: 2px dashed #f59e0b;
+  outline-offset: 3px;
+}
+.te-dragging .te-block-head {
+  opacity: 0.45;
+  border-style: dashed !important;
+}
+
+/* Animation "snap" quand un bloc est droppé */
+@keyframes snap-in {
+  0%   { transform: scale(1.03); }
+  60%  { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}
+.te-snapped .te-block-head {
+  animation: snap-in 0.22s ease-out;
+}
+
+/* ── SIDEBAR ── */
 .te-panel { margin-bottom: 20px; }
 .te-panel-title {
   font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
@@ -142,7 +399,7 @@ body { font-family: Inter, Roboto, sans-serif; background: #f0f4f8; min-height: 
 }
 .te-field input:focus { border-color: #003A70; }
 
-/* Toast */
+/* ── TOAST ── */
 .te-toast {
   position: fixed; bottom: 24px; right: 24px; padding: 12px 20px;
   border-radius: 10px; color: #fff; font-size: 0.9rem; font-weight: 600;
@@ -156,13 +413,11 @@ body { font-family: Inter, Roboto, sans-serif; background: #f0f4f8; min-height: 
 .te-toast.error { background: #ef4444; }
 .te-toast.info { background: #003A70; }
 
-/* Drag over indicator */
-.te-drag-over { outline: 2px dashed #f59e0b; outline-offset: 2px; }
-
-/* Responsive */
+/* ── RESPONSIVE ── */
 @media (max-width: 768px) {
   .te-body { flex-direction: column; }
   .te-sidebar { width: 100%; border-left: none; border-top: 1px solid #e2e8f0; max-height: 300px; }
+  .te-tree { padding: 16px; }
 }
 </style>
 
@@ -451,38 +706,48 @@ function render() {
   sauvegarder();
   tree.innerHTML = '';
 
+  var root = document.createElement('div');
+  root.className = 'te-machines-root';
+
   Object.keys(taxo).forEach(function(machineKey, mi) {
     var machine = taxo[machineKey];
     var machineEl = creerMachine(machineKey, machine, mi);
-    tree.appendChild(machineEl);
+    root.appendChild(machineEl);
   });
 
   /* Bouton ajouter machine */
   var addMachine = document.createElement('button');
   addMachine.className = 'te-add-btn te-add-btn-machine';
   addMachine.innerHTML = '+ Ajouter une machine';
+  addMachine.style.marginTop = '8px';
   addMachine.addEventListener('click', function() {
     var key = 'machine_' + Date.now();
     taxo[key] = { label: 'Nouvelle machine', stations: [] };
     render();
   });
-  tree.appendChild(addMachine);
+  root.appendChild(addMachine);
+
+  tree.appendChild(root);
 }
 
 function creerMachine(key, machine, mi) {
-  var el = document.createElement('div');
-  el.className = 'te-machine';
-  el.draggable = true;
-  el.dataset.key = key;
+  var block = document.createElement('div');
+  block.className = 'te-machine-block';
+  block.dataset.key = key;
 
   /* Header machine */
-  var header = document.createElement('div');
-  header.className = 'te-machine-header';
+  var head = document.createElement('div');
+  head.className = 'te-block-head';
+  head.draggable = true;
 
   var drag = document.createElement('span');
   drag.className = 'te-drag';
-  drag.textContent = '⠣';
+  drag.textContent = '⠿';
   drag.title = 'Glisser pour reordonner';
+
+  var icon = document.createElement('span');
+  icon.textContent = '▣';
+  icon.style.cssText = 'font-size:0.95rem;opacity:0.8;flex-shrink:0;';
 
   var label = document.createElement('span');
   label.className = 'te-label';
@@ -508,17 +773,18 @@ function creerMachine(key, machine, mi) {
     }
   });
 
-  header.appendChild(drag);
-  header.appendChild(label);
-  header.appendChild(delBtn);
-  el.appendChild(header);
+  head.appendChild(drag);
+  head.appendChild(icon);
+  head.appendChild(label);
+  head.appendChild(delBtn);
+  block.appendChild(head);
 
-  /* Body machine */
-  var body = document.createElement('div');
-  body.className = 'te-machine-body';
+  /* Children container */
+  var children = document.createElement('div');
+  children.className = 'te-block-children';
 
   machine.stations.forEach(function(station, si) {
-    body.appendChild(creerStation(machine, station, si));
+    children.appendChild(creerStation(machine, station, si));
   });
 
   /* Bouton ajouter station */
@@ -529,39 +795,43 @@ function creerMachine(key, machine, mi) {
     machine.stations.push({ label: 'Nouvelle station', subcats: [] });
     render();
   });
-  body.appendChild(addStation);
-  el.appendChild(body);
+  children.appendChild(addStation);
+  block.appendChild(children);
 
   /* Drag & drop machine */
-  setupDrag(el, function() { return Object.keys(taxo); }, function(newKeys) {
+  setupDrag(block, head, function() { return Object.keys(taxo); }, function(newKeys) {
     var newTaxo = {};
     newKeys.forEach(function(k) { newTaxo[k] = taxo[k]; });
     taxo = newTaxo;
     render();
   }, key);
 
-  return el;
+  return block;
 }
 
 function creerStation(machine, station, si) {
-  var el = document.createElement('div');
-  el.className = 'te-station';
+  var block = document.createElement('div');
+  block.className = 'te-station-block';
 
   /* Header station */
-  var header = document.createElement('div');
-  header.className = 'te-station-header';
+  var head = document.createElement('div');
+  head.className = 'te-block-head';
 
   var chevron = document.createElement('button');
   chevron.className = 'te-chevron';
   chevron.textContent = '▾';
   chevron.title = 'Plier/Deplier';
   chevron.addEventListener('click', function() {
-    el.classList.toggle('collapsed');
+    block.classList.toggle('collapsed');
   });
 
   var drag = document.createElement('span');
   drag.className = 'te-drag';
-  drag.textContent = '⠣';
+  drag.textContent = '⠿';
+
+  var icon = document.createElement('span');
+  icon.textContent = '▸';
+  icon.style.cssText = 'font-size:0.85rem;opacity:0.8;flex-shrink:0;';
 
   var label = document.createElement('span');
   label.className = 'te-label';
@@ -586,18 +856,19 @@ function creerStation(machine, station, si) {
     }
   });
 
-  header.appendChild(chevron);
-  header.appendChild(drag);
-  header.appendChild(label);
-  header.appendChild(delBtn);
-  el.appendChild(header);
+  head.appendChild(chevron);
+  head.appendChild(drag);
+  head.appendChild(icon);
+  head.appendChild(label);
+  head.appendChild(delBtn);
+  block.appendChild(head);
 
-  /* Body station */
-  var body = document.createElement('div');
-  body.className = 'te-station-body';
+  /* Children container */
+  var children = document.createElement('div');
+  children.className = 'te-block-children';
 
   station.subcats.forEach(function(subcat, sci) {
-    body.appendChild(creerSubcat(station, subcat, sci));
+    children.appendChild(creerSubcat(station, subcat, sci));
   });
 
   var addSubcat = document.createElement('button');
@@ -607,26 +878,29 @@ function creerStation(machine, station, si) {
     station.subcats.push({ label: 'Nouvelle sous-catégorie', elements: [] });
     render();
   });
-  body.appendChild(addSubcat);
-  el.appendChild(body);
+  children.appendChild(addSubcat);
+  block.appendChild(children);
 
-  return el;
+  return block;
 }
 
 function creerSubcat(station, subcat, sci) {
-  var el = document.createElement('div');
-  el.className = 'te-subcat';
+  var block = document.createElement('div');
+  block.className = 'te-subcat-block';
 
   /* Header subcat */
-  var header = document.createElement('div');
-  header.className = 'te-subcat-header';
+  var head = document.createElement('div');
+  head.className = 'te-block-head';
 
   var chevron = document.createElement('button');
   chevron.className = 'te-chevron';
   chevron.textContent = '▾';
   chevron.addEventListener('click', function() {
-    el.classList.toggle('collapsed');
+    block.classList.toggle('collapsed');
   });
+
+  var dot = document.createElement('span');
+  dot.className = 'te-subcat-dot';
 
   var label = document.createElement('span');
   label.className = 'te-label';
@@ -651,14 +925,15 @@ function creerSubcat(station, subcat, sci) {
     }
   });
 
-  header.appendChild(chevron);
-  header.appendChild(label);
-  header.appendChild(delBtn);
-  el.appendChild(header);
+  head.appendChild(chevron);
+  head.appendChild(dot);
+  head.appendChild(label);
+  head.appendChild(delBtn);
+  block.appendChild(head);
 
-  /* Body subcat — elements en chips */
-  var body = document.createElement('div');
-  body.className = 'te-subcat-body';
+  /* Children (éléments) */
+  var children = document.createElement('div');
+  children.className = 'te-block-children';
 
   var chipsEl = document.createElement('div');
   chipsEl.className = 'te-elements';
@@ -667,7 +942,6 @@ function creerSubcat(station, subcat, sci) {
     chipsEl.appendChild(creerChip(subcat, elem, ei));
   });
 
-  /* Input ajouter element */
   var addEl = document.createElement('button');
   addEl.className = 'te-add-btn te-add-btn-element';
   addEl.style.cssText = 'font-size:0.75rem;padding:3px 8px;margin-top:4px;';
@@ -680,11 +954,11 @@ function creerSubcat(station, subcat, sci) {
     }
   });
 
-  body.appendChild(chipsEl);
-  body.appendChild(addEl);
-  el.appendChild(body);
+  children.appendChild(chipsEl);
+  children.appendChild(addEl);
+  block.appendChild(children);
 
-  return el;
+  return block;
 }
 
 function creerChip(subcat, elem, ei) {
@@ -724,29 +998,42 @@ function creerChip(subcat, elem, ei) {
 /* =====================================================
    DRAG & DROP (HTML5 natif) pour machines
    ===================================================== */
-function setupDrag(el, getKeys, setKeys, myKey) {
-  el.addEventListener('dragstart', function(e) {
+function setupDrag(block, handle, getKeys, setKeys, myKey) {
+  /* Le drag démarre seulement depuis le handle (head) */
+  handle.addEventListener('mousedown', function() {
+    block.draggable = true;
+  });
+
+  block.addEventListener('dragstart', function(e) {
     dragSrc = myKey;
     e.dataTransfer.effectAllowed = 'move';
-    setTimeout(function() { el.style.opacity = '0.4'; }, 0);
+    setTimeout(function() { block.classList.add('te-dragging'); }, 0);
   });
-  el.addEventListener('dragend', function() {
-    el.style.opacity = '';
+
+  block.addEventListener('dragend', function() {
+    block.classList.remove('te-dragging');
+    block.draggable = false;
     tree.querySelectorAll('.te-drag-over').forEach(function(d) {
       d.classList.remove('te-drag-over');
     });
   });
-  el.addEventListener('dragover', function(e) {
+
+  block.addEventListener('dragover', function(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    el.classList.add('te-drag-over');
+    block.classList.add('te-drag-over');
   });
-  el.addEventListener('dragleave', function() {
-    el.classList.remove('te-drag-over');
+
+  block.addEventListener('dragleave', function(e) {
+    /* Eviter que les enfants triggent dragleave */
+    if (!block.contains(e.relatedTarget)) {
+      block.classList.remove('te-drag-over');
+    }
   });
-  el.addEventListener('drop', function(e) {
+
+  block.addEventListener('drop', function(e) {
     e.preventDefault();
-    el.classList.remove('te-drag-over');
+    block.classList.remove('te-drag-over');
     if (dragSrc && dragSrc !== myKey) {
       var keys = getKeys();
       var fromIdx = keys.indexOf(dragSrc);
