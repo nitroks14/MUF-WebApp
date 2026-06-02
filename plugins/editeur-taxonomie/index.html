@@ -22,7 +22,7 @@
   z-index: 10;
 }
 .te-toolbar-title { flex: 1; font-weight: 700; font-size: var(--font-size-md); }
-.te-btn { padding: 7px 14px; border-radius: 7px; border: none; cursor: pointer; font-size: 0.82rem; font-weight: 600; font-family: inherit; }
+.te-btn { padding: 7px 14px; border-radius: var(--radius); border: none; cursor: pointer; font-size: 0.82rem; font-weight: 600; font-family: inherit; }
 .te-btn-ghost { background: rgba(255,255,255,0.15); color: #fff; }
 .te-btn-ghost:hover { background: rgba(255,255,255,0.25); }
 .te-btn-json { background: #f59e0b; color: #1a1a1a; }
@@ -55,7 +55,7 @@
 /* Toast */
 .te-toast {
   position: fixed; bottom: 24px; right: 24px;
-  padding: 12px 20px; border-radius: 10px; color: #fff;
+  padding: 12px 20px; border-radius: var(--radius); color: #fff;
   font-size: 0.88rem; font-weight: 600; font-family: inherit;
   box-shadow: 0 4px 16px rgba(0,0,0,0.25); z-index: 9999;
   transform: translateY(80px); opacity: 0; transition: all 0.3s; pointer-events: none;
@@ -68,7 +68,7 @@
 /* Champs config */
 .te-field { margin-bottom: 10px; }
 .te-field label { display: block; font-size: 0.78rem; color: #475569; margin-bottom: 3px; font-weight: 500; }
-.te-field input { width: 100%; padding: 7px 9px; border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: 0.82rem; }
+.te-field input { width: 100%; padding: 7px 9px; border: 1.5px solid #e2e8f0; border-radius: var(--radius); font-size: 0.82rem; }
 .te-panel-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 10px; }
 </style>
 
@@ -94,7 +94,7 @@
   <div class="te-field"><label>Repo</label><input type="text" id="gh-repo" placeholder="MUF-WebApp"></div>
   <div class="te-field"><label>Branche</label><input type="text" id="gh-branch" placeholder="main"></div>
   <div class="te-field"><label>Chemin fichier</label><input type="text" id="gh-path" placeholder="plugins/rapport-intervention/index.html"></div>
-  <button id="gh-save-config" style="width:100%;padding:10px;background:#003A70;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:600;">Sauvegarder</button>
+  <button id="gh-save-config" style="width:100%;padding:10px;background:#003A70;color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:0.85rem;font-weight:600;">Sauvegarder</button>
   <p style="font-size:var(--font-size-xs);color:#94a3b8;margin-top:12px;line-height:1.5;">Permission requise : <strong>contents: write</strong></p>
 </div>
 

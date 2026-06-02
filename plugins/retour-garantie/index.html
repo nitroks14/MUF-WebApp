@@ -43,7 +43,7 @@
     background: transparent;
     color: var(--color-text);
   }
-  .brg-table input:focus { background: rgba(0,58,112,0.05); border-radius: 3px; }
+  .brg-table input:focus { background: rgba(0,58,112,0.05); border-radius: var(--radius); }
   .brg-table .brg-col-ref { width: 55%; }
   .brg-table .brg-col-qty { width: 14%; }
   .brg-table .brg-col-ser { width: 24%; }
@@ -71,7 +71,7 @@
     font-size: 17px;
     padding: 4px 6px;
     line-height: 1;
-    border-radius: 3px;
+    border-radius: var(--radius);
     transition: color 0.15s;
   }
   .brg-del-btn:hover { color: #E53E3E; background: rgba(229,62,62,0.08); }
@@ -106,7 +106,7 @@
   }
 
   .form-control.brg-invalid { border-color: #E53E3E !important; box-shadow: 0 0 0 3px rgba(229,62,62,0.15); }
-  .brg-table input.brg-invalid { background: rgba(229,62,62,0.08) !important; border-radius: 3px; }
+  .brg-table input.brg-invalid { background: rgba(229,62,62,0.08) !important; border-radius: var(--radius); }
 
   .brg-note-box {
     background-color: var(--color-bg);
