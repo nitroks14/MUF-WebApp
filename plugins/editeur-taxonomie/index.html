@@ -21,7 +21,7 @@
   flex-shrink: 0;
   z-index: 10;
 }
-.te-toolbar-title { flex: 1; font-weight: 700; font-size: 0.95rem; }
+.te-toolbar-title { flex: 1; font-weight: 700; font-size: var(--font-size-md); }
 .te-btn { padding: 7px 14px; border-radius: 7px; border: none; cursor: pointer; font-size: 0.82rem; font-weight: 600; font-family: inherit; }
 .te-btn-ghost { background: rgba(255,255,255,0.15); color: #fff; }
 .te-btn-ghost:hover { background: rgba(255,255,255,0.25); }
@@ -95,7 +95,7 @@
   <div class="te-field"><label>Branche</label><input type="text" id="gh-branch" placeholder="main"></div>
   <div class="te-field"><label>Chemin fichier</label><input type="text" id="gh-path" placeholder="plugins/rapport-intervention/index.html"></div>
   <button id="gh-save-config" style="width:100%;padding:10px;background:#003A70;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:600;">Sauvegarder</button>
-  <p style="font-size:0.75rem;color:#94a3b8;margin-top:12px;line-height:1.5;">Permission requise : <strong>contents: write</strong></p>
+  <p style="font-size:var(--font-size-xs);color:#94a3b8;margin-top:12px;line-height:1.5;">Permission requise : <strong>contents: write</strong></p>
 </div>
 
 <div class="te-toast" id="te-toast"></div>

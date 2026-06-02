@@ -18,7 +18,9 @@
   --color-white:        #FFFFFF;
 
   --font-family: 'Inter', 'Roboto', sans-serif;
+  --font-size-xs:   0.75rem;   /* 12px — micro-labels, badges */
   --font-size-sm:   0.875rem;  /* 14px */
+  --font-size-md:   0.95rem;   /* ~15px — entre sm et base */
   --font-size-base: 1rem;      /* 16px */
   --font-size-lg:   1.125rem;  /* 18px */
   --font-size-xl:   1.25rem;   /* 20px */
@@ -117,7 +119,7 @@ img {
 .sidebar-logo-badge {
   background-color: rgba(255, 255, 255, 0.2);
   color: var(--color-white);
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 4px;
