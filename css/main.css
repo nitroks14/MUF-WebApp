@@ -10,6 +10,7 @@
   --color-primary:      #003A70;   /* Bleu marine Multivac */
   --color-primary-dark: #002850;   /* Bleu marine foncé (hover) */
   --color-bg:           #F5F5F5;   /* Fond gris très clair */
+  --color-bg-alt:       #F8F9FA;   /* Fond secondaire (panneaux, sous-sections) */
   --color-surface:      #FFFFFF;   /* Fond des cards / panneaux */
   --color-text:         #333333;   /* Texte principal gris foncé */
   --color-text-muted:   #666666;   /* Texte secondaire */
