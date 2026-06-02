@@ -303,6 +303,29 @@
     font-size: var(--font-size-sm);
     font-style: italic;
   }
+
+  /* ---- Aperçu live du rapport ---- */
+  .ri-apercu-titre {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--color-text);
+    margin-top: 20px;
+    margin-bottom: 6px;
+  }
+
+  .ri-apercu-zone {
+    background: #F0F4F8;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    font-family: monospace;
+    font-size: 0.78rem;
+    white-space: pre;
+    max-height: 300px;
+    overflow-y: auto;
+    line-height: 1.5;
+    color: var(--color-text);
+  }
 </style>
 
 <!-- ============================================================
@@ -465,6 +488,9 @@
     </div>
 
     <p class="ri-archive-status" id="ri-archive-status" aria-live="polite"></p>
+
+    <div class="ri-apercu-titre">Aperçu du rapport</div>
+    <div class="ri-apercu-zone" id="ri-apercu-zone" aria-label="Aperçu du rapport généré" aria-live="polite"></div>
 
   </div>
 </div>
@@ -750,16 +776,19 @@
   domBtnSolo.addEventListener('click', function () {
     appliquerTypeIntervention('solo');
     demanderSauvegarde();
+    mettreAJourApercu();
   });
 
   domBtnBinome.addEventListener('click', function () {
     appliquerTypeIntervention('binome');
     demanderSauvegarde();
+    mettreAJourApercu();
   });
 
   domBinomeNom.addEventListener('input', function () {
     etat.binome = domBinomeNom.value;
     demanderSauvegarde();
+    mettreAJourApercu();
   });
 
   /* ============================================================
@@ -799,6 +828,7 @@
     if (!machine) { return; }
     appliquerMachine(machine);
     demanderSauvegarde();
+    mettreAJourApercu();
   }
 
   domMachineGrid.addEventListener('click', gererClicMachine);
@@ -986,6 +1016,7 @@
     if (Object.keys(etat.travaux[station]).length === 0) { delete etat.travaux[station]; }
 
     demanderSauvegarde();
+    mettreAJourApercu();
   }
 
   /* ============================================================
@@ -1003,6 +1034,7 @@
         etat.tests.splice(idx, 1);
       }
       demanderSauvegarde();
+      mettreAJourApercu();
     });
   }
 
@@ -1016,21 +1048,36 @@
   }
 
   /* ============================================================
-     Génération du texte du rapport
+     Génération du texte du rapport (format modernisé)
      ============================================================ */
-  function genererTexteRapport() {
+  var SEP_EPAIS  = '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+  var SEP_FIN    = '──────────────────────────────────────────';
+  var PAD_TOTAL  = 40; /* largeur fixe pour l'alignement des points */
+
+  function padPoints(nom, total) {
+    /* Retourne "Nom d'élément ....." pour atteindre `total` chars avant les actions */
+    var manque = total - nom.length;
+    if (manque < 2) { manque = 2; }
+    var points = '';
+    var i;
+    for (i = 0; i < manque; i++) { points += '.'; }
+    return nom + ' ' + points + ' ';
+  }
+
+  function genererTexte() {
     var lignes = [];
 
-    lignes.push('RAPPORT D\'INTERVENTION — Multivac France');
-    lignes.push('========================================');
+    lignes.push(SEP_EPAIS);
+    lignes.push(' RAPPORT D\'INTERVENTION MULTIVAC');
+    lignes.push(SEP_EPAIS);
 
     var typeLabel = etat.typeIntervention === 'binome'
       ? 'Binôme' + (etat.binome ? ' (' + etat.binome + ')' : '')
       : 'Solo';
-    lignes.push('Intervention : ' + typeLabel);
+    lignes.push(' Intervention : ' + typeLabel);
 
     if (etat.typeMachine && TAXONOMIE[etat.typeMachine]) {
-      lignes.push('Machine : ' + TAXONOMIE[etat.typeMachine].label);
+      lignes.push(' Machine : ' + TAXONOMIE[etat.typeMachine].label);
     }
 
     lignes.push('');
@@ -1038,46 +1085,68 @@
     /* Travaux effectués */
     var stations = Object.keys(etat.travaux);
     if (stations.length > 0) {
-      lignes.push('TRAVAUX EFFECTUÉS');
-      lignes.push('-----------------');
+      lignes.push(' TRAVAUX EFFECTUÉS');
+      lignes.push(SEP_FIN);
 
       var si;
       for (si = 0; si < stations.length; si++) {
         var stationLabel = stations[si];
-        lignes.push('[' + stationLabel + ']');
+        lignes.push(' ▸ ' + stationLabel);
 
         var subcats = Object.keys(etat.travaux[stationLabel]);
         var sci;
         for (sci = 0; sci < subcats.length; sci++) {
           var subcatLabel = subcats[sci];
-          lignes.push('  [' + subcatLabel + ']');
+          lignes.push('   ' + subcatLabel);
 
           var elements = Object.keys(etat.travaux[stationLabel][subcatLabel]);
           var ei;
           for (ei = 0; ei < elements.length; ei++) {
             var elementLabel = elements[ei];
             var actions = etat.travaux[stationLabel][subcatLabel][elementLabel];
-            var ai;
-            for (ai = 0; ai < actions.length; ai++) {
-              lignes.push('    ✔ ' + elementLabel + ' — ' + actions[ai]);
+            /* Regrouper toutes les actions sur une seule ligne */
+            if (actions.length > 0) {
+              lignes.push('     • ' + padPoints(elementLabel, PAD_TOTAL) + actions.join(', '));
             }
           }
         }
+
+        /* Ligne vide entre stations sauf la dernière */
+        if (si < stations.length - 1) {
+          lignes.push('');
+        }
       }
+
+      lignes.push('');
+      lignes.push(SEP_FIN);
     }
 
     /* Tests */
     if (etat.tests.length > 0) {
-      lignes.push('');
-      lignes.push('TESTS ET VALIDATIONS');
-      lignes.push('--------------------');
+      lignes.push(' TESTS ET VALIDATIONS');
+      lignes.push(SEP_FIN);
       var testi;
       for (testi = 0; testi < etat.tests.length; testi++) {
-        lignes.push('  ✔ ' + etat.tests[testi]);
+        lignes.push('   ✓ ' + etat.tests[testi]);
       }
+      lignes.push('');
+      lignes.push(SEP_EPAIS);
+    } else {
+      lignes.push(SEP_EPAIS);
     }
 
     return lignes.join('\n');
+  }
+
+  /* ============================================================
+     Aperçu live — mise à jour de la zone de prévisualisation
+     ============================================================ */
+  var domApercu = null; /* initialisé après le DOM */
+
+  function mettreAJourApercu() {
+    if (!domApercu) { domApercu = el('ri-apercu-zone'); }
+    if (!domApercu) { return; }
+    domApercu.textContent = genererTexte();
   }
 
   /* ============================================================
@@ -1085,7 +1154,7 @@
      Compatible Safari iOS : fallback textarea
      ============================================================ */
   domBtnCopier.addEventListener('click', function () {
-    var texte = genererTexteRapport();
+    var texte = genererTexte();
 
     function fallbackCopy(txt) {
       var area = document.createElement('textarea');
@@ -1164,6 +1233,7 @@
 
     afficherStatut('', '');
     try { localStorage.removeItem(RI_KEY); } catch (e) {}
+    mettreAJourApercu();
   });
 
   /* ============================================================
@@ -1232,6 +1302,7 @@
   }
 
   restaurerDepuisEtat();
+  mettreAJourApercu();
 
 })();
 </script>
