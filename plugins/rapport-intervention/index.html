@@ -1,18 +1,18 @@
 <!--
   Plugin : Rapport d'intervention
-  Plugin 5 â MUF-WebApp
-  IIFE strict â localStorage clÃ© ri_brouillon â debounce 600ms
-  Compatible Safari iOS â pas de modules ES6
-  PrÃ©fixe CSS : .ri-
+  Plugin 5 Ã¢ÂÂ MUF-WebApp
+  IIFE strict Ã¢ÂÂ localStorage clÃÂ© ri_brouillon Ã¢ÂÂ debounce 600ms
+  Compatible Safari iOS Ã¢ÂÂ pas de modules ES6
+  PrÃÂ©fixe CSS : .ri-
 -->
 
 <style>
   /* ============================================================
-     Styles spÃ©cifiques â Rapport d'intervention
-     HÃ©rite des variables CSS de main.css
+     Styles spÃÂ©cifiques Ã¢ÂÂ Rapport d'intervention
+     HÃÂ©rite des variables CSS de main.css
      ============================================================ */
 
-  /* ---- En-tÃªte / toggle Solo/BinÃ´me ---- */
+  /* ---- En-tÃÂªte / toggle Solo/BinÃÂ´me ---- */
   .ri-toggle-group {
     display: flex;
     gap: 8px;
@@ -106,7 +106,7 @@
     margin-top: 2px;
   }
 
-  /* ---- Checklists â accordÃ©ons ---- */
+  /* ---- Checklists Ã¢ÂÂ accordÃÂ©ons ---- */
   .ri-checklists {
     margin-top: 8px;
   }
@@ -171,7 +171,7 @@
     padding: 12px 16px 16px;
   }
 
-  /* ---- Sous-catÃ©gorie titre ---- */
+  /* ---- Sous-catÃÂ©gorie titre ---- */
   .ri-subcat-title {
     font-size: var(--font-size-sm);
     font-weight: 700;
@@ -232,7 +232,7 @@
     background: rgba(0, 58, 112, 0.03);
   }
 
-  /* Checkbox stylÃ©e */
+  /* Checkbox stylÃÂ©e */
   .ri-check {
     width: 20px;
     height: 20px;
@@ -241,7 +241,7 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Dropdown d'Ã©tat de contrÃ´le */
+  /* Dropdown d'ÃÂ©tat de contrÃÂ´le */
   .ri-etat {
     font-size: 0.8rem;
     padding: 3px 6px;
@@ -300,7 +300,7 @@
     .ri-actions .btn { width: 100%; }
   }
 
-  /* ---- Machine non sÃ©lectionnÃ©e ---- */
+  /* ---- Machine non sÃÂ©lectionnÃÂ©e ---- */
   .ri-no-machine {
     background: var(--color-bg);
     border: 1px dashed var(--color-border);
@@ -312,7 +312,7 @@
     font-style: italic;
   }
 
-  /* ---- AperÃ§u live du rapport ---- */
+  /* ---- AperÃÂ§u live du rapport ---- */
   .ri-apercu-titre {
     font-size: var(--font-size-sm);
     font-weight: 700;
@@ -337,7 +337,7 @@
 </style>
 
 <!-- ============================================================
-     EN-TÃTE DU PLUGIN
+     EN-TÃÂTE DU PLUGIN
      ============================================================ -->
 <div class="card mb-24">
   <div class="card-header">
@@ -346,13 +346,13 @@
   </div>
   <div class="card-body">
     <p class="text-muted text-sm">
-      Cochez les travaux effectuÃ©s station par station. Le rapport est sauvegardÃ© automatiquement et peut Ãªtre copiÃ© en texte structurÃ©.
+      Cochez les travaux effectuÃÂ©s station par station. Le rapport est sauvegardÃÂ© automatiquement et peut ÃÂªtre copiÃÂ© en texte structurÃÂ©.
     </p>
   </div>
 </div>
 
 <!-- ============================================================
-     SECTION 1 â EN-TÃTE : Solo / BinÃ´me
+     SECTION 1 Ã¢ÂÂ EN-TÃÂTE : Solo / BinÃÂ´me
      ============================================================ -->
 <div class="card mb-24">
   <div class="card-header">
@@ -362,20 +362,20 @@
 
     <div class="ri-toggle-group" id="ri-toggle-group" role="group" aria-label="Type d'intervention">
       <button class="ri-toggle-btn ri-active" type="button" data-value="solo" id="ri-btn-solo">Solo</button>
-      <button class="ri-toggle-btn" type="button" data-value="binome" id="ri-btn-binome">BinÃ´me</button>
+      <button class="ri-toggle-btn" type="button" data-value="binome" id="ri-btn-binome">BinÃÂ´me</button>
     </div>
 
     <div class="ri-binome-field" id="ri-binome-field">
-      <label class="form-label" for="ri-binome-nom">Nom du binÃ´me</label>
+      <label class="form-label" for="ri-binome-nom">Nom du binÃÂ´me</label>
       <input class="form-control" id="ri-binome-nom" type="text"
-             placeholder="PrÃ©nom Nom du binÃ´me" autocomplete="off">
+             placeholder="PrÃÂ©nom Nom du binÃÂ´me" autocomplete="off">
     </div>
 
   </div>
 </div>
 
 <!-- ============================================================
-     SECTION 2 â SÃLECTION DE LA MACHINE
+     SECTION 2 Ã¢ÂÂ SÃÂLECTION DE LA MACHINE
      ============================================================ -->
 <div class="card mb-24">
   <div class="card-header">
@@ -383,24 +383,24 @@
   </div>
   <div class="card-body">
 
-    <div class="ri-machine-grid" id="ri-machine-grid" role="group" aria-label="SÃ©lectionner le type de machine">
+    <div class="ri-machine-grid" id="ri-machine-grid" role="group" aria-label="SÃÂ©lectionner le type de machine">
 
       <div class="ri-machine-card" data-machine="cloche" id="ri-card-cloche" role="button" tabindex="0" aria-pressed="false">
         <span class="ri-machine-card-icon" aria-hidden="true">&#x1F514;</span>
         <span class="ri-machine-card-name">Cloche</span>
-        <span class="ri-machine-card-serie">SÃ©rie C</span>
+        <span class="ri-machine-card-serie">SÃÂ©rie C</span>
       </div>
 
       <div class="ri-machine-card" data-machine="operculeuse" id="ri-card-operculeuse" role="button" tabindex="0" aria-pressed="false">
         <span class="ri-machine-card-icon" aria-hidden="true">&#x1F4E6;</span>
         <span class="ri-machine-card-name">Operculeuse</span>
-        <span class="ri-machine-card-serie">SÃ©rie T</span>
+        <span class="ri-machine-card-serie">SÃÂ©rie T</span>
       </div>
 
       <div class="ri-machine-card" data-machine="thermoformeuse" id="ri-card-thermoformeuse" role="button" tabindex="0" aria-pressed="false">
         <span class="ri-machine-card-icon" aria-hidden="true">&#x2699;&#xFE0F;</span>
         <span class="ri-machine-card-name">Thermoformeuse</span>
-        <span class="ri-machine-card-serie">SÃ©rie R</span>
+        <span class="ri-machine-card-serie">SÃÂ©rie R</span>
       </div>
 
     </div>
@@ -409,23 +409,23 @@
 </div>
 
 <!-- ============================================================
-     SECTION 3 â CHECKLISTS TRAVAUX (contenu dynamique)
+     SECTION 3 Ã¢ÂÂ CHECKLISTS TRAVAUX (contenu dynamique)
      ============================================================ -->
 <div class="card mb-24" id="ri-checklists-card">
   <div class="card-header">
-    <h3 class="card-title" id="ri-checklists-title">Travaux effectuÃ©s</h3>
+    <h3 class="card-title" id="ri-checklists-title">Travaux effectuÃÂ©s</h3>
   </div>
   <div class="card-body">
     <div id="ri-checklists-container">
       <div class="ri-no-machine" id="ri-no-machine">
-        SÃ©lectionnez un type de machine ci-dessus pour afficher les checklists.
+        SÃÂ©lectionnez un type de machine ci-dessus pour afficher les checklists.
       </div>
     </div>
   </div>
 </div>
 
 <!-- ============================================================
-     SECTION 4 â TESTS ET VALIDATIONS (toutes machines)
+     SECTION 4 Ã¢ÂÂ TESTS ET VALIDATIONS (toutes machines)
      ============================================================ -->
 <div class="card mb-24">
   <div class="card-header">
@@ -447,8 +447,8 @@
       </li>
       <li class="ri-test-item">
         <label>
-          <input class="ri-check" type="checkbox" data-test="Test dÃ©coupe" id="ri-test-2">
-          Test dÃ©coupe
+          <input class="ri-check" type="checkbox" data-test="Test dÃÂ©coupe" id="ri-test-2">
+          Test dÃÂ©coupe
         </label>
       </li>
       <li class="ri-test-item">
@@ -465,8 +465,8 @@
       </li>
       <li class="ri-test-item">
         <label>
-          <input class="ri-check" type="checkbox" data-test="Formation opÃ©rateur" id="ri-test-5">
-          Formation opÃ©rateur
+          <input class="ri-check" type="checkbox" data-test="Formation opÃÂ©rateur" id="ri-test-5">
+          Formation opÃÂ©rateur
         </label>
       </li>
     </ul>
@@ -474,7 +474,7 @@
 </div>
 
 <!-- ============================================================
-     SECTION 5 â ACTIONS
+     SECTION 5 Ã¢ÂÂ ACTIONS
      ============================================================ -->
 <div class="card mb-24">
   <div class="card-header">
@@ -492,13 +492,13 @@
         </svg>
         Copier le rapport
       </button>
-      <button class="btn btn-outline btn-sm" id="ri-btn-reset" type="button">RÃ©initialiser</button>
+      <button class="btn btn-outline btn-sm" id="ri-btn-reset" type="button">RÃÂ©initialiser</button>
     </div>
 
     <p class="ri-archive-status" id="ri-archive-status" aria-live="polite"></p>
 
-    <div class="ri-apercu-titre">AperÃ§u du rapport</div>
-    <div class="ri-apercu-zone" id="ri-apercu-zone" aria-label="AperÃ§u du rapport gÃ©nÃ©rÃ©" aria-live="polite"></div>
+    <div class="ri-apercu-titre">AperÃÂ§u du rapport</div>
+    <div class="ri-apercu-zone" id="ri-apercu-zone" aria-label="AperÃÂ§u du rapport gÃÂ©nÃÂ©rÃÂ©" aria-live="polite"></div>
 
   </div>
 </div>
@@ -511,12 +511,12 @@
   'use strict';
 
   /* ============================================================
-     Taxonomie complÃ¨te des machines et stations
-     Structure : machine â stations â { label, subcats: [ { label, elements: [] } ] }
+     Taxonomie complÃÂ¨te des machines et stations
+     Structure : machine Ã¢ÂÂ stations Ã¢ÂÂ { label, subcats: [ { label, elements: [] } ] }
      ============================================================ */
-  var ETATS_DEFAUT = ['Bon', 'Moyen', 'DÃ©gradÃ©', "DÃ©but d'oxydation", 'Oxydation avancÃ©e'];
+  var ETATS_DEFAUT = ['Bon', 'Moyen', 'DÃÂ©gradÃÂ©', "DÃÂ©but d'oxydation", 'Oxydation avancÃÂ©e'];
 
-    var TAXONOMIE = {
+      var TAXONOMIE = {
     _etats: ["Bon", "Moyen", "Dégradé", "Début d'oxydation", "Oxydation avancée"],
     cloche: {
       label: "Cloche (Série C)",
@@ -635,18 +635,18 @@
     }
   };
 
-  /* Liste des Ã©tats de contrÃ´le (issue de la taxonomie, fallback dÃ©faut) */
+  /* Liste des ÃÂ©tats de contrÃÂ´le (issue de la taxonomie, fallback dÃÂ©faut) */
   function getEtats() {
     return (TAXONOMIE._etats && TAXONOMIE._etats.length) ? TAXONOMIE._etats : ETATS_DEFAUT;
   }
 
   /* ============================================================
-     ClÃ© localStorage
+     ClÃÂ© localStorage
      ============================================================ */
   var RI_KEY = 'ri_brouillon';
 
   /* ============================================================
-     Ãtat en mÃ©moire
+     ÃÂtat en mÃÂ©moire
      ============================================================ */
   var etat = {
     typeIntervention: 'solo',
@@ -658,7 +658,7 @@
   };
 
   /* ============================================================
-     RÃ©fÃ©rences DOM
+     RÃÂ©fÃÂ©rences DOM
      ============================================================ */
   function el(id) { return document.getElementById(id); }
 
@@ -689,7 +689,7 @@
   function sauvegarder() {
     try {
       localStorage.setItem(RI_KEY, JSON.stringify(etat));
-    } catch (e) { /* quota â silencieux */ }
+    } catch (e) { /* quota Ã¢ÂÂ silencieux */ }
   }
 
   function chargerDepuisLS() {
@@ -701,7 +701,7 @@
   }
 
   /* ============================================================
-     Toggle Solo / BinÃ´me
+     Toggle Solo / BinÃÂ´me
      ============================================================ */
   function appliquerTypeIntervention(type) {
     etat.typeIntervention = type;
@@ -736,12 +736,12 @@
   });
 
   /* ============================================================
-     SÃ©lection machine â cards
+     SÃÂ©lection machine Ã¢ÂÂ cards
      ============================================================ */
   function appliquerMachine(machine) {
     etat.typeMachine = machine;
 
-    /* Mise Ã  jour visuelle des cards */
+    /* Mise ÃÂ  jour visuelle des cards */
     var cards = domMachineGrid.querySelectorAll('.ri-machine-card');
     var i;
     for (i = 0; i < cards.length; i++) {
@@ -763,7 +763,7 @@
 
   function gererClicMachine(e) {
     var target = e.target;
-    /* Remonter jusqu'Ã  la card si clic sur un enfant */
+    /* Remonter jusqu'ÃÂ  la card si clic sur un enfant */
     while (target && !target.getAttribute('data-machine')) {
       target = target.parentElement;
     }
@@ -777,7 +777,7 @@
 
   domMachineGrid.addEventListener('click', gererClicMachine);
 
-  /* AccessibilitÃ© clavier */
+  /* AccessibilitÃÂ© clavier */
   domMachineGrid.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -786,7 +786,7 @@
   });
 
   /* ============================================================
-     Rendu des accordÃ©ons et tableaux de checklists
+     Rendu des accordÃÂ©ons et tableaux de checklists
      ============================================================ */
   function rendreChecklists(machine) {
     var data = TAXONOMIE[machine];
@@ -823,7 +823,7 @@
     var inner = document.createElement('div');
     inner.className = 'ri-accordion-inner';
 
-    /* Sous-catÃ©gories */
+    /* Sous-catÃÂ©gories */
     var si;
     for (si = 0; si < station.subcats.length; si++) {
       var subcat = station.subcats[si];
@@ -832,7 +832,7 @@
 
     body.appendChild(inner);
 
-    /* Toggle accordÃ©on */
+    /* Toggle accordÃÂ©on */
     header.addEventListener('click', function () {
       var ouvert = divAccordeon.className.indexOf('ri-open') !== -1;
       if (ouvert) {
@@ -860,20 +860,20 @@
     var table = document.createElement('table');
     table.className = 'ri-table';
 
-    /* LibellÃ©s d'affichage par identifiant d'action */
+    /* LibellÃÂ©s d'affichage par identifiant d'action */
     var ACTION_LABELS = {
-      controle:      'ContrÃ´le',
+      controle:      'ContrÃÂ´le',
       nettoyage:     'Nettoyage',
       remplacement:  'Remplacement',
       graissage:     'Graissage',
       lubrification: 'Lubrification',
-      reglage:       'RÃ©glage'
+      reglage:       'RÃÂ©glage'
     };
 
     /* Ordre canonique des colonnes */
     var ALL_ACTIONS = ['controle', 'nettoyage', 'remplacement', 'graissage', 'lubrification', 'reglage'];
 
-    /* Collecter l'union des actions prÃ©sentes dans la sous-catÃ©gorie */
+    /* Collecter l'union des actions prÃÂ©sentes dans la sous-catÃÂ©gorie */
     var actionsPresentes = [];
     var ai;
     for (ai = 0; ai < ALL_ACTIONS.length; ai++) {
@@ -891,9 +891,9 @@
       }
     }
 
-    /* En-tÃªte dynamique */
+    /* En-tÃÂªte dynamique */
     var thead = document.createElement('thead');
-    var theadHtml = '<tr><th>ÃlÃ©ment</th>';
+    var theadHtml = '<tr><th>ÃÂlÃÂ©ment</th>';
     var hi;
     for (hi = 0; hi < actionsPresentes.length; hi++) {
       theadHtml += '<th>' + escHtml(ACTION_LABELS[actionsPresentes[hi]]) + '</th>';
@@ -928,8 +928,8 @@
               ' data-station="' + escAttr(stationLabel) + '"' +
               ' data-subcat="' + escAttr(subcat.label) + '"' +
               ' data-element="' + escAttr(elementLabel) + '"' +
-              ' aria-label="Ãtat â ' + escAttr(elementLabel) + '">' +
-              '<option value="">â Ã©tat â</option>';
+              ' aria-label="ÃÂtat Ã¢ÂÂ ' + escAttr(elementLabel) + '">' +
+              '<option value="">Ã¢ÂÂ ÃÂ©tat Ã¢ÂÂ</option>';
             var oi;
             for (oi = 0; oi < etatsListe.length; oi++) {
               selectHtml += '<option value="' + escAttr(etatsListe[oi]) + '">' + escHtml(etatsListe[oi]) + '</option>';
@@ -943,7 +943,7 @@
               ' data-subcat="' + escAttr(subcat.label) + '"' +
               ' data-element="' + escAttr(elementLabel) + '"' +
               ' data-action="' + escAttr(aLabel) + '"' +
-              ' aria-label="' + escAttr(elementLabel) + ' â ' + escAttr(aLabel) + '">' +
+              ' aria-label="' + escAttr(elementLabel) + ' Ã¢ÂÂ ' + escAttr(aLabel) + '">' +
               selectHtml +
             '</td>';
         } else {
@@ -953,7 +953,7 @@
 
       tr.innerHTML = trHtml;
 
-      /* Restaurer l'Ã©tat des checkboxes depuis etat.travaux */
+      /* Restaurer l'ÃÂ©tat des checkboxes depuis etat.travaux */
       var checkboxes = tr.querySelectorAll('input[type="checkbox"]');
       var ci;
       for (ci = 0; ci < checkboxes.length; ci++) {
@@ -965,16 +965,16 @@
         cb.addEventListener('change', gererChangementChecklist);
       }
 
-      /* Dropdown d'Ã©tat de contrÃ´le : restauration + listener */
+      /* Dropdown d'ÃÂ©tat de contrÃÂ´le : restauration + listener */
       var selectEtat = tr.querySelector('.ri-etat');
       if (selectEtat) {
         var sStation = selectEtat.getAttribute('data-station');
         var sSubcat  = selectEtat.getAttribute('data-subcat');
         var sElement = selectEtat.getAttribute('data-element');
 
-        /* Afficher le select si le ContrÃ´le est cochÃ© */
+        /* Afficher le select si le ContrÃÂ´le est cochÃÂ© */
         var actionsEnregistrees = obtenirActionsEtat(sStation, sSubcat, sElement);
-        if (actionsEnregistrees.indexOf('ContrÃ´le') !== -1) {
+        if (actionsEnregistrees.indexOf('ContrÃÂ´le') !== -1) {
           selectEtat.style.display = 'block';
           var valEnreg = obtenirEtatControle(sStation, sSubcat, sElement);
           if (valEnreg) { selectEtat.value = valEnreg; }
@@ -1002,7 +1002,7 @@
   }
 
   /* ============================================================
-     Gestion de l'Ã©tat travaux
+     Gestion de l'ÃÂ©tat travaux
      ============================================================ */
   function obtenirActionsEtat(station, subcat, element) {
     if (!etat.travaux[station]) { return []; }
@@ -1010,14 +1010,14 @@
     return etat.travaux[station][subcat][element] || [];
   }
 
-  /* Lecture de l'Ã©tat de contrÃ´le enregistrÃ© pour un Ã©lÃ©ment */
+  /* Lecture de l'ÃÂ©tat de contrÃÂ´le enregistrÃÂ© pour un ÃÂ©lÃÂ©ment */
   function obtenirEtatControle(station, subcat, element) {
     if (!etat.etats[station]) { return ''; }
     if (!etat.etats[station][subcat]) { return ''; }
     return etat.etats[station][subcat][element] || '';
   }
 
-  /* Ãcriture / purge de l'Ã©tat de contrÃ´le (avec nettoyage des niveaux vides) */
+  /* ÃÂcriture / purge de l'ÃÂ©tat de contrÃÂ´le (avec nettoyage des niveaux vides) */
   function definirEtatControle(station, subcat, element, valeur) {
     if (valeur) {
       if (!etat.etats[station]) { etat.etats[station] = {}; }
@@ -1039,7 +1039,7 @@
     var element  = cb.getAttribute('data-element');
     var action   = cb.getAttribute('data-action');
 
-    /* Initialiser la structure si nÃ©cessaire */
+    /* Initialiser la structure si nÃÂ©cessaire */
     if (!etat.travaux[station]) { etat.travaux[station] = {}; }
     if (!etat.travaux[station][subcat]) { etat.travaux[station][subcat] = {}; }
     if (!etat.travaux[station][subcat][element]) { etat.travaux[station][subcat][element] = []; }
@@ -1053,13 +1053,13 @@
       actions.splice(idx, 1);
     }
 
-    /* Nettoyer les entrÃ©es vides */
+    /* Nettoyer les entrÃÂ©es vides */
     if (actions.length === 0) { delete etat.travaux[station][subcat][element]; }
     if (Object.keys(etat.travaux[station][subcat]).length === 0) { delete etat.travaux[station][subcat]; }
     if (Object.keys(etat.travaux[station]).length === 0) { delete etat.travaux[station]; }
 
-    /* Dropdown d'Ã©tat liÃ© au ContrÃ´le */
-    if (action === 'ContrÃ´le') {
+    /* Dropdown d'ÃÂ©tat liÃÂ© au ContrÃÂ´le */
+    if (action === 'ContrÃÂ´le') {
       var cell = cb.closest('td');
       var selectEtat = cell ? cell.querySelector('.ri-etat') : null;
       if (selectEtat) {
@@ -1106,14 +1106,14 @@
   }
 
   /* ============================================================
-     GÃ©nÃ©ration du texte du rapport (format modernisÃ©)
+     GÃÂ©nÃÂ©ration du texte du rapport (format modernisÃÂ©)
      ============================================================ */
-  var SEP_EPAIS  = 'ââââââââââââââââââââââââââââââââââââââââ';
-  var SEP_FIN    = 'ââââââââââââââââââââââââââââââââââââââââââ';
+  var SEP_EPAIS  = 'Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ';
+  var SEP_FIN    = 'Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ';
   var PAD_TOTAL  = 40; /* largeur fixe pour l'alignement des points */
 
   function padPoints(nom, total) {
-    /* Retourne "Nom d'Ã©lÃ©ment ....." pour atteindre `total` chars avant les actions */
+    /* Retourne "Nom d'ÃÂ©lÃÂ©ment ....." pour atteindre `total` chars avant les actions */
     var manque = total - nom.length;
     if (manque < 2) { manque = 2; }
     var points = '';
@@ -1130,7 +1130,7 @@
     lignes.push(SEP_EPAIS);
 
     var typeLabel = etat.typeIntervention === 'binome'
-      ? 'BinÃ´me' + (etat.binome ? ' (' + etat.binome + ')' : '')
+      ? 'BinÃÂ´me' + (etat.binome ? ' (' + etat.binome + ')' : '')
       : 'Solo';
     lignes.push(' Intervention : ' + typeLabel);
 
@@ -1140,16 +1140,16 @@
 
     lignes.push('');
 
-    /* Travaux effectuÃ©s */
+    /* Travaux effectuÃÂ©s */
     var stations = Object.keys(etat.travaux);
     if (stations.length > 0) {
-      lignes.push(' TRAVAUX EFFECTUÃS');
+      lignes.push(' TRAVAUX EFFECTUÃÂS');
       lignes.push(SEP_FIN);
 
       var si;
       for (si = 0; si < stations.length; si++) {
         var stationLabel = stations[si];
-        lignes.push(' â¸ ' + stationLabel);
+        lignes.push(' Ã¢ÂÂ¸ ' + stationLabel);
 
         var subcats = Object.keys(etat.travaux[stationLabel]);
         var sci;
@@ -1166,17 +1166,17 @@
             if (actions.length > 0) {
               var etatControle = obtenirEtatControle(stationLabel, subcatLabel, elementLabel);
               var actionsAffichees = actions.map(function (a) {
-                if (a === 'ContrÃ´le' && etatControle) {
-                  return 'ContrÃ´le (' + etatControle + ')';
+                if (a === 'ContrÃÂ´le' && etatControle) {
+                  return 'ContrÃÂ´le (' + etatControle + ')';
                 }
                 return a;
               });
-              lignes.push('     â¢ ' + padPoints(elementLabel, PAD_TOTAL) + actionsAffichees.join(', '));
+              lignes.push('     Ã¢ÂÂ¢ ' + padPoints(elementLabel, PAD_TOTAL) + actionsAffichees.join(', '));
             }
           }
         }
 
-        /* Ligne vide entre stations sauf la derniÃ¨re */
+        /* Ligne vide entre stations sauf la derniÃÂ¨re */
         if (si < stations.length - 1) {
           lignes.push('');
         }
@@ -1192,7 +1192,7 @@
       lignes.push(SEP_FIN);
       var testi;
       for (testi = 0; testi < etat.tests.length; testi++) {
-        lignes.push('   â ' + etat.tests[testi]);
+        lignes.push('   Ã¢ÂÂ ' + etat.tests[testi]);
       }
       lignes.push('');
       lignes.push(SEP_EPAIS);
@@ -1204,9 +1204,9 @@
   }
 
   /* ============================================================
-     AperÃ§u live â mise Ã  jour de la zone de prÃ©visualisation
+     AperÃÂ§u live Ã¢ÂÂ mise ÃÂ  jour de la zone de prÃÂ©visualisation
      ============================================================ */
-  var domApercu = null; /* initialisÃ© aprÃ¨s le DOM */
+  var domApercu = null; /* initialisÃÂ© aprÃÂ¨s le DOM */
 
   function mettreAJourApercu() {
     if (!domApercu) { domApercu = el('ri-apercu-zone'); }
@@ -1232,7 +1232,7 @@
       area.select();
       try {
         document.execCommand('copy');
-        afficherStatut('CopiÃ© !', 'ok');
+        afficherStatut('CopiÃÂ© !', 'ok');
       } catch (e) {
         afficherStatut('Impossible de copier sur cet appareil.', 'err');
       }
@@ -1241,7 +1241,7 @@
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(texte).then(function () {
-        afficherStatut('CopiÃ© !', 'ok');
+        afficherStatut('CopiÃÂ© !', 'ok');
         setTimeout(function () { afficherStatut('', ''); }, 2000);
       }).catch(function () {
         fallbackCopy(texte);
@@ -1254,7 +1254,7 @@
 
     /* Feedback visuel sur le bouton */
     var labelOriginal = domBtnCopier.innerHTML;
-    domBtnCopier.textContent = 'CopiÃ© !';
+    domBtnCopier.textContent = 'CopiÃÂ© !';
     domBtnCopier.disabled = true;
     setTimeout(function () {
       domBtnCopier.innerHTML = labelOriginal;
@@ -1263,10 +1263,10 @@
   });
 
   /* ============================================================
-     RÃ©initialisation
+     RÃÂ©initialisation
      ============================================================ */
   domBtnReset.addEventListener('click', function () {
-    if (!confirm('RÃ©initialiser le rapport ? Toutes les cases cochÃ©es seront effacÃ©es.')) { return; }
+    if (!confirm('RÃÂ©initialiser le rapport ? Toutes les cases cochÃÂ©es seront effacÃÂ©es.')) { return; }
 
     etat.typeIntervention = 'solo';
     etat.binome = '';
@@ -1278,7 +1278,7 @@
     appliquerTypeIntervention('solo');
     domBinomeNom.value = '';
 
-    /* DÃ©-sÃ©lectionner toutes les cards machine */
+    /* DÃÂ©-sÃÂ©lectionner toutes les cards machine */
     var cards = domMachineGrid.querySelectorAll('.ri-machine-card');
     var i;
     for (i = 0; i < cards.length; i++) {
@@ -1291,10 +1291,10 @@
     var noMachine = document.createElement('div');
     noMachine.className = 'ri-no-machine';
     noMachine.id = 'ri-no-machine';
-    noMachine.textContent = 'SÃ©lectionnez un type de machine ci-dessus pour afficher les checklists.';
+    noMachine.textContent = 'SÃÂ©lectionnez un type de machine ci-dessus pour afficher les checklists.';
     domContainer.appendChild(noMachine);
 
-    /* DÃ©cocher les tests */
+    /* DÃÂ©cocher les tests */
     restaurerTests();
 
     afficherStatut('', '');
@@ -1321,7 +1321,7 @@
   }
 
   /* ============================================================
-     Utilitaires d'Ã©chappement HTML / attributs
+     Utilitaires d'ÃÂ©chappement HTML / attributs
      ============================================================ */
   function escHtml(str) {
     return String(str)
@@ -1338,10 +1338,10 @@
   }
 
   /* ============================================================
-     Restauration complÃ¨te depuis localStorage
+     Restauration complÃÂ¨te depuis localStorage
      ============================================================ */
   function restaurerDepuisEtat() {
-    /* Toggle Solo/BinÃ´me */
+    /* Toggle Solo/BinÃÂ´me */
     appliquerTypeIntervention(etat.typeIntervention);
     if (etat.binome) { domBinomeNom.value = etat.binome; }
 
@@ -1359,7 +1359,7 @@
      ============================================================ */
   var donnees = chargerDepuisLS();
   if (donnees) {
-    /* Fusionner les donnÃ©es restaurÃ©es dans etat */
+    /* Fusionner les donnÃÂ©es restaurÃÂ©es dans etat */
     if (donnees.typeIntervention) { etat.typeIntervention = donnees.typeIntervention; }
     if (donnees.binome)           { etat.binome           = donnees.binome; }
     if (donnees.typeMachine)      { etat.typeMachine      = donnees.typeMachine; }
