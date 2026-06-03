@@ -933,12 +933,23 @@ document.getElementById('te-etats-btn').addEventListener('click', function() {
    ===================================================== */
 var pushEnCours = false;
 
+/* Décode du base64 (réponse GitHub) en vraie chaîne UTF-8.
+   atob() seul renvoie une chaîne binaire Latin-1 : les octets UTF-8 multi-octets
+   (ex. é = 0xC3 0xA9) deviendraient 2 caractères et seraient ré-encodés par
+   btoa(unescape(encodeURIComponent(...))) → double encodage → mojibake. */
+function decoderBase64UTF8(b64) {
+  var binaire = atob((b64 || '').replace(/\n/g, ''));
+  var octets = new Uint8Array(binaire.length);
+  for (var i = 0; i < binaire.length; i++) { octets[i] = binaire.charCodeAt(i); }
+  return new TextDecoder('utf-8').decode(octets);
+}
+
 /* Lit le sha courant du fichier sur la branche */
 async function lireShaCourant(apiBase, headers, branch) {
   var resp = await fetch(apiBase + '?ref=' + encodeURIComponent(branch), { headers: headers });
   if (!resp.ok) { throw new Error('Lecture GitHub : ' + resp.status + ' ' + resp.statusText); }
   var data = await resp.json();
-  return { sha: data.sha, content: atob(data.content.replace(/\n/g, '')) };
+  return { sha: data.sha, content: decoderBase64UTF8(data.content) };
 }
 
 /* Effectue le PUT ; renvoie l'objet Response sans throw sur 409 (géré par l'appelant) */
