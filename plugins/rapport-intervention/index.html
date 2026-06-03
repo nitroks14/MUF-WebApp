@@ -514,310 +514,126 @@
      Taxonomie complète des machines et stations
      Structure : machine → stations → { label, subcats: [ { label, elements: [] } ] }
      ============================================================ */
-  var TAXONOMIE = {
+    var TAXONOMIE = {
     _etatsDefauts: {
-      controle: ['Bon', 'Moyen', 'Dégradé', "Début d'oxydation", 'Oxydation avancée'],
+      controle: ["Bon", "Moyen", "Dégradé", "Début d'oxydation", "Oxydation avancée"],
       nettoyage: [],
       remplacement: [],
       graissage: [],
       lubrification: [],
-      reglage: []
+      reglage: ["Offset: "]
     },
     cloche: {
-      label: 'Cloche (Série C)',
+      label: "Cloche (Série C)",
       stations: [
         {
-          label: 'Vannes à vide',
+          label: "Vannes à vide",
           subcats: [
-            {
-              label: 'Système de vide',
-              elements: [
-                { label: 'Vanne principale', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Vanne d\'atmosphère', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Vanne de temporisation', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            }
+            { label: "Essais taxonomie", elements: [{ label: "fonctionne t'elle", actions: [{ type: "controle" }] }] },
+            { label: "Système de vide", elements: [{ label: "Vanne principale", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Vanne d'atmosphère", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Vanne de temporisation", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }] }
           ]
         },
         {
-          label: 'Barres de soudure',
+          label: "Barres de soudure",
           subcats: [
-            {
-              label: 'Éléments chauffants',
-              elements: [
-                { label: 'Barre de soudure supérieure', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Barre de soudure inférieure', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Résistance', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            },
-            {
-              label: 'Outillage soudure',
-              elements: [
-                { label: 'Téflon', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Joint de soudure', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            }
+            { label: "Éléments chauffants", elements: [{ label: "Barre de soudure supérieure", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Barre de soudure inférieure", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Résistance", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }] },
+            { label: "Outillage soudure", elements: [{ label: "Téflon", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Joint de soudure", actions: [{ type: "controle" }, { type: "remplacement" }] }] }
           ]
         },
         {
-          label: 'Couvercle',
+          label: "Couvercle",
           subcats: [
-            {
-              label: 'Étanchéité',
-              elements: [
-                { label: 'Joint couvercle', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Charnières', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            }
+            { label: "Étanchéité", elements: [{ label: "Joint couvercle", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Charnières", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }] }
           ]
         },
         {
-          label: 'Pompe à vide',
+          label: "Pompe à vide",
           subcats: [
-            {
-              label: 'Pompe',
-              elements: [
-                { label: 'Huile', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Filtre d\'huile', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Filtre à air', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Courroie', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            }
+            { label: "Pompe", elements: [{ label: "Huile", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Filtre d'huile", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Filtre à air", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Courroie", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }] }
           ]
         },
         {
-          label: 'Système électrique',
+          label: "Système électrique",
           subcats: [
-            {
-              label: 'Électricité',
-              elements: [
-                { label: 'Tableau électrique', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Câblage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Temporisateurs', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            }
+            { label: "Électricité", elements: [{ label: "Tableau électrique", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Câblage", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Temporisateurs", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }] }
           ]
         }
       ]
     },
-
     operculeuse: {
-      label: 'Operculeuse (Série T)',
+      label: "Operculeuse (Série T)",
       stations: [
         {
-          label: 'Poste de soudure',
+          label: "Poste de soudure",
           subcats: [
-            {
-              label: 'Embiellage',
-              elements: [
-                { label: 'Bielles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Manivelles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Paliers', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Ressorts de rappel', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            },
-            {
-              label: 'Système de vide / gaz',
-              elements: [
-                { label: 'Vannes de vide', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Vannes de gaz', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Tuyaux', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Joints de raccord', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            },
-            {
-              label: 'Outillage',
-              elements: [
-                { label: 'Lames de découpe', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Pavés de soudure', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Membranes / diaphragmes', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Joints d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Douilles de guidage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Paliers d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Ressorts d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            }
+            { label: "Embiellage", elements: [{ label: "Bielles", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Manivelles", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Paliers", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Ressorts de rappel", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }] },
+            { label: "Système de vide / gaz", elements: [{ label: "Vannes de vide", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Vannes de gaz", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Tuyaux", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Joints de raccord", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }] },
+            { label: "Outillage", elements: [{ label: "Lames de découpe", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Pavés de soudure", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Membranes / diaphragmes", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Joints d'outillage", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Douilles de guidage", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Paliers d'outillage", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Ressorts d'outillage", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }] }
           ]
         },
         {
-          label: 'Avance film',
+          label: "Avance film",
           subcats: [
-            {
-              label: 'Déroulement',
-              elements: [
-                { label: 'Rouleaux tendeurs', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Douilles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Frein de bobine', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            },
-            {
-              label: 'Chaîne d\'avance',
-              elements: [
-                { label: 'Chaîne', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Pignons', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Pinces film', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            }
+            { label: "Déroulement", elements: [{ label: "Rouleaux tendeurs", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Douilles", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Frein de bobine", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }] },
+            { label: "Chaîne d'avance", elements: [{ label: "Chaîne", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Pignons", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Pinces film", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }] }
           ]
         },
         {
-          label: 'Découpe longitudinale',
+          label: "Découpe longitudinale",
           subcats: [
-            {
-              label: 'Coupe',
-              elements: [
-                { label: 'Lame longitudinale', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Contre-lame', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Réglage position', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            }
+            { label: "Coupe", elements: [{ label: "Lame longitudinale", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Contre-lame", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Réglage position", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }] }
           ]
         },
         {
-          label: 'Électricité / chauffe',
+          label: "Électricité / chauffe",
           subcats: [
-            {
-              label: 'Régulation',
-              elements: [
-                { label: 'Contrôleurs de chauffe', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Pyromètre', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Câblage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            }
+            { label: "Régulation", elements: [{ label: "Contrôleurs de chauffe", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Pyromètre", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Câblage", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }] }
           ]
         }
       ]
     },
-
     thermoformeuse: {
-      label: 'Thermoformeuse (Série R)',
+      label: "Thermoformeuse (Série R)",
       stations: [
         {
-          label: 'Formage',
+          label: "Formage",
           subcats: [
-            {
-              label: 'Embiellage',
-              elements: [
-                { label: 'Bielles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Manivelles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Paliers', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Ressorts', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            },
-            {
-              label: 'Système de vide',
-              elements: [
-                { label: 'Vannes de vide', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Tuyaux', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Joints de raccord', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            },
-            {
-              label: 'Outillage formage',
-              elements: [
-                { label: 'Joints d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Membranes', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Plaque de formage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Douilles de guidage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            }
+            { label: "Embiellage", elements: [{ label: "Mécanisme", actions: [{ type: "controle", note: "des jeux de fonctionnement", etats: [""] }, { type: "remplacement", note: "des pièces d'usure" }, { type: "remplacement", note: "vérin de montée" }, { type: "remplacement", note: "vérin d'assistance" }, { type: "reglage", note: "Réalisation du calage mécanique de la machine : réglage des bielles, contrôle du PMH, équerrage et hauteur de verrouillage." }] }, { label: "Compensation épaisseur film", actions: [{ type: "controle", etats: [""] }, { type: "remplacement", note: "des pièces d'usure" }] }] },
+            { label: "Système de vide", elements: [{ label: "Vannes de vide", actions: [{ type: "nettoyage" }, { type: "remplacement", note: "des joints" }, { type: "graissage" }] }, { label: "Tuyaux", actions: [{ type: "controle", etats: [""] }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Sonde", actions: [{ type: "controle", note: "du tuyau de mesure", etats: [""] }, { type: "nettoyage" }, { type: "remplacement" }, { type: "reglage", note: "Calibration", etats: [""] }] }] },
+            { label: "Outillage", elements: [{ label: "État des lieux visuel", actions: [{ type: "controle", etats: [""] }] }, { label: "Joints d'outillage", actions: [{ type: "controle", etats: [""] }, { type: "remplacement" }] }, { label: "Membranes", actions: [{ type: "controle", etats: [""] }, { type: "remplacement" }] }, { label: "Plaque de formage", actions: [{ type: "controle", etats: [""] }, { type: "remplacement" }, { type: "reglage", note: "Reprise du calage du plan de chauffe" }] }, { label: "Réglage de hauteur", actions: [{ type: "controle", etats: [""] }, { type: "nettoyage" }, { type: "remplacement", note: "des pieces d'usure" }, { type: "reglage", etats: [""] }] }, { label: "Couteaux de perforation", actions: [{ type: "controle", etats: [""] }, { type: "remplacement" }] }] }
           ]
         },
         {
-          label: 'Soudure',
+          label: "Soudure",
           subcats: [
-            {
-              label: 'Embiellage',
-              elements: [
-                { label: 'Bielles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Manivelles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Paliers', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Ressorts', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            },
-            {
-              label: 'Système de vide / gaz',
-              elements: [
-                { label: 'Vannes de vide', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Vannes de gaz', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Tuyaux', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Joints de raccord', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            },
-            {
-              label: 'Outillage soudure',
-              elements: [
-                { label: 'Pavés de soudure', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Membranes / diaphragmes', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Joints d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Douilles de guidage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Paliers', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Ressorts d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            }
+            { label: "Embiellage", elements: [{ label: "Mécanisme", actions: [{ type: "controle", note: "des jeux de fonctionnement" }, { type: "remplacement", note: "des pièces d'usure" }, { type: "remplacement", note: "vérin de montée" }, { type: "remplacement", note: "vérin d'assistance" }, { type: "reglage", note: "Réalisation du calage mécanique de la machine : réglage des bielles, contrôle du PMH, équerrage et hauteur de verrouillage." }] }, { label: "Compensation épaisseur film", actions: [{ type: "controle" }, { type: "remplacement", note: "des pièces d'usure" }] }] },
+            { label: "Système de vide / gaz", elements: [{ label: "Vannes de vide", actions: [{ type: "nettoyage" }, { type: "remplacement", note: "des joints" }, { type: "graissage" }] }, { label: "Tuyaux", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Sonde", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }, { type: "reglage", note: "Calibration" }] }, { label: "Vannes de gaz", actions: [{ type: "controle" }, { type: "remplacement" }] }] },
+            { label: "Outillage soudure", elements: [{ label: "Pavés de soudure", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Membranes / diaphragmes", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Joints d'outillage", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Douilles de guidage", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Paliers", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Ressorts d'outillage", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }] }
           ]
         },
         {
-          label: 'Découpe transversale',
+          label: "Découpe transversale",
           subcats: [
-            {
-              label: 'Coupe',
-              elements: [
-                { label: 'Lames transversales', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Contre-lames', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Presses flans', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Coupelles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            }
+            { label: "Coupe", elements: [{ label: "Lames transversales", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Contre-lames", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Presses flans", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Coupelles", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }] }
           ]
         },
         {
-          label: 'Découpe longitudinale',
+          label: "Découpe longitudinale",
           subcats: [
-            {
-              label: 'Coupe',
-              elements: [
-                { label: 'Lame longitudinale', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Contre-lame', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Réglage position', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            }
+            { label: "Coupe", elements: [{ label: "Lame longitudinale", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Contre-lame", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Réglage position", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }] }
           ]
         },
         {
-          label: 'Avance film',
+          label: "Avance film",
           subcats: [
-            {
-              label: 'Déroulement',
-              elements: [
-                { label: 'Rouleaux', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Douilles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Frein bobine', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Tension film', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            },
-            {
-              label: 'Chaîne d\'avance',
-              elements: [
-                { label: 'Chaînes', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Pignons', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Pinces', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Ressorts de pince', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            }
+            { label: "Déroulement", elements: [{ label: "Rouleaux", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Douilles", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Frein bobine", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Tension film", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }] },
+            { label: "Chaîne d'avance", elements: [{ label: "Chaînes", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Pignons", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Pinces", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Ressorts de pince", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }] }
           ]
         },
         {
-          label: 'Divers',
+          label: "Divers",
           subcats: [
-            {
-              label: 'Thermique',
-              elements: [
-                { label: 'Contrôleurs de chauffe', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Pyromètre', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-                { label: 'Circuit de refroidissement', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-              ]
-            }
+            { label: "Thermique", elements: [{ label: "Contrôleurs de chauffe", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Pyromètre", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }, { label: "Circuit de refroidissement", actions: [{ type: "controle" }, { type: "nettoyage" }, { type: "remplacement" }] }] }
           ]
         }
       ]
