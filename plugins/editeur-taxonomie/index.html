@@ -730,15 +730,16 @@ document.getElementById('gh-save-config').addEventListener('click', function() {
   showToast('Config GitHub sauvegardée', 'success');
 });
 
-/* Aligne le haut des panneaux latéraux sous la toolbar (mesure réelle, #3) */
+/* Aligne le haut des panneaux latéraux sous la toolbar (position viewport réelle) */
 function positionnerSidebars() {
   var toolbar = document.querySelector('.te-toolbar');
   if (!toolbar) { return; }
-  var h = toolbar.offsetHeight || 54;
+  var rect = toolbar.getBoundingClientRect();
+  var top = Math.max(0, Math.round(rect.bottom));   // bas de la toolbar en coord. viewport
   var panneaux = document.querySelectorAll('.te-sidebar');
   var i;
   for (i = 0; i < panneaux.length; i++) {
-    panneaux[i].style.top = h + 'px';
+    panneaux[i].style.top = top + 'px';
   }
 }
 
@@ -1452,6 +1453,9 @@ function extraireStationsDepuisWorkspace(ws) {
 charger();
 chargerConfig();
 chargerBlocklyEtInit();
+
+/* Recalcule le top des panneaux latéraux quand la fenêtre change de taille */
+window.addEventListener('resize', positionnerSidebars);
 
 })();
 </script>
