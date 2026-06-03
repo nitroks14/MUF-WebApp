@@ -19,7 +19,8 @@
   background: #003A70;
   color: #fff;
   flex-shrink: 0;
-  z-index: 10;
+  flex-wrap: wrap;
+  z-index: 20;
 }
 .te-toolbar-title { flex: 1; font-weight: 700; font-size: var(--font-size-md); }
 .te-btn { padding: 7px 14px; border-radius: var(--radius); border: none; cursor: pointer; font-size: 0.82rem; font-weight: 600; font-family: inherit; }
@@ -76,7 +77,7 @@
   white-space: nowrap;
 }
 
-/* Liste des états de contrôle (sidebar) */
+/* Liste des états par type d'action (sidebar défauts) */
 .te-etat-row {
   display: flex;
   align-items: center;
@@ -103,15 +104,35 @@
 .te-etat-row button:hover { background: #cbd5e1; }
 .te-etat-add {
   width: 100%;
-  margin-top: 10px;
-  padding: 10px;
+  margin-top: 6px;
+  padding: 8px;
   background: #f59e0b;
   color: #1a1a1a;
   border: none;
   border-radius: var(--radius);
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 600;
+}
+
+/* Bloc « type d'action » dans le panneau défauts */
+.te-type-group {
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.te-type-group:last-child { border-bottom: none; margin-bottom: 0; }
+.te-type-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #003A70;
+  margin-bottom: 8px;
+}
+.te-type-empty {
+  font-size: 0.74rem;
+  color: #94a3b8;
+  font-style: italic;
+  margin-bottom: 6px;
 }
 
 /* Zone Blockly */
@@ -120,16 +141,19 @@
   min-height: 0;
 }
 
-/* Sidebar config */
+/* Sidebar config — commence SOUS la toolbar (top calculé en JS, fallback 54px) */
 .te-sidebar {
   position: fixed;
-  right: 0; top: 0; bottom: 0;
+  right: 0;
+  top: 54px;
+  bottom: 0;
   width: 280px;
+  max-width: 90vw;
   background: #fff;
   border-left: 1px solid #e2e8f0;
-  padding: 60px 16px 16px;
+  padding: 16px;
   overflow-y: auto;
-  z-index: 5;
+  z-index: 15;
   transform: translateX(100%);
   transition: transform 0.3s;
   box-shadow: -4px 0 20px rgba(0,0,0,0.1);
@@ -164,7 +188,7 @@
     <button class="te-btn te-btn-json" id="te-copy-json">Copier JSON</button>
     <button class="te-btn te-btn-js" id="te-copy-js">Copier JS</button>
     <button class="te-btn te-btn-push" id="te-push">&#8593; Push GitHub</button>
-    <button class="te-btn te-btn-ghost" id="te-etats-btn">&#9873; États</button>
+    <button class="te-btn te-btn-ghost" id="te-etats-btn">&#9873; États / type</button>
     <button class="te-btn te-btn-ghost" id="te-config-btn">&#9881; GitHub</button>
   </div>
 
@@ -185,12 +209,11 @@
   <p style="font-size:var(--font-size-xs);color:#94a3b8;margin-top:12px;line-height:1.5;">Permission requise : <strong>contents: write</strong></p>
 </div>
 
-<!-- Sidebar États de contrôle (panel coulissant) -->
+<!-- Sidebar États par type d'action (panel coulissant) -->
 <div class="te-sidebar" id="te-sidebar-etats">
-  <div style="margin-bottom:16px;font-weight:700;color:#003A70;">États de contrôle</div>
-  <p style="font-size:var(--font-size-xs);color:#94a3b8;margin-bottom:12px;line-height:1.5;">Liste des états proposés lorsqu'un contrôle est coché dans le rapport.</p>
+  <div style="margin-bottom:12px;font-weight:700;color:#003A70;">États par type d'action</div>
+  <p style="font-size:var(--font-size-xs);color:#94a3b8;margin-bottom:16px;line-height:1.5;">Liste d'états proposée par défaut pour chaque type d'action. Un bloc action peut surcharger sa propre liste dans le workspace.</p>
   <div id="te-etats-list"></div>
-  <button class="te-etat-add" id="te-etats-add">+ Ajouter un état</button>
 </div>
 
 <div class="te-toast" id="te-toast"></div>
@@ -203,7 +226,14 @@
    DONNEES PAR DEFAUT (copie TAXONOMIE plugin RI)
    ===================================================== */
 var TAXO_DEFAUT = {
-  _etats: ['Bon', 'Moyen', 'Dégradé', "Début d'oxydation", 'Oxydation avancée'],
+  _etatsDefauts: {
+    controle: ['Bon', 'Moyen', 'Dégradé', "Début d'oxydation", 'Oxydation avancée'],
+    nettoyage: [],
+    remplacement: [],
+    graissage: [],
+    lubrification: [],
+    reglage: []
+  },
   cloche: {
     label: 'Cloche (Série C)',
     stations: [
@@ -213,9 +243,9 @@ var TAXO_DEFAUT = {
           {
             label: 'Système de vide',
             elements: [
-              { label: 'Vanne principale', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Vanne d\'atmosphère', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Vanne de temporisation', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Vanne principale', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Vanne d\'atmosphère', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Vanne de temporisation', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           }
         ]
@@ -226,16 +256,16 @@ var TAXO_DEFAUT = {
           {
             label: 'Éléments chauffants',
             elements: [
-              { label: 'Barre de soudure supérieure', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Barre de soudure inférieure', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Résistance', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Barre de soudure supérieure', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Barre de soudure inférieure', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Résistance', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           },
           {
             label: 'Outillage soudure',
             elements: [
-              { label: 'Téflon', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Joint de soudure', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Téflon', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Joint de soudure', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           }
         ]
@@ -246,8 +276,8 @@ var TAXO_DEFAUT = {
           {
             label: 'Étanchéité',
             elements: [
-              { label: 'Joint couvercle', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Charnières', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Joint couvercle', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Charnières', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           }
         ]
@@ -258,10 +288,10 @@ var TAXO_DEFAUT = {
           {
             label: 'Pompe',
             elements: [
-              { label: 'Huile', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Filtre d\'huile', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Filtre à air', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Courroie', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Huile', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Filtre d\'huile', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Filtre à air', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Courroie', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           }
         ]
@@ -272,9 +302,9 @@ var TAXO_DEFAUT = {
           {
             label: 'Électricité',
             elements: [
-              { label: 'Tableau électrique', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Câblage', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Temporisateurs', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Tableau électrique', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Câblage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Temporisateurs', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           }
         ]
@@ -290,31 +320,31 @@ var TAXO_DEFAUT = {
           {
             label: 'Embiellage',
             elements: [
-              { label: 'Bielles', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Manivelles', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Paliers', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Ressorts de rappel', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Bielles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Manivelles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Paliers', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Ressorts de rappel', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           },
           {
             label: 'Système de vide / gaz',
             elements: [
-              { label: 'Vannes de vide', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Vannes de gaz', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Tuyaux', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Joints de raccord', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Vannes de vide', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Vannes de gaz', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Tuyaux', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Joints de raccord', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           },
           {
             label: 'Outillage',
             elements: [
-              { label: 'Lames de découpe', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Pavés de soudure', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Membranes / diaphragmes', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Joints d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Douilles de guidage', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Paliers d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Ressorts d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Lames de découpe', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Pavés de soudure', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Membranes / diaphragmes', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Joints d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Douilles de guidage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Paliers d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Ressorts d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           }
         ]
@@ -325,17 +355,17 @@ var TAXO_DEFAUT = {
           {
             label: 'Déroulement',
             elements: [
-              { label: 'Rouleaux tendeurs', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Douilles', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Frein de bobine', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Rouleaux tendeurs', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Douilles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Frein de bobine', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           },
           {
             label: 'Chaîne d\'avance',
             elements: [
-              { label: 'Chaîne', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Pignons', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Pinces film', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Chaîne', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Pignons', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Pinces film', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           }
         ]
@@ -346,9 +376,9 @@ var TAXO_DEFAUT = {
           {
             label: 'Coupe',
             elements: [
-              { label: 'Lame longitudinale', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Contre-lame', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Réglage position', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Lame longitudinale', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Contre-lame', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Réglage position', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           }
         ]
@@ -359,9 +389,9 @@ var TAXO_DEFAUT = {
           {
             label: 'Régulation',
             elements: [
-              { label: 'Contrôleurs de chauffe', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Pyromètre', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Câblage', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Contrôleurs de chauffe', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Pyromètre', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Câblage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           }
         ]
@@ -377,27 +407,27 @@ var TAXO_DEFAUT = {
           {
             label: 'Embiellage',
             elements: [
-              { label: 'Bielles', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Manivelles', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Paliers', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Ressorts', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Bielles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Manivelles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Paliers', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Ressorts', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           },
           {
             label: 'Système de vide',
             elements: [
-              { label: 'Vannes de vide', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Tuyaux', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Joints de raccord', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Vannes de vide', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Tuyaux', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Joints de raccord', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           },
           {
             label: 'Outillage formage',
             elements: [
-              { label: 'Joints d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Membranes', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Plaque de formage', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Douilles de guidage', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Joints d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Membranes', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Plaque de formage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Douilles de guidage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           }
         ]
@@ -408,30 +438,30 @@ var TAXO_DEFAUT = {
           {
             label: 'Embiellage',
             elements: [
-              { label: 'Bielles', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Manivelles', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Paliers', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Ressorts', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Bielles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Manivelles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Paliers', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Ressorts', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           },
           {
             label: 'Système de vide / gaz',
             elements: [
-              { label: 'Vannes de vide', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Vannes de gaz', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Tuyaux', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Joints de raccord', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Vannes de vide', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Vannes de gaz', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Tuyaux', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Joints de raccord', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           },
           {
             label: 'Outillage soudure',
             elements: [
-              { label: 'Pavés de soudure', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Membranes / diaphragmes', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Joints d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Douilles de guidage', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Paliers', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Ressorts d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Pavés de soudure', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Membranes / diaphragmes', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Joints d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Douilles de guidage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Paliers', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Ressorts d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           }
         ]
@@ -442,10 +472,10 @@ var TAXO_DEFAUT = {
           {
             label: 'Coupe',
             elements: [
-              { label: 'Lames transversales', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Contre-lames', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Presses flans', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Coupelles', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Lames transversales', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Contre-lames', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Presses flans', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Coupelles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           }
         ]
@@ -456,9 +486,9 @@ var TAXO_DEFAUT = {
           {
             label: 'Coupe',
             elements: [
-              { label: 'Lame longitudinale', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Contre-lame', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Réglage position', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Lame longitudinale', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Contre-lame', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Réglage position', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           }
         ]
@@ -469,19 +499,19 @@ var TAXO_DEFAUT = {
           {
             label: 'Déroulement',
             elements: [
-              { label: 'Rouleaux', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Douilles', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Frein bobine', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Tension film', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Rouleaux', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Douilles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Frein bobine', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Tension film', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           },
           {
             label: 'Chaîne d\'avance',
             elements: [
-              { label: 'Chaînes', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Pignons', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Pinces', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Ressorts de pince', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Chaînes', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Pignons', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Pinces', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Ressorts de pince', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           }
         ]
@@ -492,9 +522,9 @@ var TAXO_DEFAUT = {
           {
             label: 'Thermique',
             elements: [
-              { label: 'Contrôleurs de chauffe', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Pyromètre', actions: ['controle', 'nettoyage', 'remplacement'] },
-              { label: 'Circuit de refroidissement', actions: ['controle', 'nettoyage', 'remplacement'] }
+              { label: 'Contrôleurs de chauffe', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Pyromètre', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+              { label: 'Circuit de refroidissement', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
             ]
           }
         ]
@@ -513,26 +543,75 @@ var workspace = null;
 var activeMachineKey = null;
 var chargementEnCours = false;
 
-var ETATS_DEFAUT = ['Bon', 'Moyen', 'Dégradé', "Début d'oxydation", 'Oxydation avancée'];
+/* Liste ordonnée des types d'action connus (id -> libellé pour le panneau défauts) */
+var ACTION_TYPES = [
+  { id: 'controle',      label: 'Contrôle' },
+  { id: 'nettoyage',     label: 'Nettoyage' },
+  { id: 'remplacement',  label: 'Remplacement' },
+  { id: 'graissage',     label: 'Graissage' },
+  { id: 'lubrification', label: 'Lubrification' },
+  { id: 'reglage',       label: 'Réglage' }
+];
+
+/* Défauts d'états par type d'action (Contrôle pré-rempli, autres vides) */
+function etatsDefautsInitiaux() {
+  return {
+    controle: ['Bon', 'Moyen', 'Dégradé', "Début d'oxydation", 'Oxydation avancée'],
+    nettoyage: [],
+    remplacement: [],
+    graissage: [],
+    lubrification: [],
+    reglage: []
+  };
+}
+
+/* Clés réservées (jamais traitées comme des machines) */
+var CLES_RESERVEES = ['_etats', '_etatsDefauts'];
+function estCleReservee(k) { return CLES_RESERVEES.indexOf(k) !== -1; }
 
 /* Deep clone simple */
 function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
 
-/* Helper : clés des machines (ignore la clé réservée _etats) */
+/* Helper : clés des machines (ignore les clés réservées _etats / _etatsDefauts) */
 function machineKeys() {
-  return Object.keys(taxo).filter(function(k) { return k !== '_etats'; });
+  return Object.keys(taxo).filter(function(k) { return !estCleReservee(k); });
 }
 
-/* Migration ancien format (strings -> objets {label, actions}) */
+/* Migration ancien format :
+   - éléments string -> objets {label, actions}
+   - actions string -> objets {type}
+   - garantit _etatsDefauts ; migre l'ancien _etats global vers _etatsDefauts.controle */
 function migrerSiNecessaire(t) {
+  /* 1. _etatsDefauts garanti */
+  if (!t._etatsDefauts || typeof t._etatsDefauts !== 'object') {
+    t._etatsDefauts = etatsDefautsInitiaux();
+  }
+  /* Compléter les types manquants par une liste vide */
+  ACTION_TYPES.forEach(function(at) {
+    if (!Array.isArray(t._etatsDefauts[at.id])) { t._etatsDefauts[at.id] = []; }
+  });
+
+  /* 2. Migration ancien _etats global -> _etatsDefauts.controle puis suppression */
+  if (Array.isArray(t._etats)) {
+    if (!t._etatsDefauts.controle || t._etatsDefauts.controle.length === 0) {
+      t._etatsDefauts.controle = t._etats.slice();
+    }
+    delete t._etats;
+  }
+
+  /* 3. Migration des machines / éléments / actions */
   Object.keys(t).forEach(function(mk) {
-    if (mk === '_etats') { return; }
-    t[mk].stations.forEach(function(s) {
-      s.subcats.forEach(function(sc) {
-        sc.elements = sc.elements.map(function(e) {
+    if (estCleReservee(mk)) { return; }
+    (t[mk].stations || []).forEach(function(s) {
+      (s.subcats || []).forEach(function(sc) {
+        sc.elements = (sc.elements || []).map(function(e) {
           if (typeof e === 'string') {
-            return { label: e, actions: ['controle', 'nettoyage', 'remplacement'] };
+            return { label: e, actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] };
           }
+          e.actions = (e.actions || []).map(function(a) {
+            if (typeof a === 'string') { return { type: a }; }
+            return a;
+          });
           return e;
         });
       });
@@ -545,8 +624,8 @@ function migrerSiNecessaire(t) {
 function charger() {
   var saved = localStorage.getItem(LS_KEY);
   taxo = saved ? migrerSiNecessaire(JSON.parse(saved)) : clone(TAXO_DEFAUT);
-  if (!taxo._etats || !Array.isArray(taxo._etats)) {
-    taxo._etats = clone(ETATS_DEFAUT);
+  if (!taxo._etatsDefauts || typeof taxo._etatsDefauts !== 'object') {
+    taxo._etatsDefauts = etatsDefautsInitiaux();
   }
 }
 
@@ -569,16 +648,32 @@ function showToast(msg, type) {
 /* =====================================================
    SERIALISATION JS
    ===================================================== */
+/* Sérialise une action en objet compact : { type: "x" } ou { type: "x", etats: ["a","b"] } */
+function serializerAction(a) {
+  var s = '{ type: ' + JSON.stringify(a.type);
+  if (a.etats && Array.isArray(a.etats) && a.etats.length) {
+    var es = a.etats.map(function(e) { return JSON.stringify(e); }).join(', ');
+    s += ', etats: [' + es + ']';
+  }
+  return s + ' }';
+}
+
 function serializerTaxoJS(t) {
   var lines = ['  var TAXONOMIE = {'];
 
-  /* États de contrôle en tête, sur une seule ligne */
-  var etats = (t._etats && Array.isArray(t._etats)) ? t._etats : ETATS_DEFAUT;
-  var etatsStr = etats.map(function(e) { return JSON.stringify(e); }).join(', ');
-  lines.push('    _etats: [' + etatsStr + '],');
+  /* États par défaut par type d'action, en tête, format compact (≥4 espaces d'indentation) */
+  var defauts = (t._etatsDefauts && typeof t._etatsDefauts === 'object') ? t._etatsDefauts : etatsDefautsInitiaux();
+  lines.push('    _etatsDefauts: {');
+  ACTION_TYPES.forEach(function(at, idx) {
+    var liste = Array.isArray(defauts[at.id]) ? defauts[at.id] : [];
+    var listeStr = liste.map(function(e) { return JSON.stringify(e); }).join(', ');
+    var comma = idx < ACTION_TYPES.length - 1 ? ',' : '';
+    lines.push('      ' + at.id + ': [' + listeStr + ']' + comma);
+  });
+  lines.push('    },');
 
-  /* Machines (on ignore la clé réservée _etats) */
-  var keys = Object.keys(t).filter(function(k) { return k !== '_etats'; });
+  /* Machines (on ignore les clés réservées) */
+  var keys = Object.keys(t).filter(function(k) { return !estCleReservee(k); });
   keys.forEach(function(k, ki, arr) {
     var m = t[k];
     lines.push('    ' + k + ': {');
@@ -590,7 +685,7 @@ function serializerTaxoJS(t) {
       lines.push('          subcats: [');
       s.subcats.forEach(function(sc, sci, scarr) {
         var elemStr = sc.elements.map(function(e) {
-          var actionsStr = (e.actions || []).map(function(a) { return JSON.stringify(a); }).join(', ');
+          var actionsStr = (e.actions || []).map(serializerAction).join(', ');
           return '{ label: ' + JSON.stringify(e.label) + ', actions: [' + actionsStr + '] }';
         }).join(', ');
         var comma = sci < scarr.length - 1 ? ',' : '';
@@ -635,156 +730,236 @@ document.getElementById('gh-save-config').addEventListener('click', function() {
   showToast('Config GitHub sauvegardée', 'success');
 });
 
+/* Aligne le haut des panneaux latéraux sous la toolbar (mesure réelle, #3) */
+function positionnerSidebars() {
+  var toolbar = document.querySelector('.te-toolbar');
+  if (!toolbar) { return; }
+  var h = toolbar.offsetHeight || 54;
+  var panneaux = document.querySelectorAll('.te-sidebar');
+  var i;
+  for (i = 0; i < panneaux.length; i++) {
+    panneaux[i].style.top = h + 'px';
+  }
+}
+
 /* Toggle sidebar config GitHub (ferme la sidebar États pour éviter le chevauchement) */
 document.getElementById('te-config-btn').addEventListener('click', function() {
+  positionnerSidebars();
   document.getElementById('te-sidebar-etats').classList.remove('open');
   document.getElementById('te-sidebar').classList.toggle('open');
 });
 
 /* =====================================================
-   ÉTATS DE CONTRÔLE — SIDEBAR
+   ÉTATS PAR TYPE D'ACTION — SIDEBAR (défauts)
    ===================================================== */
-function renderEtats() {
+
+/* Construit une ligne éditable pour un état d'un type donné */
+function creerLigneEtatDefaut(typeId, i, rerender) {
+  var liste = taxo._etatsDefauts[typeId];
+  var row = document.createElement('div');
+  row.className = 'te-etat-row';
+
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.value = liste[i];
+  var commit = function() {
+    taxo._etatsDefauts[typeId][i] = input.value;
+    sauvegarder();
+  };
+  input.addEventListener('change', commit);
+  input.addEventListener('blur', commit);
+
+  var btnUp = document.createElement('button');
+  btnUp.type = 'button';
+  btnUp.textContent = '↑';
+  btnUp.title = 'Monter';
+  btnUp.addEventListener('click', function() {
+    if (i <= 0) { return; }
+    var l = taxo._etatsDefauts[typeId];
+    var tmp = l[i - 1]; l[i - 1] = l[i]; l[i] = tmp;
+    sauvegarder();
+    rerender();
+  });
+
+  var btnDown = document.createElement('button');
+  btnDown.type = 'button';
+  btnDown.textContent = '↓';
+  btnDown.title = 'Descendre';
+  btnDown.addEventListener('click', function() {
+    var l = taxo._etatsDefauts[typeId];
+    if (i >= l.length - 1) { return; }
+    var tmp = l[i + 1]; l[i + 1] = l[i]; l[i] = tmp;
+    sauvegarder();
+    rerender();
+  });
+
+  var btnDel = document.createElement('button');
+  btnDel.type = 'button';
+  btnDel.textContent = '✕';
+  btnDel.title = 'Supprimer';
+  btnDel.addEventListener('click', function() {
+    taxo._etatsDefauts[typeId].splice(i, 1);
+    sauvegarder();
+    rerender();
+  });
+
+  row.appendChild(input);
+  row.appendChild(btnUp);
+  row.appendChild(btnDown);
+  row.appendChild(btnDel);
+  return row;
+}
+
+/* Rendu du panneau : un groupe par type d'action avec sa liste d'états par défaut */
+function renderEtatsDefauts() {
   var list = document.getElementById('te-etats-list');
   if (!list) { return; }
   list.innerHTML = '';
 
-  taxo._etats.forEach(function(etatVal, i) {
-    var row = document.createElement('div');
-    row.className = 'te-etat-row';
+  ACTION_TYPES.forEach(function(at) {
+    if (!Array.isArray(taxo._etatsDefauts[at.id])) { taxo._etatsDefauts[at.id] = []; }
 
-    var input = document.createElement('input');
-    input.type = 'text';
-    input.value = etatVal;
-    var commit = function() {
-      taxo._etats[i] = input.value;
-      sauvegarder();
-    };
-    input.addEventListener('change', commit);
-    input.addEventListener('blur', commit);
+    var group = document.createElement('div');
+    group.className = 'te-type-group';
 
-    var btnUp = document.createElement('button');
-    btnUp.type = 'button';
-    btnUp.textContent = '↑';
-    btnUp.title = 'Monter';
-    btnUp.addEventListener('click', function() {
-      if (i <= 0) { return; }
-      var tmp = taxo._etats[i - 1];
-      taxo._etats[i - 1] = taxo._etats[i];
-      taxo._etats[i] = tmp;
+    var title = document.createElement('div');
+    title.className = 'te-type-title';
+    title.textContent = at.label;
+    group.appendChild(title);
+
+    var liste = taxo._etatsDefauts[at.id];
+    if (liste.length === 0) {
+      var empty = document.createElement('div');
+      empty.className = 'te-type-empty';
+      empty.textContent = 'Aucun état par défaut.';
+      group.appendChild(empty);
+    } else {
+      liste.forEach(function(_, i) {
+        group.appendChild(creerLigneEtatDefaut(at.id, i, renderEtatsDefauts));
+      });
+    }
+
+    var btnAdd = document.createElement('button');
+    btnAdd.type = 'button';
+    btnAdd.className = 'te-etat-add';
+    btnAdd.textContent = '+ Ajouter un état';
+    btnAdd.addEventListener('click', function() {
+      taxo._etatsDefauts[at.id].push('Nouvel état');
       sauvegarder();
-      renderEtats();
+      renderEtatsDefauts();
     });
+    group.appendChild(btnAdd);
 
-    var btnDown = document.createElement('button');
-    btnDown.type = 'button';
-    btnDown.textContent = '↓';
-    btnDown.title = 'Descendre';
-    btnDown.addEventListener('click', function() {
-      if (i >= taxo._etats.length - 1) { return; }
-      var tmp = taxo._etats[i + 1];
-      taxo._etats[i + 1] = taxo._etats[i];
-      taxo._etats[i] = tmp;
-      sauvegarder();
-      renderEtats();
-    });
-
-    var btnDel = document.createElement('button');
-    btnDel.type = 'button';
-    btnDel.textContent = '✕';
-    btnDel.title = 'Supprimer';
-    btnDel.addEventListener('click', function() {
-      if (taxo._etats.length <= 1) {
-        showToast('Impossible de supprimer le dernier état', 'error');
-        return;
-      }
-      taxo._etats.splice(i, 1);
-      sauvegarder();
-      renderEtats();
-    });
-
-    row.appendChild(input);
-    row.appendChild(btnUp);
-    row.appendChild(btnDown);
-    row.appendChild(btnDel);
-    list.appendChild(row);
+    list.appendChild(group);
   });
 }
 
-document.getElementById('te-etats-add').addEventListener('click', function() {
-  taxo._etats.push('Nouvel état');
-  sauvegarder();
-  renderEtats();
-});
-
-/* Toggle sidebar États (ferme la sidebar GitHub pour éviter le chevauchement) */
+/* Toggle sidebar États par type (ferme la sidebar GitHub pour éviter le chevauchement) */
 document.getElementById('te-etats-btn').addEventListener('click', function() {
+  positionnerSidebars();
   document.getElementById('te-sidebar').classList.remove('open');
   var sb = document.getElementById('te-sidebar-etats');
   sb.classList.toggle('open');
-  if (sb.classList.contains('open')) { renderEtats(); }
+  if (sb.classList.contains('open')) { renderEtatsDefauts(); }
 });
 
 /* =====================================================
-   PUSH GITHUB
+   PUSH GITHUB (#2 — garde anti double-soumission + gestion 409)
    ===================================================== */
-document.getElementById('te-push').addEventListener('click', async function() {
-  var cfg = lireConfig();
-  if (!cfg.token || !cfg.owner || !cfg.repo || !cfg.path) {
-    showToast('Config GitHub incomplète', 'error');
-    return;
-  }
+var pushEnCours = false;
 
-  showToast('Lecture du fichier en cours…', 'info');
+/* Lit le sha courant du fichier sur la branche */
+async function lireShaCourant(apiBase, headers, branch) {
+  var resp = await fetch(apiBase + '?ref=' + encodeURIComponent(branch), { headers: headers });
+  if (!resp.ok) { throw new Error('Lecture GitHub : ' + resp.status + ' ' + resp.statusText); }
+  var data = await resp.json();
+  return { sha: data.sha, content: atob(data.content.replace(/\n/g, '')) };
+}
 
-  var apiBase = 'https://api.github.com/repos/' + cfg.owner + '/' + cfg.repo + '/contents/' + cfg.path;
-  var headers = {
-    'Authorization': 'token ' + cfg.token,
-    'Accept': 'application/vnd.github+json',
-    'Content-Type': 'application/json'
-  };
+/* Effectue le PUT ; renvoie l'objet Response sans throw sur 409 (géré par l'appelant) */
+async function envoyerPut(apiBase, headers, encoded, sha, branch) {
+  return fetch(apiBase, {
+    method: 'PUT',
+    headers: headers,
+    body: JSON.stringify({
+      message: 'chore(taxonomie): mise a jour via editeur integre',
+      content: encoded,
+      sha: sha,
+      branch: branch
+    })
+  });
+}
+
+async function gererPush() {
+  if (pushEnCours) { return; }
+  pushEnCours = true;
+
+  var btn = document.getElementById('te-push');
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
 
   try {
-    /* 1 — Lire le fichier actuel */
-    var getResp = await fetch(apiBase + '?ref=' + encodeURIComponent(cfg.branch), { headers: headers });
-    if (!getResp.ok) throw new Error('Lecture GitHub : ' + getResp.status + ' ' + getResp.statusText);
-    var fileData = await getResp.json();
+    var cfg = lireConfig();
+    if (!cfg.token || !cfg.owner || !cfg.repo || !cfg.path) {
+      showToast('Config GitHub incomplète', 'error');
+      return;
+    }
 
-    /* 2 — Decoder */
-    var content = atob(fileData.content.replace(/\n/g, ''));
-    var sha = fileData.sha;
+    showToast('Lecture du fichier en cours…', 'info');
 
-    /* 3 — Remplacer TAXONOMIE */
+    var apiBase = 'https://api.github.com/repos/' + cfg.owner + '/' + cfg.repo + '/contents/' + cfg.path;
+    var headers = {
+      'Authorization': 'token ' + cfg.token,
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json'
+    };
+
+    /* 1 — Lire le fichier actuel (sha + contenu) */
+    var fichier = await lireShaCourant(apiBase, headers, cfg.branch);
+
+    /* 2 — Remplacer le bloc TAXONOMIE */
     var newBlock = serializerTaxoJS(taxo);
     var regex = /var TAXONOMIE = \{[\s\S]*?\n  \};/;
-    if (!regex.test(content)) {
+    if (!regex.test(fichier.content)) {
       throw new Error('Bloc TAXONOMIE introuvable dans le fichier. Vérifiez le chemin.');
     }
-    var newContent = content.replace(regex, newBlock);
-
-    /* 4 — Encoder et pousser */
+    var newContent = fichier.content.replace(regex, newBlock);
     var encoded = btoa(unescape(encodeURIComponent(newContent)));
-    var putResp = await fetch(apiBase, {
-      method: 'PUT',
-      headers: headers,
-      body: JSON.stringify({
-        message: 'chore(taxonomie): mise a jour via editeur integre',
-        content: encoded,
-        sha: sha,
-        branch: cfg.branch
-      })
-    });
+
+    /* 3 — PUT (avec un seul retry en cas de 409 Conflict : sha périmé) */
+    var putResp = await envoyerPut(apiBase, headers, encoded, fichier.sha, cfg.branch);
+
+    if (putResp.status === 409) {
+      /* sha périmé : re-GET du sha à jour et nouvelle tentative unique */
+      var frais = await lireShaCourant(apiBase, headers, cfg.branch);
+      var newContent2 = frais.content.replace(regex, newBlock);
+      var encoded2 = btoa(unescape(encodeURIComponent(newContent2)));
+      putResp = await envoyerPut(apiBase, headers, encoded2, frais.sha, cfg.branch);
+    }
+
     if (!putResp.ok) {
-      var errData = await putResp.json();
+      var errData = {};
+      try { errData = await putResp.json(); } catch (e) {}
       throw new Error('Push GitHub : ' + putResp.status + ' — ' + (errData.message || putResp.statusText));
     }
 
     showToast('Push GitHub réussi !', 'success');
-  } catch(err) {
+  } catch (err) {
     console.error('[TaxoEditor] Push error:', err);
     showToast('Erreur : ' + err.message, 'error');
+  } finally {
+    pushEnCours = false;
+    btn.disabled = false;
+    btn.style.opacity = '';
   }
-});
+}
+
+/* Attache unique : protégée contre un double-binding en cas de réinjection du plugin */
+var btnPush = document.getElementById('te-push');
+if (btnPush && !btnPush.dataset.bound) {
+  btnPush.dataset.bound = '1';
+  btnPush.addEventListener('click', gererPush);
+}
 
 /* =====================================================
    BOUTONS TOOLBAR
@@ -860,10 +1035,21 @@ var blockDefs = [
       },
       {"type": "field_input", "name": "NOTE", "text": ""}
     ],
+    "message1": "états (optionnel) %1",
+    "args1": [{"type": "input_statement", "name": "ETATS", "check": "ETAT"}],
     "previousStatement": "ACTION",
     "nextStatement": "ACTION",
     "colour": 65,
-    "tooltip": "Action applicable à cet élément"
+    "tooltip": "Action applicable à cet élément. Les états (optionnels) surchargent la liste par défaut du type."
+  },
+  {
+    "type": "taxo_etat",
+    "message0": "⚑ État: %1",
+    "args0": [{"type": "field_input", "name": "LABEL", "text": "Nouvel état"}],
+    "previousStatement": "ETAT",
+    "nextStatement": "ETAT",
+    "colour": 290,
+    "tooltip": "État possible pour cette action"
   }
 ];
 
@@ -878,7 +1064,9 @@ var toolbox = {
     {"kind": "block", "type": "taxo_subcat", "fields": {"LABEL": "Nouvelle sous-catégorie"}},
     {"kind": "block", "type": "taxo_element", "fields": {"LABEL": "Nouvel élément"}},
     {"kind": "label", "text": "Actions"},
-    {"kind": "block", "type": "taxo_action"}
+    {"kind": "block", "type": "taxo_action"},
+    {"kind": "label", "text": "États"},
+    {"kind": "block", "type": "taxo_etat", "fields": {"LABEL": "Nouvel état"}}
   ]
 };
 
@@ -967,7 +1155,7 @@ function slugifyKey(label) {
     .replace(/[^a-z0-9_]/g, '');
   if (!base) { base = 'machine'; }
 
-  var existantes = Object.keys(taxo).filter(function(k) { return k !== '_etats'; });
+  var existantes = Object.keys(taxo).filter(function(k) { return !estCleReservee(k); });
   if (existantes.indexOf(base) === -1) { return base; }
   var n = 2;
   while (existantes.indexOf(base + '_' + n) !== -1) { n++; }
@@ -1136,11 +1324,12 @@ function chargerMachineEnBlocs(ws, key) {
           if (prevConnE && eBlock.previousConnection) prevConnE.connect(eBlock.previousConnection);
         }
 
-        /* Blocs action */
+        /* Blocs action (actions = objets {type, etats?}) */
         var prevActionBlock = null;
-        (elem.actions || []).forEach(function(actionId) {
+        (elem.actions || []).forEach(function(action) {
+          var actionType = (typeof action === 'string') ? action : (action.type || 'controle');
           var aBlock = ws.newBlock('taxo_action');
-          aBlock.setFieldValue(actionId, 'ACTION_TYPE');
+          aBlock.setFieldValue(actionType, 'ACTION_TYPE');
           aBlock.initSvg();
           aBlock.render();
 
@@ -1151,6 +1340,27 @@ function chargerMachineEnBlocs(ws, key) {
             if (prevActionBlock.nextConnection && aBlock.previousConnection)
               prevActionBlock.nextConnection.connect(aBlock.previousConnection);
           }
+
+          /* États surchargés (si présents) : chaîne de blocs taxo_etat dans l'input ETATS */
+          var etatsAction = (typeof action === 'object' && Array.isArray(action.etats)) ? action.etats : null;
+          if (etatsAction && etatsAction.length) {
+            var prevEtatBlock = null;
+            etatsAction.forEach(function(etatLabel) {
+              var etBlock = ws.newBlock('taxo_etat');
+              etBlock.setFieldValue(etatLabel, 'LABEL');
+              etBlock.initSvg();
+              etBlock.render();
+              if (!prevEtatBlock) {
+                var etatsConn = aBlock.getInput('ETATS').connection;
+                if (etatsConn && etBlock.previousConnection) etatsConn.connect(etBlock.previousConnection);
+              } else {
+                if (prevEtatBlock.nextConnection && etBlock.previousConnection)
+                  prevEtatBlock.nextConnection.connect(etBlock.previousConnection);
+              }
+              prevEtatBlock = etBlock;
+            });
+          }
+
           prevActionBlock = aBlock;
         });
 
@@ -1197,7 +1407,22 @@ function extraireStationsDepuisWorkspace(ws) {
                       var actionBlock = actionsInput.connection.targetBlock();
                       while (actionBlock) {
                         if (actionBlock.type === 'taxo_action') {
-                          actions.push(actionBlock.getFieldValue('ACTION_TYPE'));
+                          var actionObj = { type: actionBlock.getFieldValue('ACTION_TYPE') };
+                          /* Lire la chaîne de blocs taxo_etat dans l'input ETATS */
+                          var etatsListe = [];
+                          var etatsInput = actionBlock.getInput('ETATS');
+                          if (etatsInput && etatsInput.connection && etatsInput.connection.targetBlock()) {
+                            var etatBlock = etatsInput.connection.targetBlock();
+                            while (etatBlock) {
+                              if (etatBlock.type === 'taxo_etat') {
+                                etatsListe.push(etatBlock.getFieldValue('LABEL') || '');
+                              }
+                              etatBlock = etatBlock.nextConnection && etatBlock.nextConnection.targetBlock();
+                            }
+                          }
+                          /* La propriété etats n'existe que si le bloc surcharge la liste par défaut */
+                          if (etatsListe.length) { actionObj.etats = etatsListe; }
+                          actions.push(actionObj);
                         }
                         actionBlock = actionBlock.nextConnection && actionBlock.nextConnection.targetBlock();
                       }

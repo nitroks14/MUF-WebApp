@@ -514,10 +514,15 @@
      Taxonomie complète des machines et stations
      Structure : machine → stations → { label, subcats: [ { label, elements: [] } ] }
      ============================================================ */
-  var ETATS_DEFAUT = ['Bon', 'Moyen', 'Dégradé', "Début d'oxydation", 'Oxydation avancée'];
-
   var TAXONOMIE = {
-    _etats: ['Bon', 'Moyen', 'Dégradé', "Début d'oxydation", 'Oxydation avancée'],
+    _etatsDefauts: {
+      controle: ['Bon', 'Moyen', 'Dégradé', "Début d'oxydation", 'Oxydation avancée'],
+      nettoyage: [],
+      remplacement: [],
+      graissage: [],
+      lubrification: [],
+      reglage: []
+    },
     cloche: {
       label: 'Cloche (Série C)',
       stations: [
@@ -527,9 +532,9 @@
             {
               label: 'Système de vide',
               elements: [
-                { label: 'Vanne principale', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Vanne d\'atmosphère', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Vanne de temporisation', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Vanne principale', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Vanne d\'atmosphère', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Vanne de temporisation', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             }
           ]
@@ -540,16 +545,16 @@
             {
               label: 'Éléments chauffants',
               elements: [
-                { label: 'Barre de soudure supérieure', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Barre de soudure inférieure', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Résistance', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Barre de soudure supérieure', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Barre de soudure inférieure', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Résistance', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             },
             {
               label: 'Outillage soudure',
               elements: [
-                { label: 'Téflon', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Joint de soudure', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Téflon', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Joint de soudure', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             }
           ]
@@ -560,8 +565,8 @@
             {
               label: 'Étanchéité',
               elements: [
-                { label: 'Joint couvercle', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Charnières', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Joint couvercle', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Charnières', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             }
           ]
@@ -572,10 +577,10 @@
             {
               label: 'Pompe',
               elements: [
-                { label: 'Huile', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Filtre d\'huile', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Filtre à air', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Courroie', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Huile', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Filtre d\'huile', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Filtre à air', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Courroie', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             }
           ]
@@ -586,9 +591,9 @@
             {
               label: 'Électricité',
               elements: [
-                { label: 'Tableau électrique', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Câblage', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Temporisateurs', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Tableau électrique', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Câblage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Temporisateurs', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             }
           ]
@@ -605,31 +610,31 @@
             {
               label: 'Embiellage',
               elements: [
-                { label: 'Bielles', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Manivelles', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Paliers', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Ressorts de rappel', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Bielles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Manivelles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Paliers', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Ressorts de rappel', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             },
             {
               label: 'Système de vide / gaz',
               elements: [
-                { label: 'Vannes de vide', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Vannes de gaz', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Tuyaux', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Joints de raccord', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Vannes de vide', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Vannes de gaz', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Tuyaux', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Joints de raccord', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             },
             {
               label: 'Outillage',
               elements: [
-                { label: 'Lames de découpe', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Pavés de soudure', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Membranes / diaphragmes', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Joints d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Douilles de guidage', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Paliers d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Ressorts d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Lames de découpe', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Pavés de soudure', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Membranes / diaphragmes', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Joints d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Douilles de guidage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Paliers d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Ressorts d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             }
           ]
@@ -640,17 +645,17 @@
             {
               label: 'Déroulement',
               elements: [
-                { label: 'Rouleaux tendeurs', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Douilles', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Frein de bobine', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Rouleaux tendeurs', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Douilles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Frein de bobine', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             },
             {
               label: 'Chaîne d\'avance',
               elements: [
-                { label: 'Chaîne', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Pignons', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Pinces film', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Chaîne', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Pignons', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Pinces film', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             }
           ]
@@ -661,9 +666,9 @@
             {
               label: 'Coupe',
               elements: [
-                { label: 'Lame longitudinale', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Contre-lame', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Réglage position', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Lame longitudinale', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Contre-lame', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Réglage position', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             }
           ]
@@ -674,9 +679,9 @@
             {
               label: 'Régulation',
               elements: [
-                { label: 'Contrôleurs de chauffe', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Pyromètre', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Câblage', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Contrôleurs de chauffe', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Pyromètre', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Câblage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             }
           ]
@@ -693,27 +698,27 @@
             {
               label: 'Embiellage',
               elements: [
-                { label: 'Bielles', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Manivelles', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Paliers', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Ressorts', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Bielles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Manivelles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Paliers', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Ressorts', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             },
             {
               label: 'Système de vide',
               elements: [
-                { label: 'Vannes de vide', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Tuyaux', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Joints de raccord', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Vannes de vide', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Tuyaux', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Joints de raccord', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             },
             {
               label: 'Outillage formage',
               elements: [
-                { label: 'Joints d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Membranes', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Plaque de formage', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Douilles de guidage', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Joints d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Membranes', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Plaque de formage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Douilles de guidage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             }
           ]
@@ -724,30 +729,30 @@
             {
               label: 'Embiellage',
               elements: [
-                { label: 'Bielles', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Manivelles', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Paliers', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Ressorts', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Bielles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Manivelles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Paliers', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Ressorts', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             },
             {
               label: 'Système de vide / gaz',
               elements: [
-                { label: 'Vannes de vide', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Vannes de gaz', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Tuyaux', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Joints de raccord', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Vannes de vide', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Vannes de gaz', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Tuyaux', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Joints de raccord', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             },
             {
               label: 'Outillage soudure',
               elements: [
-                { label: 'Pavés de soudure', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Membranes / diaphragmes', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Joints d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Douilles de guidage', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Paliers', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Ressorts d\'outillage', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Pavés de soudure', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Membranes / diaphragmes', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Joints d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Douilles de guidage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Paliers', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Ressorts d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             }
           ]
@@ -758,10 +763,10 @@
             {
               label: 'Coupe',
               elements: [
-                { label: 'Lames transversales', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Contre-lames', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Presses flans', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Coupelles', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Lames transversales', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Contre-lames', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Presses flans', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Coupelles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             }
           ]
@@ -772,9 +777,9 @@
             {
               label: 'Coupe',
               elements: [
-                { label: 'Lame longitudinale', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Contre-lame', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Réglage position', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Lame longitudinale', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Contre-lame', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Réglage position', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             }
           ]
@@ -785,19 +790,19 @@
             {
               label: 'Déroulement',
               elements: [
-                { label: 'Rouleaux', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Douilles', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Frein bobine', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Tension film', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Rouleaux', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Douilles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Frein bobine', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Tension film', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             },
             {
               label: 'Chaîne d\'avance',
               elements: [
-                { label: 'Chaînes', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Pignons', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Pinces', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Ressorts de pince', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Chaînes', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Pignons', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Pinces', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Ressorts de pince', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             }
           ]
@@ -808,9 +813,9 @@
             {
               label: 'Thermique',
               elements: [
-                { label: 'Contrôleurs de chauffe', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Pyromètre', actions: ['controle', 'nettoyage', 'remplacement'] },
-                { label: 'Circuit de refroidissement', actions: ['controle', 'nettoyage', 'remplacement'] }
+                { label: 'Contrôleurs de chauffe', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Pyromètre', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
+                { label: 'Circuit de refroidissement', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
               ]
             }
           ]
@@ -819,9 +824,56 @@
     }
   };
 
-  /* Liste des états de contrôle (issue de la taxonomie, fallback défaut) */
-  function getEtats() {
-    return (TAXONOMIE._etats && TAXONOMIE._etats.length) ? TAXONOMIE._etats : ETATS_DEFAUT;
+  /* Libellés d'affichage par identifiant d'action */
+  var ACTION_LABELS = {
+    controle:      'Contrôle',
+    nettoyage:     'Nettoyage',
+    remplacement:  'Remplacement',
+    graissage:     'Graissage',
+    lubrification: 'Lubrification',
+    reglage:       'Réglage'
+  };
+
+  /* Mapping inverse libellé -> id (data-action utilise le libellé) */
+  var ACTION_IDS = {};
+  (function () {
+    var k;
+    for (k in ACTION_LABELS) {
+      if (Object.prototype.hasOwnProperty.call(ACTION_LABELS, k)) {
+        ACTION_IDS[ACTION_LABELS[k]] = k;
+      }
+    }
+  })();
+
+  /* Défauts d'états par type d'action (objet) */
+  function getEtatsDefauts() {
+    return TAXONOMIE._etatsDefauts || {};
+  }
+
+  /* Normalise une action (string héritée ou objet) en objet {type, etats?} */
+  function normaliserAction(action) {
+    if (typeof action === 'string') { return { type: action }; }
+    return action || { type: '' };
+  }
+
+  /* États résolus pour une action : surcharge du bloc sinon défaut du type */
+  function etatsPourAction(action) {
+    var a = normaliserAction(action);
+    if (a.etats && a.etats.length) { return a.etats; }
+    var defauts = getEtatsDefauts();
+    return defauts[a.type] || [];
+  }
+
+  /* États résolus à partir du seul libellé d'action (utilisé au rendu de cellule) */
+  function etatsPourLibelle(elemActions, actionLabel) {
+    var typeId = ACTION_IDS[actionLabel];
+    var i;
+    for (i = 0; i < elemActions.length; i++) {
+      var a = normaliserAction(elemActions[i]);
+      if (a.type === typeId) { return etatsPourAction(a); }
+    }
+    /* Fallback : défaut du type */
+    return getEtatsDefauts()[typeId] || [];
   }
 
   /* ============================================================
@@ -1044,34 +1096,31 @@
     var table = document.createElement('table');
     table.className = 'ri-table';
 
-    /* Libellés d'affichage par identifiant d'action */
-    var ACTION_LABELS = {
-      controle:      'Contrôle',
-      nettoyage:     'Nettoyage',
-      remplacement:  'Remplacement',
-      graissage:     'Graissage',
-      lubrification: 'Lubrification',
-      reglage:       'Réglage'
-    };
-
     /* Ordre canonique des colonnes */
     var ALL_ACTIONS = ['controle', 'nettoyage', 'remplacement', 'graissage', 'lubrification', 'reglage'];
 
-    /* Collecter l'union des actions présentes dans la sous-catégorie */
+    /* Récupère la liste des actions (objets) d'un élément, avec compat string héritée */
+    function actionsDeLelement(elemCheck) {
+      if (typeof elemCheck === 'string') {
+        return [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }];
+      }
+      return (elemCheck.actions || []).map(normaliserAction);
+    }
+
+    /* Collecter l'union des types d'action présents dans la sous-catégorie */
     var actionsPresentes = [];
     var ai;
     for (ai = 0; ai < ALL_ACTIONS.length; ai++) {
       var actionId = ALL_ACTIONS[ai];
       var ei2;
       for (ei2 = 0; ei2 < subcat.elements.length; ei2++) {
-        var elemCheck = subcat.elements[ei2];
-        var elemActions = typeof elemCheck === 'string'
-          ? ['controle', 'nettoyage', 'remplacement']
-          : (elemCheck.actions || []);
-        if (elemActions.indexOf(actionId) !== -1) {
-          actionsPresentes.push(actionId);
-          break;
+        var elemActions = actionsDeLelement(subcat.elements[ei2]);
+        var trouve = false;
+        var ti2;
+        for (ti2 = 0; ti2 < elemActions.length; ti2++) {
+          if (elemActions[ti2].type === actionId) { trouve = true; break; }
         }
+        if (trouve) { actionsPresentes.push(actionId); break; }
       }
     }
 
@@ -1092,9 +1141,12 @@
     for (ei = 0; ei < subcat.elements.length; ei++) {
       var elemObj = subcat.elements[ei];
       var elementLabel = typeof elemObj === 'string' ? elemObj : (elemObj.label || '');
-      var elemActions  = typeof elemObj === 'string'
-        ? ['controle', 'nettoyage', 'remplacement']
-        : (elemObj.actions || []);
+      var elemActions  = actionsDeLelement(elemObj);
+
+      /* Index type -> action objet (pour résoudre les états) */
+      var actionParType = {};
+      var ti;
+      for (ti = 0; ti < elemActions.length; ti++) { actionParType[elemActions[ti].type] = elemActions[ti]; }
 
       var tr = document.createElement('tr');
       var trHtml = '<td>' + escHtml(elementLabel) + '</td>';
@@ -1103,16 +1155,18 @@
       for (ci2 = 0; ci2 < actionsPresentes.length; ci2++) {
         var aId = actionsPresentes[ci2];
         var aLabel = ACTION_LABELS[aId];
-        if (elemActions.indexOf(aId) !== -1) {
+        if (actionParType[aId]) {
+          /* Select d'état si la liste résolue est non vide */
           var selectHtml = '';
-          if (aId === 'controle') {
-            var etatsListe = getEtats();
+          var etatsListe = etatsPourAction(actionParType[aId]);
+          if (etatsListe && etatsListe.length) {
             selectHtml =
               '<select class="ri-etat" style="display:none;margin-top:4px;"' +
               ' data-station="' + escAttr(stationLabel) + '"' +
               ' data-subcat="' + escAttr(subcat.label) + '"' +
               ' data-element="' + escAttr(elementLabel) + '"' +
-              ' aria-label="État — ' + escAttr(elementLabel) + '">' +
+              ' data-action="' + escAttr(aLabel) + '"' +
+              ' aria-label="État — ' + escAttr(elementLabel) + ' — ' + escAttr(aLabel) + '">' +
               '<option value="">— état —</option>';
             var oi;
             for (oi = 0; oi < etatsListe.length; oi++) {
@@ -1149,27 +1203,31 @@
         cb.addEventListener('change', gererChangementChecklist);
       }
 
-      /* Dropdown d'état de contrôle : restauration + listener */
-      var selectEtat = tr.querySelector('.ri-etat');
-      if (selectEtat) {
+      /* Dropdowns d'état (un par action ayant des états) : restauration + listener */
+      var selectsEtat = tr.querySelectorAll('.ri-etat');
+      var sli;
+      for (sli = 0; sli < selectsEtat.length; sli++) {
+        var selectEtat = selectsEtat[sli];
         var sStation = selectEtat.getAttribute('data-station');
         var sSubcat  = selectEtat.getAttribute('data-subcat');
         var sElement = selectEtat.getAttribute('data-element');
+        var sAction  = selectEtat.getAttribute('data-action');
 
-        /* Afficher le select si le Contrôle est coché */
+        /* Afficher le select si l'action correspondante est cochée */
         var actionsEnregistrees = obtenirActionsEtat(sStation, sSubcat, sElement);
-        if (actionsEnregistrees.indexOf('Contrôle') !== -1) {
+        if (actionsEnregistrees.indexOf(sAction) !== -1) {
           selectEtat.style.display = 'block';
-          var valEnreg = obtenirEtatControle(sStation, sSubcat, sElement);
+          var valEnreg = obtenirEtatAction(sStation, sSubcat, sElement, sAction);
           if (valEnreg) { selectEtat.value = valEnreg; }
         }
 
         selectEtat.addEventListener('change', function (e) {
           var sel = e.target;
-          definirEtatControle(
+          definirEtatAction(
             sel.getAttribute('data-station'),
             sel.getAttribute('data-subcat'),
             sel.getAttribute('data-element'),
+            sel.getAttribute('data-action'),
             sel.value
           );
           demanderSauvegarde();
@@ -1194,22 +1252,35 @@
     return etat.travaux[station][subcat][element] || [];
   }
 
-  /* Lecture de l'état de contrôle enregistré pour un élément */
-  function obtenirEtatControle(station, subcat, element) {
+  /* Lecture de l'état enregistré pour une action d'un élément (4 niveaux) */
+  function obtenirEtatAction(station, subcat, element, actionLabel) {
     if (!etat.etats[station]) { return ''; }
     if (!etat.etats[station][subcat]) { return ''; }
-    return etat.etats[station][subcat][element] || '';
+    var parElement = etat.etats[station][subcat][element];
+    /* Migration douce : ancienne valeur 3-niveaux (string directe) -> ignorée */
+    if (typeof parElement === 'string' || !parElement) { return ''; }
+    return parElement[actionLabel] || '';
   }
 
-  /* Écriture / purge de l'état de contrôle (avec nettoyage des niveaux vides) */
-  function definirEtatControle(station, subcat, element, valeur) {
+  /* Écriture / purge de l'état d'une action (avec nettoyage des niveaux vides) */
+  function definirEtatAction(station, subcat, element, actionLabel, valeur) {
     if (valeur) {
       if (!etat.etats[station]) { etat.etats[station] = {}; }
       if (!etat.etats[station][subcat]) { etat.etats[station][subcat] = {}; }
-      etat.etats[station][subcat][element] = valeur;
+      /* Si une ancienne valeur string (3 niveaux) traîne, la remplacer par un objet */
+      if (typeof etat.etats[station][subcat][element] !== 'object' || !etat.etats[station][subcat][element]) {
+        etat.etats[station][subcat][element] = {};
+      }
+      etat.etats[station][subcat][element][actionLabel] = valeur;
     } else {
       if (etat.etats[station] && etat.etats[station][subcat]) {
-        delete etat.etats[station][subcat][element];
+        var pe = etat.etats[station][subcat][element];
+        if (pe && typeof pe === 'object') {
+          delete pe[actionLabel];
+          if (Object.keys(pe).length === 0) { delete etat.etats[station][subcat][element]; }
+        } else {
+          delete etat.etats[station][subcat][element];
+        }
         if (Object.keys(etat.etats[station][subcat]).length === 0) { delete etat.etats[station][subcat]; }
       }
       if (etat.etats[station] && Object.keys(etat.etats[station]).length === 0) { delete etat.etats[station]; }
@@ -1242,18 +1313,16 @@
     if (Object.keys(etat.travaux[station][subcat]).length === 0) { delete etat.travaux[station][subcat]; }
     if (Object.keys(etat.travaux[station]).length === 0) { delete etat.travaux[station]; }
 
-    /* Dropdown d'état lié au Contrôle */
-    if (action === 'Contrôle') {
-      var cell = cb.closest('td');
-      var selectEtat = cell ? cell.querySelector('.ri-etat') : null;
-      if (selectEtat) {
-        if (cb.checked) {
-          selectEtat.style.display = 'block';
-        } else {
-          selectEtat.style.display = 'none';
-          selectEtat.value = '';
-          definirEtatControle(station, subcat, element, '');
-        }
+    /* Dropdown d'état de la même cellule (toute action ayant des états) */
+    var cell = cb.closest('td');
+    var selectEtat = cell ? cell.querySelector('.ri-etat') : null;
+    if (selectEtat) {
+      if (cb.checked) {
+        selectEtat.style.display = 'block';
+      } else {
+        selectEtat.style.display = 'none';
+        selectEtat.value = '';
+        definirEtatAction(station, subcat, element, action, '');
       }
     }
 
@@ -1346,13 +1415,12 @@
           for (ei = 0; ei < elements.length; ei++) {
             var elementLabel = elements[ei];
             var actions = etat.travaux[stationLabel][subcatLabel][elementLabel];
-            /* Regrouper toutes les actions sur une seule ligne */
+            /* Regrouper toutes les actions sur une seule ligne ; afficher l'état si présent */
             if (actions.length > 0) {
-              var etatControle = obtenirEtatControle(stationLabel, subcatLabel, elementLabel);
+              var sLabel = stationLabel, scLabel = subcatLabel, eLabel = elementLabel;
               var actionsAffichees = actions.map(function (a) {
-                if (a === 'Contrôle' && etatControle) {
-                  return 'Contrôle (' + etatControle + ')';
-                }
+                var etatAction = obtenirEtatAction(sLabel, scLabel, eLabel, a);
+                if (etatAction) { return a + ' (' + etatAction + ')'; }
                 return a;
               });
               lignes.push('     • ' + padPoints(elementLabel, PAD_TOTAL) + actionsAffichees.join(', '));
