@@ -178,6 +178,52 @@
 .te-field label { display: block; font-size: 0.78rem; color: #475569; margin-bottom: 3px; font-weight: 500; }
 .te-field input { width: 100%; padding: 7px 9px; border: 1.5px solid #e2e8f0; border-radius: var(--radius); font-size: 0.82rem; }
 .te-panel-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 10px; }
+
+/* Modal Importer JSON */
+.te-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+  padding: 16px;
+}
+.te-modal-overlay.open { display: flex; }
+.te-modal {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 20px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+}
+.te-modal-title { font-weight: 700; color: #003A70; font-size: 1rem; margin-bottom: 8px; }
+.te-modal-help { font-size: 0.78rem; color: #475569; line-height: 1.5; margin-bottom: 12px; }
+.te-modal-textarea {
+  width: 100%;
+  flex: 1;
+  min-height: 220px;
+  resize: vertical;
+  padding: 10px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: var(--radius);
+  font-family: monospace;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.te-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+.te-modal-actions .te-btn-reset { background: #eef2f7; color: #1a2733; }
+.te-modal-actions .te-btn-reset:hover { background: #cbd5e1; }
 </style>
 
 <div class="te-wrapper">
@@ -186,6 +232,7 @@
     <span class="te-toolbar-title">Editeur Taxonomie &mdash; Blockly</span>
     <button class="te-btn te-btn-reset" id="te-reset">&#8634; Reset</button>
     <button class="te-btn te-btn-json" id="te-copy-json">Copier JSON</button>
+    <button class="te-btn te-btn-ghost" id="te-import-json">&#8682; Importer JSON</button>
     <button class="te-btn te-btn-js" id="te-copy-js">Copier JS</button>
     <button class="te-btn te-btn-push" id="te-push">&#8593; Push GitHub</button>
     <button class="te-btn te-btn-ghost" id="te-etats-btn">&#9873; États / type</button>
@@ -217,6 +264,19 @@
 </div>
 
 <div class="te-toast" id="te-toast"></div>
+
+<!-- Overlay modal : Importer JSON -->
+<div class="te-modal-overlay" id="te-import-overlay">
+  <div class="te-modal">
+    <div class="te-modal-title">Importer une taxonomie JSON</div>
+    <p class="te-modal-help">Collez ci-dessous un objet JSON de taxonomie complet (le même format que « Copier JSON »). Cette action <strong>remplacera</strong> la taxonomie actuelle.</p>
+    <textarea id="te-import-textarea" class="te-modal-textarea" placeholder='{ "_etatsDefauts": { ... }, "cloche": { ... } }' spellcheck="false"></textarea>
+    <div class="te-modal-actions">
+      <button class="te-btn te-btn-reset" id="te-import-cancel" type="button">Annuler</button>
+      <button class="te-btn te-btn-push" id="te-import-confirm" type="button">Importer</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function() {
@@ -648,9 +708,13 @@ function showToast(msg, type) {
 /* =====================================================
    SERIALISATION JS
    ===================================================== */
-/* Sérialise une action en objet compact : { type: "x" } ou { type: "x", etats: ["a","b"] } */
+/* Sérialise une action en objet compact :
+   { type: "x" } / { type: "x", note: "n" } / { type: "x", note: "n", etats: ["a","b"] } */
 function serializerAction(a) {
   var s = '{ type: ' + JSON.stringify(a.type);
+  if (typeof a.note === 'string' && a.note.trim()) {
+    s += ', note: ' + JSON.stringify(a.note.trim());
+  }
   if (a.etats && Array.isArray(a.etats) && a.etats.length) {
     var es = a.etats.map(function(e) { return JSON.stringify(e); }).join(', ');
     s += ', etats: [' + es + ']';
@@ -979,6 +1043,70 @@ document.getElementById('te-copy-js').addEventListener('click', function() {
   navigator.clipboard.writeText(serializerTaxoJS(taxo)).then(function() {
     showToast('Bloc JS copié dans le presse-papier', 'success');
   });
+});
+
+/* =====================================================
+   IMPORT JSON — overlay modal
+   ===================================================== */
+var importOverlay   = document.getElementById('te-import-overlay');
+var importTextarea  = document.getElementById('te-import-textarea');
+
+function ouvrirImportModal() {
+  importTextarea.value = '';
+  importOverlay.classList.add('open');
+  setTimeout(function() { importTextarea.focus(); }, 50);
+}
+function fermerImportModal() {
+  importOverlay.classList.remove('open');
+}
+
+document.getElementById('te-import-json').addEventListener('click', ouvrirImportModal);
+document.getElementById('te-import-cancel').addEventListener('click', fermerImportModal);
+
+/* Fermer en cliquant sur le fond (hors carte) */
+importOverlay.addEventListener('click', function(e) {
+  if (e.target === importOverlay) { fermerImportModal(); }
+});
+
+document.getElementById('te-import-confirm').addEventListener('click', function() {
+  var brut = (importTextarea.value || '').trim();
+  if (!brut) { showToast('Aucun contenu à importer', 'error'); return; }
+
+  var resultat;
+  try {
+    resultat = JSON.parse(brut);
+  } catch (err) {
+    showToast('JSON invalide : ' + err.message, 'error');
+    return;
+  }
+
+  /* Validation : objet contenant au moins une machine */
+  if (!resultat || typeof resultat !== 'object' || Array.isArray(resultat)) {
+    showToast('Le JSON doit être un objet de taxonomie', 'error');
+    return;
+  }
+  var machines = Object.keys(resultat).filter(function(k) { return !estCleReservee(k); });
+  if (machines.length === 0) {
+    showToast('Aucune machine trouvée dans le JSON', 'error');
+    return;
+  }
+
+  /* Injecter _etatsDefauts par défaut si absent, puis migrer */
+  if (!resultat._etatsDefauts || typeof resultat._etatsDefauts !== 'object') {
+    resultat._etatsDefauts = etatsDefautsInitiaux();
+  }
+  resultat = migrerSiNecessaire(resultat);
+
+  /* Recharger toute l'UI */
+  taxo = resultat;
+  sauvegarder();
+  activeMachineKey = null;
+  renderTabs();
+  switchMachine(machineKeys()[0]);
+  renderEtatsDefauts();
+
+  fermerImportModal();
+  showToast('Taxonomie importée', 'success');
 });
 
 /* =====================================================
@@ -1329,8 +1457,10 @@ function chargerMachineEnBlocs(ws, key) {
         var prevActionBlock = null;
         (elem.actions || []).forEach(function(action) {
           var actionType = (typeof action === 'string') ? action : (action.type || 'controle');
+          var actionNote = (typeof action === 'object' && typeof action.note === 'string') ? action.note : '';
           var aBlock = ws.newBlock('taxo_action');
           aBlock.setFieldValue(actionType, 'ACTION_TYPE');
+          if (actionNote) { aBlock.setFieldValue(actionNote, 'NOTE'); }
           aBlock.initSvg();
           aBlock.render();
 
@@ -1409,6 +1539,9 @@ function extraireStationsDepuisWorkspace(ws) {
                       while (actionBlock) {
                         if (actionBlock.type === 'taxo_action') {
                           var actionObj = { type: actionBlock.getFieldValue('ACTION_TYPE') };
+                          /* Note libre (champ NOTE) : incluse seulement si non vide */
+                          var note = (actionBlock.getFieldValue('NOTE') || '').trim();
+                          if (note) { actionObj.note = note; }
                           /* Lire la chaîne de blocs taxo_etat dans l'input ETATS */
                           var etatsListe = [];
                           var etatsInput = actionBlock.getInput('ETATS');

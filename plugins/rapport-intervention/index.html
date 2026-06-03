@@ -876,6 +876,48 @@
     return getEtatsDefauts()[typeId] || [];
   }
 
+  /* Retrouve la liste des actions (objets normalisés) d'un élément dans la taxonomie,
+     en localisant l'élément via (machine, station, subcat, label). [] si introuvable. */
+  function actionsTaxonomie(machine, stationLabel, subcatLabel, elementLabel) {
+    var data = TAXONOMIE[machine];
+    if (!data || !data.stations) { return []; }
+    var si, sci, ei;
+    for (si = 0; si < data.stations.length; si++) {
+      var st = data.stations[si];
+      if (st.label !== stationLabel) { continue; }
+      for (sci = 0; sci < (st.subcats || []).length; sci++) {
+        var sc = st.subcats[sci];
+        if (sc.label !== subcatLabel) { continue; }
+        for (ei = 0; ei < (sc.elements || []).length; ei++) {
+          var elem = sc.elements[ei];
+          var lbl = typeof elem === 'string' ? elem : (elem.label || '');
+          if (lbl !== elementLabel) { continue; }
+          if (typeof elem === 'string') {
+            return [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }];
+          }
+          return (elem.actions || []).map(normaliserAction);
+        }
+      }
+    }
+    return [];
+  }
+
+  /* Pour un (élément, type d'action), retourne la liste des notes NON VIDES
+     de toutes les actions de ce type définies dans la taxonomie.
+     Un élément peut avoir plusieurs actions du même type différenciées par leur note. */
+  function notesPourType(machine, stationLabel, subcatLabel, elementLabel, typeId) {
+    var actions = actionsTaxonomie(machine, stationLabel, subcatLabel, elementLabel);
+    var notes = [];
+    var i;
+    for (i = 0; i < actions.length; i++) {
+      var a = actions[i];
+      if (a.type !== typeId) { continue; }
+      var note = (typeof a.note === 'string') ? a.note.trim() : '';
+      if (note && notes.indexOf(note) === -1) { notes.push(note); }
+    }
+    return notes;
+  }
+
   /* ============================================================
      Clé localStorage
      ============================================================ */
@@ -1174,9 +1216,14 @@
             }
             selectHtml += '</select>';
           }
+          /* Tooltip : notes de toutes les actions de ce type pour cet élément (aide visuelle) */
+          var notesCell = notesPourType(machine, stationLabel, subcat.label, elementLabel, aId);
+          var titleAttr = notesCell.length
+            ? ' title="' + escAttr(notesCell.join(' ; ')) + '"'
+            : '';
           trHtml +=
-            '<td class="ri-check-cell" data-label="' + escAttr(aLabel) + '">' +
-              '<input type="checkbox" class="ri-check"' +
+            '<td class="ri-check-cell" data-label="' + escAttr(aLabel) + '"' + titleAttr + '>' +
+              '<input type="checkbox" class="ri-check"' + titleAttr +
               ' data-station="' + escAttr(stationLabel) + '"' +
               ' data-subcat="' + escAttr(subcat.label) + '"' +
               ' data-element="' + escAttr(elementLabel) + '"' +
@@ -1415,13 +1462,31 @@
           for (ei = 0; ei < elements.length; ei++) {
             var elementLabel = elements[ei];
             var actions = etat.travaux[stationLabel][subcatLabel][elementLabel];
-            /* Regrouper toutes les actions sur une seule ligne ; afficher l'état si présent */
+            /* Regrouper toutes les actions sur une seule ligne ; afficher état + notes si présents.
+               Format par action :
+                 - sans note ni état        : "Remplacement"
+                 - avec état                : "Contrôle (Bon)"
+                 - avec note(s)             : "Remplacement (des pièces d'usure ; vérin de montée)"
+                 - avec état + note(s)      : "Contrôle (Bon) — jeux de fonctionnement ; corps de vanne"
+               Les notes sont agrégées depuis toutes les actions de ce type dans la taxonomie
+               (un élément peut avoir plusieurs actions du même type, différenciées par leur note). */
             if (actions.length > 0) {
               var sLabel = stationLabel, scLabel = subcatLabel, eLabel = elementLabel;
               var actionsAffichees = actions.map(function (a) {
+                var texteAction = a;
                 var etatAction = obtenirEtatAction(sLabel, scLabel, eLabel, a);
-                if (etatAction) { return a + ' (' + etatAction + ')'; }
-                return a;
+                if (etatAction) { texteAction += ' (' + etatAction + ')'; }
+
+                var typeId = ACTION_IDS[a];
+                var notes = typeId
+                  ? notesPourType(etat.typeMachine, sLabel, scLabel, eLabel, typeId)
+                  : [];
+                if (notes.length > 0) {
+                  var notesStr = notes.join(' ; ');
+                  /* Si un état est déjà affiché entre parenthèses, séparer les notes par un tiret */
+                  texteAction += etatAction ? ' — ' + notesStr : ' (' + notesStr + ')';
+                }
+                return texteAction;
               });
               lignes.push('     • ' + padPoints(elementLabel, PAD_TOTAL) + actionsAffichees.join(', '));
             }
