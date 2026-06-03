@@ -661,35 +661,46 @@
     }
   })();
 
-  /* Défauts d'états par type d'action (objet) */
-  function getEtatsDefauts() {
-    return TAXONOMIE._etatsDefauts || {};
-  }
-
-  /* Normalise une action (string héritée ou objet) en objet {type, etats?} */
+  /* Normalise une action (string héritée ou objet) en objet {type, note?, etats?} */
   function normaliserAction(action) {
     if (typeof action === 'string') { return { type: action }; }
     return action || { type: '' };
   }
 
-  /* États résolus pour une action : surcharge du bloc sinon défaut du type */
+  /* États proposés pour une action.
+     - etats sous forme de chaîne "Bon/Moyen/Dégradé" -> découpée sur "/" (trim + filtre vides)
+     - etats sous forme de tableau (compat ancien format) -> utilisé tel quel (trim + filtre vides)
+     - sinon -> [] (pas de menu déroulant) */
   function etatsPourAction(action) {
     var a = normaliserAction(action);
-    if (a.etats && a.etats.length) { return a.etats; }
-    var defauts = getEtatsDefauts();
-    return defauts[a.type] || [];
+    var brut = a.etats;
+    var liste = [];
+    if (typeof brut === 'string') {
+      liste = brut.split('/');
+    } else if (Array.isArray(brut)) {
+      liste = brut;
+    }
+    return liste
+      .map(function (e) { return String(e).trim(); })
+      .filter(function (e) { return e.length > 0; });
   }
 
-  /* États résolus à partir du seul libellé d'action (utilisé au rendu de cellule) */
+  /* Union des états de toutes les actions d'un type donné pour un élément (libellé).
+     Utile si plusieurs actions de même type définissent chacune une liste d'états. */
   function etatsPourLibelle(elemActions, actionLabel) {
     var typeId = ACTION_IDS[actionLabel];
+    var union = [];
     var i;
     for (i = 0; i < elemActions.length; i++) {
       var a = normaliserAction(elemActions[i]);
-      if (a.type === typeId) { return etatsPourAction(a); }
+      if (a.type !== typeId) { continue; }
+      var liste = etatsPourAction(a);
+      var j;
+      for (j = 0; j < liste.length; j++) {
+        if (union.indexOf(liste[j]) === -1) { union.push(liste[j]); }
+      }
     }
-    /* Fallback : défaut du type */
-    return getEtatsDefauts()[typeId] || [];
+    return union;
   }
 
   /* Retrouve la liste des actions (objets normalisés) d'un élément dans la taxonomie,
@@ -1014,9 +1025,10 @@
         var aId = actionsPresentes[ci2];
         var aLabel = ACTION_LABELS[aId];
         if (actionParType[aId]) {
-          /* Select d'état si la liste résolue est non vide */
+          /* Select d'état si la liste résolue est non vide
+             (union des états de toutes les actions de ce type pour cet élément) */
           var selectHtml = '';
-          var etatsListe = etatsPourAction(actionParType[aId]);
+          var etatsListe = etatsPourLibelle(elemActions, aLabel);
           if (etatsListe && etatsListe.length) {
             selectHtml =
               '<select class="ri-etat" style="display:none;margin-top:4px;"' +
