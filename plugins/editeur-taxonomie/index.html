@@ -30,6 +30,90 @@
 .te-btn-push { background: #10b981; color: #fff; }
 .te-btn-reset { background: rgba(255,255,255,0.1); color: #fff; }
 
+/* Barre d'onglets machines */
+.te-tabs {
+  display: flex;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #eef2f7;
+  border-bottom: 1px solid #cbd5e1;
+  flex-shrink: 0;
+}
+.te-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: #cbd5e1;
+  color: #1a2733;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: none;
+}
+.te-tab.active { background: #003A70; color: #fff; }
+.te-tab-rename, .te-tab-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+  font-size: 0.85rem;
+}
+.te-tab-rename:hover, .te-tab-del:hover { opacity: 1; }
+.te-tab-add {
+  background: transparent;
+  border: 1.5px dashed #f59e0b;
+  color: #b45309;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Liste des états de contrôle (sidebar) */
+.te-etat-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.te-etat-row input {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  min-width: 0;
+}
+.te-etat-row button {
+  background: #eef2f7;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 4px 7px;
+  font-size: 0.8rem;
+  color: #1a2733;
+}
+.te-etat-row button:hover { background: #cbd5e1; }
+.te-etat-add {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  background: #f59e0b;
+  color: #1a1a1a;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 /* Zone Blockly */
 #te-workspace {
   flex: 1;
@@ -80,8 +164,11 @@
     <button class="te-btn te-btn-json" id="te-copy-json">Copier JSON</button>
     <button class="te-btn te-btn-js" id="te-copy-js">Copier JS</button>
     <button class="te-btn te-btn-push" id="te-push">&#8593; Push GitHub</button>
+    <button class="te-btn te-btn-ghost" id="te-etats-btn">&#9873; États</button>
     <button class="te-btn te-btn-ghost" id="te-config-btn">&#9881; GitHub</button>
   </div>
+
+  <div class="te-tabs" id="te-tabs"></div>
 
   <div id="te-workspace"></div>
 </div>
@@ -98,6 +185,14 @@
   <p style="font-size:var(--font-size-xs);color:#94a3b8;margin-top:12px;line-height:1.5;">Permission requise : <strong>contents: write</strong></p>
 </div>
 
+<!-- Sidebar États de contrôle (panel coulissant) -->
+<div class="te-sidebar" id="te-sidebar-etats">
+  <div style="margin-bottom:16px;font-weight:700;color:#003A70;">États de contrôle</div>
+  <p style="font-size:var(--font-size-xs);color:#94a3b8;margin-bottom:12px;line-height:1.5;">Liste des états proposés lorsqu'un contrôle est coché dans le rapport.</p>
+  <div id="te-etats-list"></div>
+  <button class="te-etat-add" id="te-etats-add">+ Ajouter un état</button>
+</div>
+
 <div class="te-toast" id="te-toast"></div>
 
 <script>
@@ -108,6 +203,7 @@
    DONNEES PAR DEFAUT (copie TAXONOMIE plugin RI)
    ===================================================== */
 var TAXO_DEFAUT = {
+  _etats: ['Bon', 'Moyen', 'Dégradé', "Début d'oxydation", 'Oxydation avancée'],
   cloche: {
     label: 'Cloche (Série C)',
     stations: [
@@ -413,13 +509,24 @@ var TAXO_DEFAUT = {
 var LS_KEY = 'taxo_editeur_draft';
 var LS_GH  = 'taxo_editeur_github';
 var taxo;
+var workspace = null;
+var activeMachineKey = null;
+var chargementEnCours = false;
+
+var ETATS_DEFAUT = ['Bon', 'Moyen', 'Dégradé', "Début d'oxydation", 'Oxydation avancée'];
 
 /* Deep clone simple */
 function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
 
+/* Helper : clés des machines (ignore la clé réservée _etats) */
+function machineKeys() {
+  return Object.keys(taxo).filter(function(k) { return k !== '_etats'; });
+}
+
 /* Migration ancien format (strings -> objets {label, actions}) */
 function migrerSiNecessaire(t) {
   Object.keys(t).forEach(function(mk) {
+    if (mk === '_etats') { return; }
     t[mk].stations.forEach(function(s) {
       s.subcats.forEach(function(sc) {
         sc.elements = sc.elements.map(function(e) {
@@ -438,6 +545,9 @@ function migrerSiNecessaire(t) {
 function charger() {
   var saved = localStorage.getItem(LS_KEY);
   taxo = saved ? migrerSiNecessaire(JSON.parse(saved)) : clone(TAXO_DEFAUT);
+  if (!taxo._etats || !Array.isArray(taxo._etats)) {
+    taxo._etats = clone(ETATS_DEFAUT);
+  }
 }
 
 /* Sauvegarde auto */
@@ -461,7 +571,15 @@ function showToast(msg, type) {
    ===================================================== */
 function serializerTaxoJS(t) {
   var lines = ['  var TAXONOMIE = {'];
-  Object.keys(t).forEach(function(k, ki, arr) {
+
+  /* États de contrôle en tête, sur une seule ligne */
+  var etats = (t._etats && Array.isArray(t._etats)) ? t._etats : ETATS_DEFAUT;
+  var etatsStr = etats.map(function(e) { return JSON.stringify(e); }).join(', ');
+  lines.push('    _etats: [' + etatsStr + '],');
+
+  /* Machines (on ignore la clé réservée _etats) */
+  var keys = Object.keys(t).filter(function(k) { return k !== '_etats'; });
+  keys.forEach(function(k, ki, arr) {
     var m = t[k];
     lines.push('    ' + k + ': {');
     lines.push('      label: ' + JSON.stringify(m.label) + ',');
@@ -517,9 +635,94 @@ document.getElementById('gh-save-config').addEventListener('click', function() {
   showToast('Config GitHub sauvegardée', 'success');
 });
 
-/* Toggle sidebar config */
+/* Toggle sidebar config GitHub (ferme la sidebar États pour éviter le chevauchement) */
 document.getElementById('te-config-btn').addEventListener('click', function() {
+  document.getElementById('te-sidebar-etats').classList.remove('open');
   document.getElementById('te-sidebar').classList.toggle('open');
+});
+
+/* =====================================================
+   ÉTATS DE CONTRÔLE — SIDEBAR
+   ===================================================== */
+function renderEtats() {
+  var list = document.getElementById('te-etats-list');
+  if (!list) { return; }
+  list.innerHTML = '';
+
+  taxo._etats.forEach(function(etatVal, i) {
+    var row = document.createElement('div');
+    row.className = 'te-etat-row';
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.value = etatVal;
+    var commit = function() {
+      taxo._etats[i] = input.value;
+      sauvegarder();
+    };
+    input.addEventListener('change', commit);
+    input.addEventListener('blur', commit);
+
+    var btnUp = document.createElement('button');
+    btnUp.type = 'button';
+    btnUp.textContent = '↑';
+    btnUp.title = 'Monter';
+    btnUp.addEventListener('click', function() {
+      if (i <= 0) { return; }
+      var tmp = taxo._etats[i - 1];
+      taxo._etats[i - 1] = taxo._etats[i];
+      taxo._etats[i] = tmp;
+      sauvegarder();
+      renderEtats();
+    });
+
+    var btnDown = document.createElement('button');
+    btnDown.type = 'button';
+    btnDown.textContent = '↓';
+    btnDown.title = 'Descendre';
+    btnDown.addEventListener('click', function() {
+      if (i >= taxo._etats.length - 1) { return; }
+      var tmp = taxo._etats[i + 1];
+      taxo._etats[i + 1] = taxo._etats[i];
+      taxo._etats[i] = tmp;
+      sauvegarder();
+      renderEtats();
+    });
+
+    var btnDel = document.createElement('button');
+    btnDel.type = 'button';
+    btnDel.textContent = '✕';
+    btnDel.title = 'Supprimer';
+    btnDel.addEventListener('click', function() {
+      if (taxo._etats.length <= 1) {
+        showToast('Impossible de supprimer le dernier état', 'error');
+        return;
+      }
+      taxo._etats.splice(i, 1);
+      sauvegarder();
+      renderEtats();
+    });
+
+    row.appendChild(input);
+    row.appendChild(btnUp);
+    row.appendChild(btnDown);
+    row.appendChild(btnDel);
+    list.appendChild(row);
+  });
+}
+
+document.getElementById('te-etats-add').addEventListener('click', function() {
+  taxo._etats.push('Nouvel état');
+  sauvegarder();
+  renderEtats();
+});
+
+/* Toggle sidebar États (ferme la sidebar GitHub pour éviter le chevauchement) */
+document.getElementById('te-etats-btn').addEventListener('click', function() {
+  document.getElementById('te-sidebar').classList.remove('open');
+  var sb = document.getElementById('te-sidebar-etats');
+  sb.classList.toggle('open');
+  if (sb.classList.contains('open')) { renderEtats(); }
 });
 
 /* =====================================================
@@ -607,20 +810,6 @@ document.getElementById('te-copy-js').addEventListener('click', function() {
    ===================================================== */
 var blockDefs = [
   {
-    "type": "taxo_machine",
-    "message0": "Machine: %1  clé: %2",
-    "args0": [
-      {"type": "field_input", "name": "LABEL", "text": "Nouvelle machine"},
-      {"type": "field_input", "name": "KEY", "text": "machine_id"}
-    ],
-    "message1": "stations %1",
-    "args1": [{"type": "input_statement", "name": "STATIONS", "check": "STATION"}],
-    "previousStatement": "MACHINE",
-    "nextStatement": "MACHINE",
-    "colour": 210,
-    "tooltip": "Bloc Machine (niveau 1)"
-  },
-  {
     "type": "taxo_station",
     "message0": "Station: %1",
     "args0": [{"type": "field_input", "name": "LABEL", "text": "Nouvelle station"}],
@@ -685,7 +874,6 @@ var toolbox = {
   "kind": "flyoutToolbox",
   "contents": [
     {"kind": "label", "text": "Niveaux taxonomie"},
-    {"kind": "block", "type": "taxo_machine", "fields": {"LABEL": "Nouvelle machine", "KEY": "machine_id"}},
     {"kind": "block", "type": "taxo_station", "fields": {"LABEL": "Nouvelle station"}},
     {"kind": "block", "type": "taxo_subcat", "fields": {"LABEL": "Nouvelle sous-catégorie"}},
     {"kind": "block", "type": "taxo_element", "fields": {"LABEL": "Nouvel élément"}},
@@ -733,19 +921,18 @@ function initBlockly() {
   };
   if (theme) workspaceConfig.theme = theme;
 
-  var workspace = Blockly.inject('te-workspace', workspaceConfig);
+  workspace = Blockly.inject('te-workspace', workspaceConfig);
 
-  /* 3. Charger la taxonomie existante dans le workspace */
-  chargerTaxoEnBlocs(workspace, taxo);
+  /* 3. Construire les onglets et afficher la première machine */
+  renderTabs();
+  switchMachine(machineKeys()[0]);
 
-  /* 4. Écouter les changements pour sauvegarder */
+  /* 4. Écouter les changements pour sauvegarder (machine active uniquement) */
   workspace.addChangeListener(function(event) {
-    if (event.isUiEvent) return;
-    var newTaxo = extraireTaxoDepuisWorkspace(workspace);
-    if (newTaxo) {
-      taxo = newTaxo;
-      sauvegarder();
-    }
+    if (chargementEnCours || event.isUiEvent) return;
+    if (!activeMachineKey) return;
+    taxo[activeMachineKey].stations = extraireStationsDepuisWorkspace(workspace);
+    sauvegarder();
   });
 
   /* 5. Bouton Reset : réinitialiser le workspace */
@@ -753,7 +940,9 @@ function initBlockly() {
     if (confirm('Réinitialiser vers la taxonomie par défaut ? (les modifications non poussées seront perdues)')) {
       taxo = clone(TAXO_DEFAUT);
       sauvegarder();
-      chargerTaxoEnBlocs(workspace, taxo);
+      activeMachineKey = null;
+      renderTabs();
+      switchMachine(machineKeys()[0]);
       showToast('Taxonomie réinitialisée', 'info');
     }
   });
@@ -762,187 +951,274 @@ function initBlockly() {
 }
 
 /* =====================================================
-   BLOCKLY — CHARGEMENT TAXONOMIE VERS WORKSPACE
+   ONGLETS MACHINES
    ===================================================== */
-function chargerTaxoEnBlocs(workspace, taxo) {
-  workspace.clear();
 
-  var machineKeys = Object.keys(taxo);
-  var prevMachineBlock = null;
+/* Translittération basique + slug unique contre les clés existantes */
+function slugifyKey(label) {
+  var base = String(label).toLowerCase()
+    .replace(/[àâä]/g, 'a')
+    .replace(/[éèêë]/g, 'e')
+    .replace(/[îï]/g, 'i')
+    .replace(/[ôö]/g, 'o')
+    .replace(/[ùûü]/g, 'u')
+    .replace(/[ç]/g, 'c')
+    .replace(/\s+/g, '_')
+    .replace(/[^a-z0-9_]/g, '');
+  if (!base) { base = 'machine'; }
 
-  machineKeys.forEach(function(key) {
-    var machine = taxo[key];
+  var existantes = Object.keys(taxo).filter(function(k) { return k !== '_etats'; });
+  if (existantes.indexOf(base) === -1) { return base; }
+  var n = 2;
+  while (existantes.indexOf(base + '_' + n) !== -1) { n++; }
+  return base + '_' + n;
+}
 
-    /* Créer bloc machine */
-    var mBlock = workspace.newBlock('taxo_machine');
-    mBlock.setFieldValue(machine.label, 'LABEL');
-    mBlock.setFieldValue(key, 'KEY');
-    mBlock.initSvg();
-    mBlock.render();
+/* Reconstruit la barre d'onglets depuis machineKeys() */
+function renderTabs() {
+  var tabsEl = document.getElementById('te-tabs');
+  if (!tabsEl) { return; }
+  tabsEl.innerHTML = '';
 
-    /* Connecter au précédent */
-    if (prevMachineBlock) {
-      var prevConn = prevMachineBlock.nextConnection;
-      var currConn = mBlock.previousConnection;
-      if (prevConn && currConn) prevConn.connect(currConn);
-    }
+  machineKeys().forEach(function(key) {
+    var tab = document.createElement('button');
+    tab.type = 'button';
+    tab.className = 'te-tab' + (key === activeMachineKey ? ' active' : '');
 
-    /* Stations */
-    var prevStationBlock = null;
-    machine.stations.forEach(function(station) {
-      var sBlock = workspace.newBlock('taxo_station');
-      sBlock.setFieldValue(station.label, 'LABEL');
-      sBlock.initSvg();
-      sBlock.render();
+    var lbl = document.createElement('span');
+    lbl.textContent = taxo[key].label || key;
+    lbl.addEventListener('click', function() { switchMachine(key); });
 
-      if (!prevStationBlock) {
-        var stmtConn = mBlock.getInput('STATIONS').connection;
-        if (stmtConn && sBlock.previousConnection) stmtConn.connect(sBlock.previousConnection);
-      } else {
-        var prevConn = prevStationBlock.nextConnection;
-        if (prevConn && sBlock.previousConnection) prevConn.connect(sBlock.previousConnection);
-      }
-
-      /* Subcats */
-      var prevSubcatBlock = null;
-      station.subcats.forEach(function(subcat) {
-        var scBlock = workspace.newBlock('taxo_subcat');
-        scBlock.setFieldValue(subcat.label, 'LABEL');
-        scBlock.initSvg();
-        scBlock.render();
-
-        if (!prevSubcatBlock) {
-          var stmtConn = sBlock.getInput('SUBCATS').connection;
-          if (stmtConn && scBlock.previousConnection) stmtConn.connect(scBlock.previousConnection);
-        } else {
-          var prevConn = prevSubcatBlock.nextConnection;
-          if (prevConn && scBlock.previousConnection) prevConn.connect(scBlock.previousConnection);
-        }
-
-        /* Éléments */
-        var prevElemBlock = null;
-        subcat.elements.forEach(function(elem) {
-          var eBlock = workspace.newBlock('taxo_element');
-          eBlock.setFieldValue(elem.label || '', 'LABEL');
-          eBlock.initSvg();
-          eBlock.render();
-
-          if (!prevElemBlock) {
-            var stmtConn = scBlock.getInput('ELEMENTS').connection;
-            if (stmtConn && eBlock.previousConnection) stmtConn.connect(eBlock.previousConnection);
-          } else {
-            var prevConn = prevElemBlock.nextConnection;
-            if (prevConn && eBlock.previousConnection) prevConn.connect(eBlock.previousConnection);
-          }
-
-          /* Blocs action */
-          var prevActionBlock = null;
-          (elem.actions || []).forEach(function(actionId) {
-            var aBlock = workspace.newBlock('taxo_action');
-            aBlock.setFieldValue(actionId, 'ACTION_TYPE');
-            aBlock.initSvg();
-            aBlock.render();
-
-            if (!prevActionBlock) {
-              var actionsConn = eBlock.getInput('ACTIONS').connection;
-              if (actionsConn && aBlock.previousConnection) actionsConn.connect(aBlock.previousConnection);
-            } else {
-              if (prevActionBlock.nextConnection && aBlock.previousConnection)
-                prevActionBlock.nextConnection.connect(aBlock.previousConnection);
-            }
-            prevActionBlock = aBlock;
-          });
-
-          prevElemBlock = eBlock;
-        });
-
-        prevSubcatBlock = scBlock;
-      });
-
-      prevStationBlock = sBlock;
+    var btnRename = document.createElement('button');
+    btnRename.type = 'button';
+    btnRename.className = 'te-tab-rename';
+    btnRename.textContent = '✎';
+    btnRename.title = 'Renommer';
+    btnRename.addEventListener('click', function(e) {
+      e.stopPropagation();
+      renommerMachine(key);
     });
 
-    prevMachineBlock = mBlock;
+    var btnDel = document.createElement('button');
+    btnDel.type = 'button';
+    btnDel.className = 'te-tab-del';
+    btnDel.textContent = '✕';
+    btnDel.title = 'Supprimer';
+    btnDel.addEventListener('click', function(e) {
+      e.stopPropagation();
+      supprimerMachine(key);
+    });
+
+    tab.appendChild(lbl);
+    tab.appendChild(btnRename);
+    tab.appendChild(btnDel);
+    tabsEl.appendChild(tab);
   });
 
-  /* Positionner les blocs dans la vue */
-  var topBlocks = workspace.getTopBlocks(true);
-  if (topBlocks.length > 0) {
-    topBlocks[0].moveBy(20, 20);
-    workspace.scrollCenter();
+  var btnAdd = document.createElement('button');
+  btnAdd.type = 'button';
+  btnAdd.className = 'te-tab-add';
+  btnAdd.textContent = '+ Machine';
+  btnAdd.addEventListener('click', function() { ajouterMachine(); });
+  tabsEl.appendChild(btnAdd);
+}
+
+/* Bascule sur la machine `key` : sauve la précédente, charge la nouvelle */
+function switchMachine(key) {
+  if (!key) { return; }
+
+  /* 1. Sauvegarder la machine active courante */
+  if (activeMachineKey && !chargementEnCours && taxo[activeMachineKey]) {
+    taxo[activeMachineKey].stations = extraireStationsDepuisWorkspace(workspace);
+    sauvegarder();
+  }
+
+  /* 2. Nouvelle machine active */
+  activeMachineKey = key;
+
+  /* 3. Recharger le workspace pour cette machine uniquement */
+  chargementEnCours = true;
+  workspace.clear();
+  chargerMachineEnBlocs(workspace, key);
+  chargementEnCours = false;
+
+  /* 4. Rafraîchir les onglets */
+  renderTabs();
+}
+
+/* Ajoute une machine et bascule dessus */
+function ajouterMachine() {
+  var nom = prompt('Nom de la nouvelle machine :');
+  if (!nom || !nom.trim()) { return; }
+  var key = slugifyKey(nom.trim());
+  taxo[key] = { label: nom.trim(), stations: [] };
+  sauvegarder();
+  switchMachine(key);
+}
+
+/* Renomme une machine (le label uniquement — la clé reste stable) */
+function renommerMachine(key) {
+  var nv = prompt('Nouveau nom :', taxo[key].label);
+  if (nv && nv.trim()) {
+    taxo[key].label = nv.trim();
+    sauvegarder();
+    renderTabs();
+  }
+}
+
+/* Supprime une machine (jamais la dernière) */
+function supprimerMachine(key) {
+  if (machineKeys().length <= 1) {
+    showToast('Impossible de supprimer la dernière machine', 'error');
+    return;
+  }
+  if (confirm('Supprimer la machine "' + taxo[key].label + '" ?')) {
+    delete taxo[key];
+    sauvegarder();
+    var reste = machineKeys();
+    activeMachineKey = null;
+    switchMachine(reste[0]);
   }
 }
 
 /* =====================================================
-   BLOCKLY — EXTRACTION TAXONOMIE DEPUIS WORKSPACE
+   BLOCKLY — CHARGEMENT D'UNE MACHINE (stations top-level)
    ===================================================== */
-function extraireTaxoDepuisWorkspace(workspace) {
-  var newTaxo = {};
-  var topBlocks = workspace.getTopBlocks(true);
+function chargerMachineEnBlocs(ws, key) {
+  var machine = taxo[key];
+  if (!machine) { return; }
 
-  topBlocks.forEach(function(block) {
-    if (block.type !== 'taxo_machine') return;
+  var prevStationBlock = null;
 
-    var machineChain = block;
-    while (machineChain) {
-      if (machineChain.type === 'taxo_machine') {
-        var machineLabel = machineChain.getFieldValue('LABEL') || 'Machine sans nom';
-        var machineKey   = (machineChain.getFieldValue('KEY') || machineLabel)
-                            .toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-        var stations = [];
+  machine.stations.forEach(function(station) {
+    var sBlock = ws.newBlock('taxo_station');
+    sBlock.setFieldValue(station.label, 'LABEL');
+    sBlock.initSvg();
+    sBlock.render();
 
-        /* Parcourir les stations */
-        var stationsInput = machineChain.getInput('STATIONS');
-        if (stationsInput && stationsInput.connection && stationsInput.connection.targetBlock()) {
-          var stationBlock = stationsInput.connection.targetBlock();
-          while (stationBlock) {
-            if (stationBlock.type === 'taxo_station') {
-              var subcats = [];
-              var subcatsInput = stationBlock.getInput('SUBCATS');
-              if (subcatsInput && subcatsInput.connection && subcatsInput.connection.targetBlock()) {
-                var subcatBlock = subcatsInput.connection.targetBlock();
-                while (subcatBlock) {
-                  if (subcatBlock.type === 'taxo_subcat') {
-                    var elements = [];
-                    var elemsInput = subcatBlock.getInput('ELEMENTS');
-                    if (elemsInput && elemsInput.connection && elemsInput.connection.targetBlock()) {
-                      var elemBlock = elemsInput.connection.targetBlock();
-                      while (elemBlock) {
-                        if (elemBlock.type === 'taxo_element') {
-                          var actions = [];
-                          var actionsInput = elemBlock.getInput('ACTIONS');
-                          if (actionsInput && actionsInput.connection && actionsInput.connection.targetBlock()) {
-                            var actionBlock = actionsInput.connection.targetBlock();
-                            while (actionBlock) {
-                              if (actionBlock.type === 'taxo_action') {
-                                actions.push(actionBlock.getFieldValue('ACTION_TYPE'));
-                              }
-                              actionBlock = actionBlock.nextConnection && actionBlock.nextConnection.targetBlock();
-                            }
-                          }
-                          elements.push({ label: elemBlock.getFieldValue('LABEL') || '', actions: actions });
-                        }
-                        elemBlock = elemBlock.nextConnection && elemBlock.nextConnection.targetBlock();
-                      }
-                    }
-                    subcats.push({ label: subcatBlock.getFieldValue('LABEL') || '', elements: elements });
-                  }
-                  subcatBlock = subcatBlock.nextConnection && subcatBlock.nextConnection.targetBlock();
-                }
-              }
-              stations.push({ label: stationBlock.getFieldValue('LABEL') || '', subcats: subcats });
-            }
-            stationBlock = stationBlock.nextConnection && stationBlock.nextConnection.targetBlock();
-          }
+    if (!prevStationBlock) {
+      /* Première station : top-block positionné dans la vue */
+      sBlock.moveBy(20, 20);
+    } else {
+      var prevConn = prevStationBlock.nextConnection;
+      if (prevConn && sBlock.previousConnection) prevConn.connect(sBlock.previousConnection);
+    }
+
+    /* Subcats */
+    var prevSubcatBlock = null;
+    (station.subcats || []).forEach(function(subcat) {
+      var scBlock = ws.newBlock('taxo_subcat');
+      scBlock.setFieldValue(subcat.label, 'LABEL');
+      scBlock.initSvg();
+      scBlock.render();
+
+      if (!prevSubcatBlock) {
+        var stmtConn = sBlock.getInput('SUBCATS').connection;
+        if (stmtConn && scBlock.previousConnection) stmtConn.connect(scBlock.previousConnection);
+      } else {
+        var prevConnSc = prevSubcatBlock.nextConnection;
+        if (prevConnSc && scBlock.previousConnection) prevConnSc.connect(scBlock.previousConnection);
+      }
+
+      /* Éléments */
+      var prevElemBlock = null;
+      (subcat.elements || []).forEach(function(elem) {
+        var eBlock = ws.newBlock('taxo_element');
+        eBlock.setFieldValue(elem.label || '', 'LABEL');
+        eBlock.initSvg();
+        eBlock.render();
+
+        if (!prevElemBlock) {
+          var stmtConnE = scBlock.getInput('ELEMENTS').connection;
+          if (stmtConnE && eBlock.previousConnection) stmtConnE.connect(eBlock.previousConnection);
+        } else {
+          var prevConnE = prevElemBlock.nextConnection;
+          if (prevConnE && eBlock.previousConnection) prevConnE.connect(eBlock.previousConnection);
         }
 
-        newTaxo[machineKey] = { label: machineLabel, stations: stations };
+        /* Blocs action */
+        var prevActionBlock = null;
+        (elem.actions || []).forEach(function(actionId) {
+          var aBlock = ws.newBlock('taxo_action');
+          aBlock.setFieldValue(actionId, 'ACTION_TYPE');
+          aBlock.initSvg();
+          aBlock.render();
+
+          if (!prevActionBlock) {
+            var actionsConn = eBlock.getInput('ACTIONS').connection;
+            if (actionsConn && aBlock.previousConnection) actionsConn.connect(aBlock.previousConnection);
+          } else {
+            if (prevActionBlock.nextConnection && aBlock.previousConnection)
+              prevActionBlock.nextConnection.connect(aBlock.previousConnection);
+          }
+          prevActionBlock = aBlock;
+        });
+
+        prevElemBlock = eBlock;
+      });
+
+      prevSubcatBlock = scBlock;
+    });
+
+    prevStationBlock = sBlock;
+  });
+
+  ws.scrollCenter();
+}
+
+/* =====================================================
+   BLOCKLY — EXTRACTION DES STATIONS DEPUIS LE WORKSPACE
+   ===================================================== */
+function extraireStationsDepuisWorkspace(ws) {
+  var stations = [];
+  var topBlocks = ws.getTopBlocks(true);
+
+  topBlocks.forEach(function(block) {
+    if (block.type !== 'taxo_station') return;
+
+    var stationBlock = block;
+    while (stationBlock) {
+      if (stationBlock.type === 'taxo_station') {
+        var subcats = [];
+        var subcatsInput = stationBlock.getInput('SUBCATS');
+        if (subcatsInput && subcatsInput.connection && subcatsInput.connection.targetBlock()) {
+          var subcatBlock = subcatsInput.connection.targetBlock();
+          while (subcatBlock) {
+            if (subcatBlock.type === 'taxo_subcat') {
+              var elements = [];
+              var elemsInput = subcatBlock.getInput('ELEMENTS');
+              if (elemsInput && elemsInput.connection && elemsInput.connection.targetBlock()) {
+                var elemBlock = elemsInput.connection.targetBlock();
+                while (elemBlock) {
+                  if (elemBlock.type === 'taxo_element') {
+                    var actions = [];
+                    var actionsInput = elemBlock.getInput('ACTIONS');
+                    if (actionsInput && actionsInput.connection && actionsInput.connection.targetBlock()) {
+                      var actionBlock = actionsInput.connection.targetBlock();
+                      while (actionBlock) {
+                        if (actionBlock.type === 'taxo_action') {
+                          actions.push(actionBlock.getFieldValue('ACTION_TYPE'));
+                        }
+                        actionBlock = actionBlock.nextConnection && actionBlock.nextConnection.targetBlock();
+                      }
+                    }
+                    elements.push({ label: elemBlock.getFieldValue('LABEL') || '', actions: actions });
+                  }
+                  elemBlock = elemBlock.nextConnection && elemBlock.nextConnection.targetBlock();
+                }
+              }
+              subcats.push({ label: subcatBlock.getFieldValue('LABEL') || '', elements: elements });
+            }
+            subcatBlock = subcatBlock.nextConnection && subcatBlock.nextConnection.targetBlock();
+          }
+        }
+        stations.push({ label: stationBlock.getFieldValue('LABEL') || '', subcats: subcats });
       }
-      machineChain = machineChain.nextConnection && machineChain.nextConnection.targetBlock();
+      stationBlock = stationBlock.nextConnection && stationBlock.nextConnection.targetBlock();
     }
   });
 
-  return Object.keys(newTaxo).length > 0 ? newTaxo : null;
+  return stations;
 }
 
 /* =====================================================

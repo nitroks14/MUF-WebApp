@@ -241,6 +241,14 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Dropdown d'état de contrôle */
+  .ri-etat {
+    font-size: 0.8rem;
+    padding: 3px 6px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+  }
+
   /* ---- Responsive tableau mobile ---- */
   @media (max-width: 767px) {
     .ri-table thead { display: none; }
@@ -506,7 +514,10 @@
      Taxonomie complète des machines et stations
      Structure : machine → stations → { label, subcats: [ { label, elements: [] } ] }
      ============================================================ */
+  var ETATS_DEFAUT = ['Bon', 'Moyen', 'Dégradé', "Début d'oxydation", 'Oxydation avancée'];
+
   var TAXONOMIE = {
+    _etats: ['Bon', 'Moyen', 'Dégradé', "Début d'oxydation", 'Oxydation avancée'],
     cloche: {
       label: 'Cloche (Série C)',
       stations: [
@@ -808,6 +819,11 @@
     }
   };
 
+  /* Liste des états de contrôle (issue de la taxonomie, fallback défaut) */
+  function getEtats() {
+    return (TAXONOMIE._etats && TAXONOMIE._etats.length) ? TAXONOMIE._etats : ETATS_DEFAUT;
+  }
+
   /* ============================================================
      Clé localStorage
      ============================================================ */
@@ -821,6 +837,7 @@
     binome: '',
     typeMachine: '',
     travaux: {},
+    etats: {},
     tests: []
   };
 
@@ -1087,6 +1104,22 @@
         var aId = actionsPresentes[ci2];
         var aLabel = ACTION_LABELS[aId];
         if (elemActions.indexOf(aId) !== -1) {
+          var selectHtml = '';
+          if (aId === 'controle') {
+            var etatsListe = getEtats();
+            selectHtml =
+              '<select class="ri-etat" style="display:none;margin-top:4px;"' +
+              ' data-station="' + escAttr(stationLabel) + '"' +
+              ' data-subcat="' + escAttr(subcat.label) + '"' +
+              ' data-element="' + escAttr(elementLabel) + '"' +
+              ' aria-label="État — ' + escAttr(elementLabel) + '">' +
+              '<option value="">— état —</option>';
+            var oi;
+            for (oi = 0; oi < etatsListe.length; oi++) {
+              selectHtml += '<option value="' + escAttr(etatsListe[oi]) + '">' + escHtml(etatsListe[oi]) + '</option>';
+            }
+            selectHtml += '</select>';
+          }
           trHtml +=
             '<td class="ri-check-cell" data-label="' + escAttr(aLabel) + '">' +
               '<input type="checkbox" class="ri-check"' +
@@ -1095,6 +1128,7 @@
               ' data-element="' + escAttr(elementLabel) + '"' +
               ' data-action="' + escAttr(aLabel) + '"' +
               ' aria-label="' + escAttr(elementLabel) + ' — ' + escAttr(aLabel) + '">' +
+              selectHtml +
             '</td>';
         } else {
           trHtml += '<td class="ri-check-cell" data-label="' + escAttr(aLabel) + '"></td>';
@@ -1115,6 +1149,34 @@
         cb.addEventListener('change', gererChangementChecklist);
       }
 
+      /* Dropdown d'état de contrôle : restauration + listener */
+      var selectEtat = tr.querySelector('.ri-etat');
+      if (selectEtat) {
+        var sStation = selectEtat.getAttribute('data-station');
+        var sSubcat  = selectEtat.getAttribute('data-subcat');
+        var sElement = selectEtat.getAttribute('data-element');
+
+        /* Afficher le select si le Contrôle est coché */
+        var actionsEnregistrees = obtenirActionsEtat(sStation, sSubcat, sElement);
+        if (actionsEnregistrees.indexOf('Contrôle') !== -1) {
+          selectEtat.style.display = 'block';
+          var valEnreg = obtenirEtatControle(sStation, sSubcat, sElement);
+          if (valEnreg) { selectEtat.value = valEnreg; }
+        }
+
+        selectEtat.addEventListener('change', function (e) {
+          var sel = e.target;
+          definirEtatControle(
+            sel.getAttribute('data-station'),
+            sel.getAttribute('data-subcat'),
+            sel.getAttribute('data-element'),
+            sel.value
+          );
+          demanderSauvegarde();
+          mettreAJourApercu();
+        });
+      }
+
       tbody.appendChild(tr);
     }
 
@@ -1130,6 +1192,28 @@
     if (!etat.travaux[station]) { return []; }
     if (!etat.travaux[station][subcat]) { return []; }
     return etat.travaux[station][subcat][element] || [];
+  }
+
+  /* Lecture de l'état de contrôle enregistré pour un élément */
+  function obtenirEtatControle(station, subcat, element) {
+    if (!etat.etats[station]) { return ''; }
+    if (!etat.etats[station][subcat]) { return ''; }
+    return etat.etats[station][subcat][element] || '';
+  }
+
+  /* Écriture / purge de l'état de contrôle (avec nettoyage des niveaux vides) */
+  function definirEtatControle(station, subcat, element, valeur) {
+    if (valeur) {
+      if (!etat.etats[station]) { etat.etats[station] = {}; }
+      if (!etat.etats[station][subcat]) { etat.etats[station][subcat] = {}; }
+      etat.etats[station][subcat][element] = valeur;
+    } else {
+      if (etat.etats[station] && etat.etats[station][subcat]) {
+        delete etat.etats[station][subcat][element];
+        if (Object.keys(etat.etats[station][subcat]).length === 0) { delete etat.etats[station][subcat]; }
+      }
+      if (etat.etats[station] && Object.keys(etat.etats[station]).length === 0) { delete etat.etats[station]; }
+    }
   }
 
   function gererChangementChecklist(e) {
@@ -1157,6 +1241,21 @@
     if (actions.length === 0) { delete etat.travaux[station][subcat][element]; }
     if (Object.keys(etat.travaux[station][subcat]).length === 0) { delete etat.travaux[station][subcat]; }
     if (Object.keys(etat.travaux[station]).length === 0) { delete etat.travaux[station]; }
+
+    /* Dropdown d'état lié au Contrôle */
+    if (action === 'Contrôle') {
+      var cell = cb.closest('td');
+      var selectEtat = cell ? cell.querySelector('.ri-etat') : null;
+      if (selectEtat) {
+        if (cb.checked) {
+          selectEtat.style.display = 'block';
+        } else {
+          selectEtat.style.display = 'none';
+          selectEtat.value = '';
+          definirEtatControle(station, subcat, element, '');
+        }
+      }
+    }
 
     demanderSauvegarde();
     mettreAJourApercu();
@@ -1249,7 +1348,14 @@
             var actions = etat.travaux[stationLabel][subcatLabel][elementLabel];
             /* Regrouper toutes les actions sur une seule ligne */
             if (actions.length > 0) {
-              lignes.push('     • ' + padPoints(elementLabel, PAD_TOTAL) + actions.join(', '));
+              var etatControle = obtenirEtatControle(stationLabel, subcatLabel, elementLabel);
+              var actionsAffichees = actions.map(function (a) {
+                if (a === 'Contrôle' && etatControle) {
+                  return 'Contrôle (' + etatControle + ')';
+                }
+                return a;
+              });
+              lignes.push('     • ' + padPoints(elementLabel, PAD_TOTAL) + actionsAffichees.join(', '));
             }
           }
         }
@@ -1350,6 +1456,7 @@
     etat.binome = '';
     etat.typeMachine = '';
     etat.travaux = {};
+    etat.etats = {};
     etat.tests = [];
 
     appliquerTypeIntervention('solo');
@@ -1441,6 +1548,7 @@
     if (donnees.binome)           { etat.binome           = donnees.binome; }
     if (donnees.typeMachine)      { etat.typeMachine      = donnees.typeMachine; }
     if (donnees.travaux && typeof donnees.travaux === 'object') { etat.travaux = donnees.travaux; }
+    if (donnees.etats && typeof donnees.etats === 'object') { etat.etats = donnees.etats; }
     if (Array.isArray(donnees.tests)) { etat.tests = donnees.tests; }
   }
 
