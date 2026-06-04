@@ -172,9 +172,6 @@
   <div class="te-toolbar">
     <button class="te-btn te-btn-ghost" id="te-back">&larr; Retour</button>
     <span class="te-toolbar-title">Editeur Taxonomie &mdash; Blockly</span>
-    <button class="te-btn te-btn-ghost" id="te-fold-stations" title="Replier toutes les stations">&#8863; Stations</button>
-    <button class="te-btn te-btn-ghost" id="te-fold-subcats" title="Replier toutes les sous-catégories">&#8863; Sous-cat.</button>
-    <button class="te-btn te-btn-ghost" id="te-unfold-all" title="Déplier tous les blocs">&#8862; Tout déplier</button>
     <button class="te-btn te-btn-reset" id="te-reset">&#8634; Reset</button>
     <button class="te-btn te-btn-json" id="te-copy-json">Copier JSON</button>
     <button class="te-btn te-btn-ghost" id="te-import-json">&#8682; Importer JSON</button>
@@ -820,27 +817,6 @@ document.getElementById('te-back').addEventListener('click', function() {
   window.location.hash = '#plugin-rapport-intervention';
 });
 
-/* Repli / dépli des blocs par type (purement visuel — n'altère pas les données).
-   setCollapsed émet un évènement UI Blockly que le change-listener ignore déjà
-   (event.isUiEvent), mais on sécurise avec chargementEnCours pour exclure toute
-   sauvegarde/extraction parasite. */
-function plierParType(type, etat) {
-  var ws = workspace || (window.Blockly && Blockly.getMainWorkspace());
-  if (!ws) { return; }
-  var ancien = chargementEnCours;
-  chargementEnCours = true;
-  try {
-    ws.getAllBlocks(false).forEach(function(b) {
-      if (!type || b.type === type) { b.setCollapsed(etat); }
-    });
-  } finally {
-    chargementEnCours = ancien;
-  }
-}
-document.getElementById('te-fold-stations').addEventListener('click', function() { plierParType('taxo_station', true); });
-document.getElementById('te-fold-subcats').addEventListener('click', function() { plierParType('taxo_subcat', true); });
-document.getElementById('te-unfold-all').addEventListener('click', function() { plierParType(null, false); });
-
 document.getElementById('te-copy-json').addEventListener('click', function() {
   navigator.clipboard.writeText(JSON.stringify(taxo, null, 2)).then(function() {
     showToast('JSON copié dans le presse-papier', 'success');
@@ -1009,11 +985,36 @@ function chargerBlocklyEtInit() {
   document.head.appendChild(script);
 }
 
+/* Data-URI d'un petit triangle ▾ blanc (visible sur header vert/orange).
+   Sert d'icône de repli cliquable en tête des blocs station / sous-cat. */
+var FOLD_ICON_SRC = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14"><path d="M3 5l4 4 4-4z" fill="white"/></svg>'
+);
+
+/* Types de blocs sur lesquels on ajoute le triangle de repli + dépli au clic */
+var TYPES_REPLIABLES = ['taxo_station', 'taxo_subcat'];
+
 function initBlockly() {
-  /* 1. Enregistrer les blocs custom */
+  /* 1. Enregistrer les blocs custom.
+     Pour les blocs station / sous-cat : après le jsonInit, on insère en tête
+     un FieldImage cliquable (▾) qui replie le bloc (setCollapsed(true)).
+     Le champ est nommé FOLD_ICON et n'est JAMAIS lu par l'extraction
+     (qui lit uniquement LABEL / ACTION_TYPE / NOTE / ETATS). */
   blockDefs.forEach(function(def) {
+    var repliable = TYPES_REPLIABLES.indexOf(def.type) !== -1;
     Blockly.Blocks[def.type] = {
-      init: function() { this.jsonInit(def); }
+      init: function() {
+        this.jsonInit(def);
+        if (repliable) {
+          var self = this;
+          var icon = new Blockly.FieldImage(
+            FOLD_ICON_SRC, 14, 14, '▾ plier',
+            function() { self.setCollapsed(true); }
+          );
+          /* Insérer le triangle au tout début du premier input (celui du LABEL) */
+          this.inputList[0].insertFieldAt(0, icon, 'FOLD_ICON');
+        }
+      }
     };
   });
 
@@ -1044,6 +1045,22 @@ function initBlockly() {
     if (!activeMachineKey) return;
     taxo[activeMachineKey].stations = extraireStationsDepuisWorkspace(workspace);
     sauvegarder();
+  });
+
+  /* 4 bis. Déplier au clic sur un bloc DÉJÀ replié (station / sous-cat).
+     Quand un bloc est replié, Blockly masque ses champs (donc le triangle ▾) :
+     un clic n'importe où sur le bloc compact le déplie alors (setCollapsed(false)).
+     Ce listener n'agit que sur les blocs repliés → aucun conflit avec l'édition
+     d'un libellé (bloc déplié) ni avec le clic sur le triangle (clic de champ, et
+     le bloc n'est pas encore replié à cet instant). Purement visuel : setCollapsed
+     émet un évènement UI ignoré par le listener de sauvegarde ci-dessus. */
+  workspace.addChangeListener(function(e) {
+    if (e.type === Blockly.Events.CLICK && e.targetType === 'block' && e.blockId) {
+      var b = workspace.getBlockById(e.blockId);
+      if (b && b.isCollapsed() && TYPES_REPLIABLES.indexOf(b.type) !== -1) {
+        b.setCollapsed(false);
+      }
+    }
   });
 
   /* 5. Bouton Reset : réinitialiser le workspace */
