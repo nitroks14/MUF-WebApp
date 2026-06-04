@@ -529,6 +529,14 @@ var workspace = null;
 var activeMachineKey = null;
 var chargementEnCours = false;
 
+/* Garde anti-rebond pour le dépli au clic (event SELECTED).
+   Replier un bloc via l'icône ▾ le sélectionne aussi → un event SELECTED
+   est émis pour ce bloc désormais replié. Sans garde, le listener le
+   re-déplierait immédiatement (toggle-toggle). On mémorise le bloc qu'on
+   vient de replier (id + timestamp) pour neutraliser ce rebond < 500 ms. */
+var dernierRepliId = null;
+var dernierRepliTs = 0;
+
 /* Clés réservées : anciennes clés legacy, jamais traitées comme des machines.
    Conservées pour ignorer/nettoyer proprement d'éventuelles données anciennes. */
 var CLES_RESERVEES = ['_etats', '_etatsDefauts'];
@@ -1009,7 +1017,13 @@ function initBlockly() {
           var self = this;
           var icon = new Blockly.FieldImage(
             FOLD_ICON_SRC, 14, 14, '▾ plier',
-            function() { self.setCollapsed(true); }
+            function() {
+              /* Mémoriser le repli pour neutraliser l'event SELECTED induit
+                 par ce même clic (sinon le listener re-déplierait aussitôt). */
+              dernierRepliId = self.id;
+              dernierRepliTs = Date.now();
+              self.setCollapsed(true);
+            }
           );
           /* Insérer le triangle au tout début du premier input (celui du LABEL) */
           this.inputList[0].insertFieldAt(0, icon, 'FOLD_ICON');
@@ -1047,20 +1061,25 @@ function initBlockly() {
     sauvegarder();
   });
 
-  /* 4 bis. Déplier au clic sur un bloc DÉJÀ replié (station / sous-cat).
-     Quand un bloc est replié, Blockly masque ses champs (donc le triangle ▾) :
-     un clic n'importe où sur le bloc compact le déplie alors (setCollapsed(false)).
-     Ce listener n'agit que sur les blocs repliés → aucun conflit avec l'édition
-     d'un libellé (bloc déplié) ni avec le clic sur le triangle (clic de champ, et
-     le bloc n'est pas encore replié à cet instant). Purement visuel : setCollapsed
-     émet un évènement UI ignoré par le listener de sauvegarde ci-dessus. */
+  /* 4 bis. Déplier en sélectionnant un bloc DÉJÀ replié (station / sous-cat).
+     On écoute SELECTED (et non CLICK) : cliquer un bloc émet de façon fiable
+     un event SELECTED, alors que CLICK n'atteint pas toujours le listener.
+     Ce listener n'agit QUE si le bloc nouvellement sélectionné est déjà replié
+     → un bloc déplié n'est jamais affecté : éditer un libellé (clic sur le champ
+     texte → sélection du bloc déplié) ne le replie donc PAS.
+     Purement visuel : setCollapsed émet un évènement UI ignoré par le listener
+     de sauvegarde ci-dessus. */
   workspace.addChangeListener(function(e) {
-    if (e.type === Blockly.Events.CLICK && e.targetType === 'block' && e.blockId) {
-      var b = workspace.getBlockById(e.blockId);
-      if (b && b.isCollapsed() && TYPES_REPLIABLES.indexOf(b.type) !== -1) {
-        b.setCollapsed(false);
-      }
-    }
+    if (e.type !== Blockly.Events.SELECTED) return;
+    var id = e.newElementId;                 // bloc nouvellement sélectionné
+    if (!id) return;
+    var b = workspace.getBlockById(id);
+    if (!b || !b.isCollapsed()) return;
+    if (TYPES_REPLIABLES.indexOf(b.type) === -1) return;
+    /* Garde anti-rebond : ne pas re-déplier le bloc qu'on vient juste de
+       replier via l'icône ▾ (même clic → event SELECTED induit < 500 ms). */
+    if (b.id === dernierRepliId && (Date.now() - dernierRepliTs) < 500) return;
+    b.setCollapsed(false);
   });
 
   /* 5. Bouton Reset : réinitialiser le workspace */
