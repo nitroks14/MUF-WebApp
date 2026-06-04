@@ -529,10 +529,10 @@ var workspace = null;
 var activeMachineKey = null;
 var chargementEnCours = false;
 
-/* Garde anti-rebond pour le dépli au clic (event SELECTED).
-   Replier un bloc via l'icône ▾ le sélectionne aussi → un event SELECTED
-   est émis pour ce bloc désormais replié. Sans garde, le listener le
-   re-déplierait immédiatement (toggle-toggle). On mémorise le bloc qu'on
+/* Garde anti-rebond pour le dépli au clic (listener DOM `click`).
+   Le clic sur l'icône ▾ qui replie le bloc bubble jusqu'au conteneur
+   d'injection, où le listener de dépli est attaché. Sans garde, ce même clic
+   re-déplierait aussitôt le bloc (toggle-toggle). On mémorise le bloc qu'on
    vient de replier (id + timestamp) pour neutraliser ce rebond < 500 ms. */
 var dernierRepliId = null;
 var dernierRepliTs = 0;
@@ -1018,8 +1018,9 @@ function initBlockly() {
           var icon = new Blockly.FieldImage(
             FOLD_ICON_SRC, 14, 14, '▾ plier',
             function() {
-              /* Mémoriser le repli pour neutraliser l'event SELECTED induit
-                 par ce même clic (sinon le listener re-déplierait aussitôt). */
+              /* Mémoriser le repli pour neutraliser le rebond : ce même clic
+                 bubble jusqu'au listener DOM de dépli (sinon il re-déplierait
+                 aussitôt le bloc qu'on vient de replier). */
               dernierRepliId = self.id;
               dernierRepliTs = Date.now();
               self.setCollapsed(true);
@@ -1061,25 +1062,39 @@ function initBlockly() {
     sauvegarder();
   });
 
-  /* 4 bis. Déplier en sélectionnant un bloc DÉJÀ replié (station / sous-cat).
-     On écoute SELECTED (et non CLICK) : cliquer un bloc émet de façon fiable
-     un event SELECTED, alors que CLICK n'atteint pas toujours le listener.
-     Ce listener n'agit QUE si le bloc nouvellement sélectionné est déjà replié
-     → un bloc déplié n'est jamais affecté : éditer un libellé (clic sur le champ
-     texte → sélection du bloc déplié) ne le replie donc PAS.
+  /* 4 bis. Déplier au clic un bloc DÉJÀ replié (station / sous-cat).
+     Les events Blockly sont non fiables ici : Blockly.Events.CLICK n'atteint
+     pas le change-listener, et Blockly.Events.SELECTED n'est émis QUE si la
+     sélection change — or après un repli via l'icône ▾ le bloc est déjà
+     sélectionné, donc re-cliquer dessus n'émet aucun nouveau SELECTED.
+     → On utilise un vrai listener DOM `click`, attaché UNE SEULE FOIS sur le
+     conteneur d'injection (getInjectionDiv() est stable : il ne change pas
+     quand on bascule d'onglet machine, donc inutile de le ré-attacher dans
+     chargerMachineEnBlocs — cela créerait des doublons). On retrouve le bloc
+     cliqué en testant getSvgRoot().contains(e.target) : même un clic sur le
+     texte compact d'un bloc replié est contenu dans son SVG racine. On itère
+     tous les blocs au moment du clic → couvre aussi les blocs ajoutés par
+     glisser-dépôt depuis la toolbox.
+     N'agit QUE si le bloc est isCollapsed() → un bloc déplié n'est jamais
+     affecté (édition du champ texte d'un bloc déplié OK).
      Purement visuel : setCollapsed émet un évènement UI ignoré par le listener
      de sauvegarde ci-dessus. */
-  workspace.addChangeListener(function(e) {
-    if (e.type !== Blockly.Events.SELECTED) return;
-    var id = e.newElementId;                 // bloc nouvellement sélectionné
-    if (!id) return;
-    var b = workspace.getBlockById(id);
-    if (!b || !b.isCollapsed()) return;
-    if (TYPES_REPLIABLES.indexOf(b.type) === -1) return;
-    /* Garde anti-rebond : ne pas re-déplier le bloc qu'on vient juste de
-       replier via l'icône ▾ (même clic → event SELECTED induit < 500 ms). */
-    if (b.id === dernierRepliId && (Date.now() - dernierRepliTs) < 500) return;
-    b.setCollapsed(false);
+  workspace.getInjectionDiv().addEventListener('click', function(e) {
+    var blocks = workspace.getAllBlocks(false);
+    for (var i = 0; i < blocks.length; i++) {
+      var b = blocks[i];
+      if (TYPES_REPLIABLES.indexOf(b.type) === -1 || !b.isCollapsed()) continue;
+      var root = b.getSvgRoot && b.getSvgRoot();
+      if (root && root.contains(e.target)) {
+        /* Garde anti-rebond : ne pas re-déplier le bloc qu'on vient juste de
+           replier via l'icône ▾. Le même clic qui replie via l'icône bubble
+           jusqu'au conteneur ; comme le bloc vient d'être replié (< 500 ms),
+           on l'ignore. */
+        if (b.id === dernierRepliId && (Date.now() - dernierRepliTs) < 500) return;
+        b.setCollapsed(false);
+        return;
+      }
+    }
   });
 
   /* 5. Bouton Reset : réinitialiser le workspace */
