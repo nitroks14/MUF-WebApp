@@ -172,6 +172,9 @@
   <div class="te-toolbar">
     <button class="te-btn te-btn-ghost" id="te-back">&larr; Retour</button>
     <span class="te-toolbar-title">Editeur Taxonomie &mdash; Blockly</span>
+    <button class="te-btn te-btn-ghost" id="te-fold-stations" title="Replier toutes les stations">&#8863; Stations</button>
+    <button class="te-btn te-btn-ghost" id="te-fold-subcats" title="Replier toutes les sous-catégories">&#8863; Sous-cat.</button>
+    <button class="te-btn te-btn-ghost" id="te-unfold-all" title="Déplier tous les blocs">&#8862; Tout déplier</button>
     <button class="te-btn te-btn-reset" id="te-reset">&#8634; Reset</button>
     <button class="te-btn te-btn-json" id="te-copy-json">Copier JSON</button>
     <button class="te-btn te-btn-ghost" id="te-import-json">&#8682; Importer JSON</button>
@@ -817,6 +820,27 @@ document.getElementById('te-back').addEventListener('click', function() {
   window.location.hash = '#plugin-rapport-intervention';
 });
 
+/* Repli / dépli des blocs par type (purement visuel — n'altère pas les données).
+   setCollapsed émet un évènement UI Blockly que le change-listener ignore déjà
+   (event.isUiEvent), mais on sécurise avec chargementEnCours pour exclure toute
+   sauvegarde/extraction parasite. */
+function plierParType(type, etat) {
+  var ws = workspace || (window.Blockly && Blockly.getMainWorkspace());
+  if (!ws) { return; }
+  var ancien = chargementEnCours;
+  chargementEnCours = true;
+  try {
+    ws.getAllBlocks(false).forEach(function(b) {
+      if (!type || b.type === type) { b.setCollapsed(etat); }
+    });
+  } finally {
+    chargementEnCours = ancien;
+  }
+}
+document.getElementById('te-fold-stations').addEventListener('click', function() { plierParType('taxo_station', true); });
+document.getElementById('te-fold-subcats').addEventListener('click', function() { plierParType('taxo_subcat', true); });
+document.getElementById('te-unfold-all').addEventListener('click', function() { plierParType(null, false); });
+
 document.getElementById('te-copy-json').addEventListener('click', function() {
   navigator.clipboard.writeText(JSON.stringify(taxo, null, 2)).then(function() {
     showToast('JSON copié dans le presse-papier', 'success');
@@ -928,7 +952,7 @@ var blockDefs = [
   },
   {
     "type": "taxo_action",
-    "message0": "%1",
+    "message0": "%1 note %2 états (/) %3",
     "args0": [
       {
         "type": "field_dropdown",
@@ -941,16 +965,15 @@ var blockDefs = [
           ["💧 Lubrification", "lubrification"],
           ["⚙ Réglage", "reglage"]
         ]
-      }
+      },
+      {"type": "field_input", "name": "NOTE", "text": ""},
+      {"type": "field_input", "name": "ETATS", "text": ""}
     ],
-    "message1": "note %1",
-    "args1": [{"type": "field_input", "name": "NOTE", "text": ""}],
-    "message2": "états (séparés par /) %1",
-    "args2": [{"type": "field_input", "name": "ETATS", "text": ""}],
+    "inputsInline": true,
     "previousStatement": "ACTION",
     "nextStatement": "ACTION",
     "colour": 65,
-    "tooltip": "Action. 'note' = précision libre. 'états' = liste séparée par / (ex: Bon/Moyen/Dégradé) → menu déroulant dans le rapport."
+    "tooltip": "Action. 'note' = précision libre ; 'états (/)' = liste séparée par / (ex: Bon/Moyen/Dégradé) → menu déroulant dans le rapport."
   }
 ];
 
@@ -1003,6 +1026,7 @@ function initBlockly() {
     toolbox: toolbox,
     scrollbars: true,
     trashcan: true,
+    collapse: true,
     move: { scrollbars: true, drag: true, wheel: true },
     zoom: { controls: true, wheel: true, startScale: 0.9 }
   };
