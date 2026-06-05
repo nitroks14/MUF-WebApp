@@ -1,6 +1,8 @@
 <!--
   Plugin Paramétrage — MUF-WebApp
   Formulaire de configuration persisté en localStorage.
+  v2 : Nom/Prénom/QR code supprimés (gérés par Auth).
+       Ajout section compte connecté (lecture seule).
 -->
 
 <div class="parametrage-wrap">
@@ -12,35 +14,30 @@
        style="display:none;"></div>
 
   <!-- ================================================================
-       SECTION 1 — Identité du technicien (Nom / Prénom)
+       SECTION 0 — Compte connecté (lecture seule)
        ================================================================ -->
-  <section class="card mb-24" aria-labelledby="titre-identite">
+  <section class="card mb-24" aria-labelledby="titre-compte">
     <div class="card-header">
-      <h2 class="card-title" id="titre-identite">Identité</h2>
+      <h2 class="card-title" id="titre-compte">Mon compte</h2>
     </div>
     <div class="card-body">
-      <div class="param-grid-2col">
-
-        <div class="form-group">
-          <label class="form-label" for="param-nom">Nom</label>
-          <input class="form-control" type="text" id="param-nom"
-                 name="nom" autocomplete="family-name"
-                 placeholder="ex : Dupont" />
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="param-prenom">Prénom</label>
-          <input class="form-control" type="text" id="param-prenom"
-                 name="prenom" autocomplete="given-name"
-                 placeholder="ex : Jean" />
-        </div>
-
+      <div id="compte-infos">
+        <!-- Rempli par JS depuis window.Auth.getUser() -->
       </div>
+      <button type="button" class="btn-deconnexion" id="btn-deconnexion">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0
+               01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+        Se déconnecter
+      </button>
     </div>
   </section>
 
   <!-- ================================================================
-       SECTION 2 — Contacts Support Technique
+       SECTION 1 — Contacts Support Technique
        ================================================================ -->
   <section class="card mb-24" aria-labelledby="titre-support">
     <div class="card-header">
@@ -67,7 +64,7 @@
   </section>
 
   <!-- ================================================================
-       SECTION 3 — Emails fréquents
+       SECTION 2 — Emails fréquents
        ================================================================ -->
   <section class="card mb-24" aria-labelledby="titre-emails">
     <div class="card-header">
@@ -112,58 +109,6 @@
   </section>
 
   <!-- ================================================================
-       SECTION QR CODE - Partage rapide de configuration
-       ================================================================ -->
-  <section class="card mb-24" aria-labelledby="titre-qr">
-    <div class="card-header">
-      <h2 class="card-title" id="titre-qr">Partage rapide — QR Code</h2>
-    </div>
-    <div class="card-body">
-
-      <p class="text-muted text-sm mb-16">
-        Transférez instantanément votre configuration vers un autre appareil.
-      </p>
-      <div class="qr-actions">
-        <button type="button" class="btn btn-primary" id="btn-generer-qr">
-          Générer le QR Code
-        </button>
-        <button type="button" class="btn btn-outline" id="btn-scanner-qr">
-          Scanner un QR Code
-        </button>
-      </div>
-
-      <!-- Zone d'affichage du QR Code généré -->
-      <div id="qr-zone-generation" style="display:none;" class="qr-zone mt-16">
-        <p class="text-sm mb-8 text-muted">
-          Scannez ce QR Code depuis l'autre appareil pour importer la configuration.
-        </p>
-        <div id="qr-canvas-container"></div>
-        <button type="button" class="btn btn-outline btn-sm mt-8" id="btn-fermer-qr">
-          Fermer
-        </button>
-      </div>
-
-      <!-- Zone de scan caméra -->
-      <div id="qr-zone-scan" style="display:none;" class="qr-zone mt-16">
-        <p class="text-sm mb-8 text-muted">
-          Pointez la caméra vers le QR Code à importer.
-        </p>
-        <div class="qr-video-wrap">
-          <video id="qr-video" playsinline autoplay muted></video>
-          <canvas id="qr-scan-canvas" style="display:none;"></canvas>
-        </div>
-        <button type="button" class="btn btn-outline btn-sm mt-8" id="btn-stopper-scan">
-          Arrêter le scan
-        </button>
-      </div>
-
-      <!-- Feedback scan -->
-      <div id="qr-feedback" class="alert mt-16" role="alert" style="display:none;"></div>
-
-    </div>
-  </section>
-
-  <!-- ================================================================
        BARRE D'ACTIONS
        ================================================================ -->
   <div class="param-actions">
@@ -178,19 +123,6 @@
      Styles spécifiques au plugin Paramétrage
      ================================================================ -->
 <style>
-  /* Grille 2 colonnes — passe en 1 colonne sur mobile */
-  .param-grid-2col {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0 20px;
-  }
-
-  @media (max-width: 767px) {
-    .param-grid-2col {
-      grid-template-columns: 1fr;
-    }
-  }
-
   /* Ligne d'un email fréquent */
   .email-row {
     display: grid;
@@ -264,96 +196,105 @@
       flex-direction: column;
     }
   }
-
-  /* ----------------------------------------------------------------
-     QR Code - Partage rapide
-     ---------------------------------------------------------------- */
-
-  .qr-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  .qr-zone {
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    padding: 16px;
-    background: var(--color-bg);
-  }
-
-  #qr-canvas-container canvas,
-  #qr-canvas-container img {
-    display: block;
-    max-width: 220px;
-    height: auto;
-    margin: 0 auto;
-    border: 4px solid white;
-    border-radius: 4px;
-  }
-
-  .qr-video-wrap {
-    position: relative;
-    width: 100%;
-    max-width: 320px;
-    margin: 0 auto;
-    background: #000;
-    border-radius: var(--radius);
-    overflow: hidden;
-  }
-
-  #qr-video {
-    width: 100%;
-    height: auto;
-    display: block;
-  }
-
 </style>
 
 <!-- ================================================================
-     Script du plugin — utilise window.Parametrage (chargé dans index.html)
+     Script du plugin — utilise window.Parametrage + window.Auth
      ================================================================ -->
 <script>
 (function () {
   'use strict';
 
   /* ----------------------------------------------------------
+     Section compte connecté (lecture seule)
+     ---------------------------------------------------------- */
+  (function afficherCompte() {
+    var conteneur = document.getElementById('compte-infos');
+    if (!conteneur) return;
+
+    var user = window.Auth ? window.Auth.getUser() : null;
+
+    if (!user) {
+      conteneur.innerHTML = '<p class="text-muted text-sm">Informations de compte non disponibles.</p>';
+      return;
+    }
+
+    var lignes = [];
+
+    if (user.prenom || user.nom) {
+      lignes.push(
+        '<div class="compte-info-row">' +
+          '<span class="compte-info-label">Nom</span>' +
+          '<span class="compte-info-value">' +
+            escHtml((user.prenom || '') + ' ' + (user.nom || '')).trim() +
+          '</span>' +
+        '</div>'
+      );
+    }
+
+    if (user.email) {
+      lignes.push(
+        '<div class="compte-info-row">' +
+          '<span class="compte-info-label">Email</span>' +
+          '<span class="compte-info-value">' + escHtml(user.email) + '</span>' +
+        '</div>'
+      );
+    }
+
+    conteneur.innerHTML = lignes.length
+      ? lignes.join('')
+      : '<p class="text-muted text-sm">Informations de compte non disponibles.</p>';
+  })();
+
+  /* Echappement HTML minimal */
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /* ----------------------------------------------------------
+     Bouton Déconnexion
+     ---------------------------------------------------------- */
+  var btnDeconnexion = document.getElementById('btn-deconnexion');
+  if (btnDeconnexion) {
+    btnDeconnexion.addEventListener('click', function () {
+      if (!confirm('Se déconnecter de MUF-WebApp ?')) return;
+      if (window.Auth) window.Auth.logout();
+      window.location.reload();
+    });
+  }
+
+  /* ----------------------------------------------------------
      Références DOM
      ---------------------------------------------------------- */
-  const champsCles = {
-    nom:               document.getElementById('param-nom'),
-    prenom:            document.getElementById('param-prenom'),
+  var champsCles = {
     email_maintenance: document.getElementById('param-email-maintenance'),
   };
 
-  const emailsListe       = document.getElementById('emails-liste');
-  const btnAjouterEmail   = document.getElementById('btn-ajouter-email');
-  const supportListe      = document.getElementById('support-liste');
-  const btnAjouterSupport = document.getElementById('btn-ajouter-support');
-  const btnEnregistrer    = document.getElementById('btn-enregistrer');
-  const zoneAlerte        = document.getElementById('param-alerte');
+  var emailsListe       = document.getElementById('emails-liste');
+  var btnAjouterEmail   = document.getElementById('btn-ajouter-email');
+  var supportListe      = document.getElementById('support-liste');
+  var btnAjouterSupport = document.getElementById('btn-ajouter-support');
+  var btnEnregistrer    = document.getElementById('btn-enregistrer');
+  var zoneAlerte        = document.getElementById('param-alerte');
 
   /* Tableaux locaux en cours d'édition */
-  let emailsEnCours  = [];
-  let supportEnCours = [];
+  var emailsEnCours  = [];
+  var supportEnCours = [];
 
   /* ----------------------------------------------------------
      Affichage d'une alerte
      ---------------------------------------------------------- */
   function afficherAlerte(type, message) {
-    /* type : 'success' | 'danger' | 'warning' | 'info' */
-    zoneAlerte.className = `alert alert-${type}`;
+    zoneAlerte.className = 'alert alert-' + type;
     zoneAlerte.textContent = message;
     zoneAlerte.style.display = 'block';
-
-    /* Scroll vers le haut pour rendre l'alerte visible */
     zoneAlerte.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-    /* Masquage automatique après 6 secondes pour les succès */
     if (type === 'success') {
-      setTimeout(() => {
-        zoneAlerte.style.display = 'none';
-      }, 6000);
+      setTimeout(function () { zoneAlerte.style.display = 'none'; }, 6000);
     }
   }
 
@@ -364,16 +305,11 @@
   /* ----------------------------------------------------------
      Gestion de la liste des emails fréquents
      ---------------------------------------------------------- */
-
-  /**
-   * Construit le DOM pour tous les emails de emailsEnCours.
-   * Chaque ligne a : label | adresse | bouton supprimer
-   */
   function rendreListe() {
     emailsListe.innerHTML = '';
 
     if (emailsEnCours.length === 0) {
-      const vide = document.createElement('p');
+      var vide = document.createElement('p');
       vide.className = 'text-muted text-sm mb-8';
       vide.textContent = 'Aucun email enregistré.';
       emailsListe.appendChild(vide);
@@ -381,37 +317,37 @@
     }
 
     emailsEnCours.forEach(function (entry, index) {
-      const ligne = document.createElement('div');
+      var ligne = document.createElement('div');
       ligne.className = 'email-row';
       ligne.setAttribute('data-index', index);
 
-      const inputLabel = document.createElement('input');
+      var inputLabel = document.createElement('input');
       inputLabel.type = 'text';
       inputLabel.className = 'form-control';
       inputLabel.value = entry.label || '';
       inputLabel.placeholder = 'Ex : Service OS';
-      inputLabel.setAttribute('aria-label', `Libellé de l'email ${index + 1}`);
+      inputLabel.setAttribute('aria-label', 'Libellé de l\'email ' + (index + 1));
       inputLabel.addEventListener('input', function () {
         emailsEnCours[index].label = this.value;
         autoSave();
       });
 
-      const inputAdresse = document.createElement('input');
+      var inputAdresse = document.createElement('input');
       inputAdresse.type = 'email';
       inputAdresse.className = 'form-control';
       inputAdresse.value = entry.adresse || '';
       inputAdresse.placeholder = 'adresse@exemple.com';
       inputAdresse.inputMode = 'email';
-      inputAdresse.setAttribute('aria-label', `Adresse email ${index + 1}`);
+      inputAdresse.setAttribute('aria-label', 'Adresse email ' + (index + 1));
       inputAdresse.addEventListener('input', function () {
         emailsEnCours[index].adresse = this.value;
         autoSave();
       });
 
-      const btnSuppr = document.createElement('button');
+      var btnSuppr = document.createElement('button');
       btnSuppr.type = 'button';
       btnSuppr.className = 'btn-supprimer-email';
-      btnSuppr.setAttribute('aria-label', `Supprimer l'email ${entry.label || index + 1}`);
+      btnSuppr.setAttribute('aria-label', 'Supprimer l\'email ' + (entry.label || index + 1));
       btnSuppr.innerHTML = '&times;';
       btnSuppr.addEventListener('click', function () {
         emailsEnCours.splice(index, 1);
@@ -429,7 +365,7 @@
   btnAjouterEmail.addEventListener('click', function () {
     emailsEnCours.push({ label: '', adresse: '' });
     rendreListe();
-    const dernierInputs = emailsListe.querySelectorAll('.email-row:last-child input');
+    var dernierInputs = emailsListe.querySelectorAll('.email-row:last-child input');
     if (dernierInputs.length > 0) dernierInputs[0].focus();
   });
 
@@ -440,7 +376,7 @@
     supportListe.innerHTML = '';
 
     if (supportEnCours.length === 0) {
-      const vide = document.createElement('p');
+      var vide = document.createElement('p');
       vide.className = 'text-muted text-sm mb-8';
       vide.textContent = 'Aucun contact enregistré.';
       supportListe.appendChild(vide);
@@ -448,10 +384,10 @@
     }
 
     supportEnCours.forEach(function (entry, index) {
-      const ligne = document.createElement('div');
+      var ligne = document.createElement('div');
       ligne.className = 'email-row';
 
-      const inputLabel = document.createElement('input');
+      var inputLabel = document.createElement('input');
       inputLabel.type = 'text';
       inputLabel.className = 'form-control';
       inputLabel.value = entry.label || '';
@@ -462,7 +398,7 @@
         autoSave();
       });
 
-      const inputAdresse = document.createElement('input');
+      var inputAdresse = document.createElement('input');
       inputAdresse.type = 'email';
       inputAdresse.className = 'form-control';
       inputAdresse.value = entry.adresse || '';
@@ -474,7 +410,7 @@
         autoSave();
       });
 
-      const btnSuppr = document.createElement('button');
+      var btnSuppr = document.createElement('button');
       btnSuppr.type = 'button';
       btnSuppr.className = 'btn-supprimer-email';
       btnSuppr.setAttribute('aria-label', 'Supprimer ' + (entry.label || 'contact ' + (index + 1)));
@@ -495,7 +431,7 @@
   btnAjouterSupport.addEventListener('click', function () {
     supportEnCours.push({ label: '', adresse: '' });
     rendreSupportListe();
-    const dernierInputs = supportListe.querySelectorAll('.email-row:last-child input');
+    var dernierInputs = supportListe.querySelectorAll('.email-row:last-child input');
     if (dernierInputs.length > 0) dernierInputs[0].focus();
   });
 
@@ -503,16 +439,14 @@
      Remplissage du formulaire depuis la config stockée
      ---------------------------------------------------------- */
   function remplirFormulaire() {
-    const config = window.Parametrage.getAll();
+    var config = window.Parametrage.getAll();
 
-    /* Champs simples */
     Object.keys(champsCles).forEach(function (key) {
-      const el = champsCles[key];
+      var el = champsCles[key];
       if (!el) return;
       el.value = config[key] || '';
     });
 
-    /* Emails fréquents */
     emailsEnCours = Array.isArray(config.emails_frequents)
       ? config.emails_frequents.map(function (e) {
           return { label: e.label || '', adresse: e.adresse || '' };
@@ -520,7 +454,6 @@
       : [];
     rendreListe();
 
-    /* Contacts support technique */
     supportEnCours = Array.isArray(config.contacts_support)
       ? config.contacts_support.map(function (e) {
           return { label: e.label || '', adresse: e.adresse || '' };
@@ -533,17 +466,15 @@
      Lecture des valeurs du formulaire → objet plat
      ---------------------------------------------------------- */
   function lireFormulaire() {
-    const valeurs = {};
+    var valeurs = {};
     Object.keys(champsCles).forEach(function (key) {
-      const el = champsCles[key];
+      var el = champsCles[key];
       if (!el) return;
       valeurs[key] = el.value.trim();
     });
-    /* Nettoyage des emails vides */
     valeurs.emails_frequents = emailsEnCours.filter(function (e) {
       return e.label.trim() || e.adresse.trim();
     });
-    /* Contacts support technique */
     valeurs.contacts_support = supportEnCours.filter(function (e) {
       return e.label.trim() || e.adresse.trim();
     });
@@ -551,33 +482,32 @@
   }
 
   /* ----------------------------------------------------------
-     Sauvegarde locale
+     Sauvegarde manuelle
      ---------------------------------------------------------- */
   btnEnregistrer.addEventListener('click', function () {
     masquerAlerte();
-    const valeurs = lireFormulaire();
+    var valeurs = lireFormulaire();
     Object.keys(valeurs).forEach(function (key) {
       window.Parametrage.set(key, valeurs[key]);
     });
-    afficherAlerte('success', 'Configuration enregistrée localement.');
+    afficherAlerte('success', 'Configuration enregistrée.');
   });
 
   /* ----------------------------------------------------------
-     Sauvegarde automatique a la saisie (debounce 800 ms)
+     Sauvegarde automatique à la saisie (debounce 800 ms)
      ---------------------------------------------------------- */
-  let timerAutoSave = null;
+  var timerAutoSave = null;
 
   function autoSave() {
     clearTimeout(timerAutoSave);
     timerAutoSave = setTimeout(function () {
-      const valeurs = lireFormulaire();
+      var valeurs = lireFormulaire();
       Object.keys(valeurs).forEach(function (key) {
         window.Parametrage.set(key, valeurs[key]);
       });
     }, 800);
   }
 
-  /* Attacher l'auto-save sur tous les champs du formulaire */
   Object.values(champsCles).forEach(function (el) {
     if (!el) return;
     el.addEventListener('input', autoSave);
@@ -588,177 +518,6 @@
      Initialisation
      ---------------------------------------------------------- */
   remplirFormulaire();
-
-  /* ----------------------------------------------------------
-     QR Code — Génération
-     ---------------------------------------------------------- */
-  const btnGenererQR   = document.getElementById('btn-generer-qr');
-  const btnFermerQR    = document.getElementById('btn-fermer-qr');
-  const zoneGeneration = document.getElementById('qr-zone-generation');
-  const qrContainer    = document.getElementById('qr-canvas-container');
-  const zoneScan       = document.getElementById('qr-zone-scan');
-  const qrFeedback     = document.getElementById('qr-feedback');
-
-  function afficherFeedbackQR(type, message) {
-    qrFeedback.className = 'alert alert-' + type + ' mt-16';
-    qrFeedback.textContent = message;
-    qrFeedback.style.display = 'block';
-    if (type === 'success') {
-      setTimeout(function () { qrFeedback.style.display = 'none'; }, 5000);
-    }
-  }
-
-  btnGenererQR.addEventListener('click', function () {
-    /* Sauvegarde d'abord la config courante */
-    const valeurs = lireFormulaire();
-    Object.keys(valeurs).forEach(function (key) {
-      window.Parametrage.set(key, valeurs[key]);
-    });
-
-    /* Sérialisation complète + compression LZ-String pour tenir dans le QR Code */
-    const config = window.Parametrage.getAll();
-    const jsonConfig = JSON.stringify(config);
-    const compressed = LZString.compressToBase64(jsonConfig);
-
-    /* Vide le conteneur et génère le QR */
-    qrContainer.innerHTML = '';
-    try {
-      new QRCode(qrContainer, {
-        text:         compressed,
-        width:        220,
-        height:       220,
-        colorDark:    '#003A70',
-        colorLight:   '#FFFFFF',
-        correctLevel: QRCode.CorrectLevel.L,
-      });
-    } catch (e) {
-      afficherFeedbackQR('danger', 'Impossible de générer le QR Code : ' + e.message);
-      return;
-    }
-
-    zoneScan.style.display       = 'none';
-    zoneGeneration.style.display = 'block';
-    zoneGeneration.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  });
-
-  btnFermerQR.addEventListener('click', function () {
-    zoneGeneration.style.display = 'none';
-    qrContainer.innerHTML = '';
-  });
-
-  /* ----------------------------------------------------------
-     QR Code — Scan caméra
-     ---------------------------------------------------------- */
-  const btnScannerQR   = document.getElementById('btn-scanner-qr');
-  const btnStopperScan = document.getElementById('btn-stopper-scan');
-  const videoEl        = document.getElementById('qr-video');
-  const canvasScan = document.getElementById('qr-scan-canvas');
-  let ctxScan      = null; /* initialisé au premier appel de analyserFrame */
-
-  let streamCamera = null;
-  let rafScan      = null;
-  let scanEnCours  = false;
-
-  function stopperCamera() {
-    scanEnCours = false;
-    if (rafScan) { cancelAnimationFrame(rafScan); rafScan = null; }
-    if (streamCamera) {
-      streamCamera.getTracks().forEach(function (t) { t.stop(); });
-      streamCamera = null;
-    }
-    videoEl.srcObject = null;
-    zoneScan.style.display = 'none';
-  }
-
-  function analyserFrame() {
-    if (!scanEnCours) return;
-
-    /* Initialisation lazy du contexte canvas */
-    if (!ctxScan && canvasScan) ctxScan = canvasScan.getContext('2d');
-    if (!ctxScan) { rafScan = requestAnimationFrame(analyserFrame); return; }
-
-    if (videoEl.readyState === videoEl.HAVE_ENOUGH_DATA) {
-      canvasScan.width  = videoEl.videoWidth;
-      canvasScan.height = videoEl.videoHeight;
-      ctxScan.drawImage(videoEl, 0, 0, canvasScan.width, canvasScan.height);
-
-      const imageData = ctxScan.getImageData(0, 0, canvasScan.width, canvasScan.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: 'dontInvert',
-      });
-
-      if (code) {
-        stopperCamera();
-        try {
-          const raw = code.data;
-          let jsonStr;
-          try {
-            const decompressed = LZString.decompressFromBase64(raw);
-            jsonStr = (decompressed && decompressed.length > 0) ? decompressed : raw;
-          } catch (e) {
-            jsonStr = raw;
-          }
-          const configImportee = JSON.parse(jsonStr);
-
-          /* Validation minimale */
-          if (typeof configImportee !== 'object' || configImportee === null) {
-            throw new Error('Format de configuration invalide.');
-          }
-
-          /* Application de la config importée */
-          Object.keys(configImportee).forEach(function (key) {
-            window.Parametrage.set(key, configImportee[key]);
-          });
-
-          afficherFeedbackQR('success', '✓ Configuration importée ! Rechargement en cours…');
-          zoneGeneration.style.display = 'none';
-          setTimeout(function () {
-            window.location.reload();
-          }, 1500);
-        } catch (e) {
-          afficherFeedbackQR('danger', 'QR Code invalide : ' + e.message);
-        }
-        return;
-      }
-    }
-
-    rafScan = requestAnimationFrame(analyserFrame);
-  }
-
-  btnScannerQR.addEventListener('click', async function () {
-    zoneGeneration.style.display = 'none';
-    qrFeedback.style.display     = 'none';
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      afficherFeedbackQR('danger', 'Accès à la caméra non supporté sur cet appareil ou navigateur.');
-      return;
-    }
-
-    try {
-      /* Caméra arrière sur mobile, caméra disponible sur desktop */
-      streamCamera = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
-      });
-      videoEl.srcObject = streamCamera;
-      await videoEl.play();
-
-      scanEnCours = true;
-      zoneScan.style.display = 'block';
-      zoneScan.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      rafScan = requestAnimationFrame(analyserFrame);
-    } catch (e) {
-      let msg = "Impossible d'accéder à la caméra.";
-      if (e.name === 'NotAllowedError')  msg = "Permission caméra refusée. Autorisez l'accès dans les réglages.";
-      if (e.name === 'NotFoundError')    msg = "Aucune caméra détectée sur cet appareil.";
-      if (e.name === 'NotReadableError') msg = "La caméra est déjà utilisée par une autre application.";
-      afficherFeedbackQR('danger', msg);
-    }
-  });
-
-  btnStopperScan.addEventListener('click', stopperCamera);
-
-  /* Arrêt propre si on quitte le plugin */
-  document.addEventListener('muf-plugin-unload', stopperCamera);
 
 })();
 </script>

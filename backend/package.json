@@ -1,0 +1,19 @@
+{
+  "name": "muf-webapp-backend",
+  "version": "1.0.0",
+  "description": "MUF-WebApp — Scaleway Functions backend (Auth)",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "scripts": {
+    "test": "node -e \"console.log('Tests non configurés — voir README.md');\""
+  }
+}

@@ -1,0 +1,363 @@
+/* ============================================================
+   MUF-WebApp — Styles Auth / Onboarding
+   Overlay plein écran affiché avant l'app si non connecté
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   Overlay plein écran
+   ------------------------------------------------------------ */
+#auth-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: var(--color-bg);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+#auth-overlay.hidden {
+  display: none;
+}
+
+/* ------------------------------------------------------------
+   Carte centrale
+   ------------------------------------------------------------ */
+.auth-card {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+  width: 100%;
+  max-width: 420px;
+  padding: 36px 32px 32px;
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 28px 20px 24px;
+  }
+}
+
+/* ------------------------------------------------------------
+   En-tête de la carte
+   ------------------------------------------------------------ */
+.auth-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.auth-logo-icon {
+  width: 40px;
+  height: 40px;
+  background-color: var(--color-primary);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-family: var(--font-family);
+  flex-shrink: 0;
+}
+
+.auth-logo-text {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-primary);
+  font-family: var(--font-family);
+}
+
+.auth-logo-badge {
+  background-color: rgba(0, 58, 112, 0.1);
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: var(--radius);
+  letter-spacing: 0.5px;
+}
+
+.auth-title {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 6px;
+  font-family: var(--font-family);
+}
+
+.auth-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin-bottom: 28px;
+  font-family: var(--font-family);
+}
+
+/* ------------------------------------------------------------
+   Vues (ecrans)
+   ------------------------------------------------------------ */
+.auth-view {
+  display: none;
+}
+
+.auth-view.active {
+  display: block;
+}
+
+/* ------------------------------------------------------------
+   Formulaire
+   ------------------------------------------------------------ */
+.auth-form-group {
+  margin-bottom: 16px;
+}
+
+.auth-form-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text);
+  margin-bottom: 6px;
+  font-family: var(--font-family);
+}
+
+.auth-form-control {
+  display: block;
+  width: 100%;
+  padding: var(--input-padding);
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  transition: border-color var(--transition), box-shadow var(--transition);
+  min-height: var(--input-height);
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+}
+
+.auth-form-control:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(0, 58, 112, 0.15);
+}
+
+.auth-form-control::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+.auth-form-control.error {
+  border-color: #C53030;
+  box-shadow: 0 0 0 3px rgba(197, 48, 48, 0.12);
+}
+
+.auth-form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .auth-form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ------------------------------------------------------------
+   Messages d'erreur inline
+   ------------------------------------------------------------ */
+.auth-field-error {
+  font-size: var(--font-size-xs);
+  color: #C53030;
+  margin-top: 4px;
+  display: none;
+  font-family: var(--font-family);
+}
+
+.auth-field-error.visible {
+  display: block;
+}
+
+/* ------------------------------------------------------------
+   Alerte globale dans la carte
+   ------------------------------------------------------------ */
+.auth-alert {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: var(--font-size-sm);
+  border: 1px solid transparent;
+  margin-bottom: 20px;
+  display: none;
+  font-family: var(--font-family);
+}
+
+.auth-alert.visible {
+  display: block;
+}
+
+.auth-alert.danger {
+  background-color: #FDECEA;
+  border-color: #F5B8B2;
+  color: #8B1A12;
+}
+
+.auth-alert.success {
+  background-color: #EBF7EF;
+  border-color: #A8D9B9;
+  color: #1B6B36;
+}
+
+/* ------------------------------------------------------------
+   Boutons
+   ------------------------------------------------------------ */
+.auth-btn-primary {
+  display: block;
+  width: 100%;
+  padding: 13px 20px;
+  background-color: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--transition);
+  min-height: var(--input-height);
+  letter-spacing: 0.2px;
+}
+
+.auth-btn-primary:hover:not(:disabled) {
+  background-color: var(--color-primary-dark);
+}
+
+.auth-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------
+   Liens de bascule entre ecrans
+   ------------------------------------------------------------ */
+.auth-switch {
+  margin-top: 20px;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  font-family: var(--font-family);
+}
+
+.auth-switch a,
+.auth-switch button {
+  color: var(--color-primary);
+  font-weight: 600;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
+  text-decoration: underline;
+}
+
+.auth-switch a:hover,
+.auth-switch button:hover {
+  color: var(--color-primary-dark);
+}
+
+/* ------------------------------------------------------------
+   Message RGPD
+   ------------------------------------------------------------ */
+.auth-rgpd {
+  margin-top: 20px;
+  padding: 10px 14px;
+  background-color: #EBF3FB;
+  border: 1px solid #B8D4ED;
+  border-radius: var(--radius);
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  line-height: 1.5;
+  font-family: var(--font-family);
+}
+
+.auth-rgpd-icon {
+  display: inline-block;
+  margin-right: 4px;
+  vertical-align: -2px;
+}
+
+/* ------------------------------------------------------------
+   Spinner de chargement dans bouton
+   ------------------------------------------------------------ */
+.auth-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: auth-spin 0.6s linear infinite;
+  vertical-align: -3px;
+  margin-right: 6px;
+}
+
+@keyframes auth-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ------------------------------------------------------------
+   Section compte — dans Parametrage (lecture seule)
+   ------------------------------------------------------------ */
+.compte-info-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+}
+
+.compte-info-row:last-child {
+  border-bottom: none;
+}
+
+.compte-info-label {
+  width: 80px;
+  flex-shrink: 0;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.compte-info-value {
+  color: var(--color-text);
+  word-break: break-all;
+}
+
+.btn-deconnexion {
+  margin-top: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background-color: transparent;
+  color: #C53030;
+  border: 1px solid #C53030;
+  border-radius: var(--radius);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--transition), color var(--transition);
+}
+
+.btn-deconnexion:hover {
+  background-color: #FDECEA;
+}

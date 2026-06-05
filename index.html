@@ -18,10 +18,173 @@
 
   <!-- Feuille de style principale -->
   <link rel="stylesheet" href="./css/main.css">
+  <!-- Styles Auth / Onboarding -->
+  <link rel="stylesheet" href="./css/auth.css">
 
   <title>MUF-WebApp</title>
 </head>
 <body>
+
+  <!-- ======================================================
+       AUTH OVERLAY — affiché si pas de JWT valide
+       ====================================================== -->
+  <div id="auth-overlay" role="dialog" aria-modal="true" aria-label="Connexion MUF-WebApp">
+    <div class="auth-card">
+
+      <!-- Logo -->
+      <div class="auth-logo">
+        <div class="auth-logo-icon">M</div>
+        <span class="auth-logo-text">Multivac</span>
+        <span class="auth-logo-badge">FR</span>
+      </div>
+
+      <!-- Alerte globale (erreurs API) -->
+      <div id="auth-alert" class="auth-alert" role="alert" aria-live="polite"></div>
+
+      <!-- ================================================
+           VUE : Inscription (onboarding)
+           ================================================ -->
+      <div id="auth-view-register" class="auth-view active">
+        <h2 class="auth-title">Créer un compte</h2>
+        <p class="auth-subtitle">Réservé aux techniciens Multivac France.</p>
+
+        <form id="auth-form-register" novalidate>
+          <div class="auth-form-grid-2">
+            <div class="auth-form-group">
+              <label class="auth-form-label" for="reg-prenom">Prénom</label>
+              <input class="auth-form-control" type="text" id="reg-prenom"
+                     name="prenom" autocomplete="given-name"
+                     placeholder="Jean" required />
+              <span class="auth-field-error" id="reg-prenom-err"></span>
+            </div>
+            <div class="auth-form-group">
+              <label class="auth-form-label" for="reg-nom">Nom</label>
+              <input class="auth-form-control" type="text" id="reg-nom"
+                     name="nom" autocomplete="family-name"
+                     placeholder="Dupont" required />
+              <span class="auth-field-error" id="reg-nom-err"></span>
+            </div>
+          </div>
+
+          <div class="auth-form-group">
+            <label class="auth-form-label" for="reg-email">Adresse email</label>
+            <input class="auth-form-control" type="email" id="reg-email"
+                   name="email" autocomplete="email" inputmode="email"
+                   placeholder="jean.dupont@multivac.fr" required />
+            <span class="auth-field-error" id="reg-email-err"></span>
+          </div>
+
+          <div class="auth-form-group">
+            <label class="auth-form-label" for="reg-mdp">Mot de passe</label>
+            <input class="auth-form-control" type="password" id="reg-mdp"
+                   name="password" autocomplete="new-password"
+                   placeholder="8 caractères minimum" required minlength="8" />
+            <span class="auth-field-error" id="reg-mdp-err"></span>
+          </div>
+
+          <div class="auth-form-group">
+            <label class="auth-form-label" for="reg-mdp2">Confirmer le mot de passe</label>
+            <input class="auth-form-control" type="password" id="reg-mdp2"
+                   name="password2" autocomplete="new-password"
+                   placeholder="Répéter le mot de passe" required />
+            <span class="auth-field-error" id="reg-mdp2-err"></span>
+          </div>
+
+          <!-- Message RGPD -->
+          <div class="auth-rgpd">
+            <svg class="auth-rgpd-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                 aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0
+                   00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+            Vos données sont sécurisées selon les normes européennes (RGPD) sur des serveurs français.
+          </div>
+
+          <button type="submit" class="auth-btn-primary" id="btn-register" style="margin-top:20px;">
+            Créer mon compte
+          </button>
+        </form>
+
+        <div class="auth-switch">
+          Déjà un compte ?
+          <button type="button" id="lien-vers-login">Se connecter</button>
+        </div>
+      </div>
+
+      <!-- ================================================
+           VUE : Connexion
+           ================================================ -->
+      <div id="auth-view-login" class="auth-view">
+        <h2 class="auth-title">Connexion</h2>
+        <p class="auth-subtitle">Accédez à votre espace technicien.</p>
+
+        <form id="auth-form-login" novalidate>
+          <div class="auth-form-group">
+            <label class="auth-form-label" for="login-email">Adresse email</label>
+            <input class="auth-form-control" type="email" id="login-email"
+                   name="email" autocomplete="email" inputmode="email"
+                   placeholder="jean.dupont@multivac.fr" required />
+            <span class="auth-field-error" id="login-email-err"></span>
+          </div>
+
+          <div class="auth-form-group">
+            <label class="auth-form-label" for="login-mdp">Mot de passe</label>
+            <input class="auth-form-control" type="password" id="login-mdp"
+                   name="password" autocomplete="current-password"
+                   placeholder="••••••••" required />
+            <span class="auth-field-error" id="login-mdp-err"></span>
+          </div>
+
+          <div style="text-align:right; margin-bottom:16px; margin-top:-8px;">
+            <button type="button" id="lien-vers-reset"
+                    style="background:none;border:none;color:var(--color-primary);
+                           font-size:var(--font-size-sm);cursor:pointer;
+                           font-family:var(--font-family);text-decoration:underline;">
+              Mot de passe oublié ?
+            </button>
+          </div>
+
+          <button type="submit" class="auth-btn-primary" id="btn-login">
+            Se connecter
+          </button>
+        </form>
+
+        <div class="auth-switch">
+          Pas encore de compte ?
+          <button type="button" id="lien-vers-register">Créer un compte</button>
+        </div>
+      </div>
+
+      <!-- ================================================
+           VUE : Reset mot de passe
+           ================================================ -->
+      <div id="auth-view-reset" class="auth-view">
+        <h2 class="auth-title">Mot de passe oublié</h2>
+        <p class="auth-subtitle">Renseignez votre adresse @multivac.fr pour recevoir un lien de réinitialisation.</p>
+
+        <form id="auth-form-reset" novalidate>
+          <div class="auth-form-group">
+            <label class="auth-form-label" for="reset-email">Adresse email</label>
+            <input class="auth-form-control" type="email" id="reset-email"
+                   name="email" autocomplete="email" inputmode="email"
+                   placeholder="jean.dupont@multivac.fr" required />
+            <span class="auth-field-error" id="reset-email-err"></span>
+          </div>
+
+          <button type="submit" class="auth-btn-primary" id="btn-reset">
+            Envoyer le lien de réinitialisation
+          </button>
+        </form>
+
+        <div class="auth-switch">
+          <button type="button" id="lien-retour-login">Retour à la connexion</button>
+        </div>
+      </div>
+
+    </div><!-- /.auth-card -->
+  </div><!-- /#auth-overlay -->
 
   <!-- ======================================================
        WRAPPER GLOBAL
@@ -126,6 +289,12 @@
     </div>
   </nav>
 
+  <!-- Config globale (URL backend) — doit être le premier script -->
+  <script src="./js/config.js"></script>
+
+  <!-- Module Auth — doit être chargé avant app.js -->
+  <script src="./js/auth.js"></script>
+
   <!-- Librairies QR Code - chargées avant parametrage.js -->
   <script src="./js/libs/qrcode.min.js"></script>
   <script src="./js/libs/jsQR.min.js"></script>
@@ -136,6 +305,221 @@
 
   <!-- Script principal -->
   <script src="./js/app.js"></script>
+
+  <!-- ========================================================
+       SCRIPT AUTH OVERLAY — contrôle l'affichage et les appels API
+       ======================================================== -->
+  <script>
+  (function () {
+    'use strict';
+
+    /* -- Références DOM -- */
+    var overlay = document.getElementById('auth-overlay');
+    var alertBox = document.getElementById('auth-alert');
+
+    var views = {
+      register: document.getElementById('auth-view-register'),
+      login:    document.getElementById('auth-view-login'),
+      reset:    document.getElementById('auth-view-reset'),
+    };
+
+    /* -- Navigation entre vues -- */
+    function afficherVue(nom) {
+      Object.keys(views).forEach(function (k) {
+        views[k].classList.toggle('active', k === nom);
+      });
+      masquerAlerte();
+      /* Focus premier champ visible */
+      var premier = views[nom].querySelector('input');
+      if (premier) setTimeout(function () { premier.focus(); }, 50);
+    }
+
+    document.getElementById('lien-vers-login').addEventListener('click', function () { afficherVue('login'); });
+    document.getElementById('lien-vers-register').addEventListener('click', function () { afficherVue('register'); });
+    document.getElementById('lien-vers-reset').addEventListener('click', function () { afficherVue('reset'); });
+    document.getElementById('lien-retour-login').addEventListener('click', function () { afficherVue('login'); });
+
+    /* -- Alertes -- */
+    function afficherAlerte(type, msg) {
+      alertBox.className = 'auth-alert visible ' + type;
+      alertBox.textContent = msg;
+      alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function masquerAlerte() {
+      alertBox.className = 'auth-alert';
+      alertBox.textContent = '';
+    }
+
+    /* -- Erreurs de champ -- */
+    function champErreur(id, msg) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = msg || '';
+      el.classList.toggle('visible', !!msg);
+      /* Bordure rouge sur l'input associé */
+      var input = el.previousElementSibling;
+      if (input && input.classList.contains('auth-form-control')) {
+        input.classList.toggle('error', !!msg);
+      }
+    }
+
+    function effacerErreursFormulaire(ids) {
+      ids.forEach(function (id) { champErreur(id, ''); });
+    }
+
+    /* -- Validation email @multivac.fr -- */
+    function validerEmailMultivac(email) {
+      if (!email) return 'Adresse email requise.';
+      if (!email.toLowerCase().endsWith('@multivac.fr')) {
+        return 'L\'adresse email doit se terminer par @multivac.fr.';
+      }
+      return null;
+    }
+
+    /* -- État bouton pendant appel API -- */
+    function setBoutonChargement(btn, loading) {
+      if (loading) {
+        btn.disabled = true;
+        btn.dataset.texteOriginal = btn.textContent;
+        btn.innerHTML = '<span class="auth-spinner" aria-hidden="true"></span>Chargement…';
+      } else {
+        btn.disabled = false;
+        btn.textContent = btn.dataset.texteOriginal || btn.textContent;
+      }
+    }
+
+    /* -- Masquer l'overlay et lancer l'app -- */
+    function demarrerApp() {
+      overlay.classList.add('hidden');
+    }
+
+    /* --------------------------------------------------------
+       Formulaire Inscription
+       -------------------------------------------------------- */
+    document.getElementById('auth-form-register').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      effacerErreursFormulaire(['reg-prenom-err','reg-nom-err','reg-email-err','reg-mdp-err','reg-mdp2-err']);
+      masquerAlerte();
+
+      var prenom = document.getElementById('reg-prenom').value.trim();
+      var nom    = document.getElementById('reg-nom').value.trim();
+      var email  = document.getElementById('reg-email').value.trim();
+      var mdp    = document.getElementById('reg-mdp').value;
+      var mdp2   = document.getElementById('reg-mdp2').value;
+
+      var ok = true;
+
+      if (!prenom) { champErreur('reg-prenom-err', 'Prénom requis.'); ok = false; }
+      if (!nom)    { champErreur('reg-nom-err', 'Nom requis.'); ok = false; }
+
+      var emailErr = validerEmailMultivac(email);
+      if (emailErr) { champErreur('reg-email-err', emailErr); ok = false; }
+
+      if (!mdp || mdp.length < 8) {
+        champErreur('reg-mdp-err', 'Le mot de passe doit contenir au moins 8 caractères.');
+        ok = false;
+      }
+      if (mdp !== mdp2) {
+        champErreur('reg-mdp2-err', 'Les mots de passe ne correspondent pas.');
+        ok = false;
+      }
+
+      if (!ok) return;
+
+      var btn = document.getElementById('btn-register');
+      setBoutonChargement(btn, true);
+
+      var res = await window.Auth.register(prenom, nom, email, mdp);
+      setBoutonChargement(btn, false);
+
+      if (res.ok) {
+        demarrerApp();
+      } else {
+        afficherAlerte('danger', res.error || 'Erreur lors de la création du compte.');
+      }
+    });
+
+    /* --------------------------------------------------------
+       Formulaire Connexion
+       -------------------------------------------------------- */
+    document.getElementById('auth-form-login').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      effacerErreursFormulaire(['login-email-err','login-mdp-err']);
+      masquerAlerte();
+
+      var email = document.getElementById('login-email').value.trim();
+      var mdp   = document.getElementById('login-mdp').value;
+
+      var ok = true;
+      var emailErr = validerEmailMultivac(email);
+      if (emailErr) { champErreur('login-email-err', emailErr); ok = false; }
+      if (!mdp)     { champErreur('login-mdp-err', 'Mot de passe requis.'); ok = false; }
+      if (!ok) return;
+
+      var btn = document.getElementById('btn-login');
+      setBoutonChargement(btn, true);
+
+      var res = await window.Auth.login(email, mdp);
+      setBoutonChargement(btn, false);
+
+      if (res.ok) {
+        demarrerApp();
+      } else {
+        afficherAlerte('danger', res.error || 'Email ou mot de passe incorrect.');
+      }
+    });
+
+    /* --------------------------------------------------------
+       Formulaire Reset mot de passe
+       -------------------------------------------------------- */
+    document.getElementById('auth-form-reset').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      effacerErreursFormulaire(['reset-email-err']);
+      masquerAlerte();
+
+      var email = document.getElementById('reset-email').value.trim();
+
+      var emailErr = validerEmailMultivac(email);
+      if (emailErr) { champErreur('reset-email-err', emailErr); return; }
+
+      var btn = document.getElementById('btn-reset');
+      setBoutonChargement(btn, true);
+
+      var res = await window.Auth.resetRequest(email);
+      setBoutonChargement(btn, false);
+
+      if (res.ok) {
+        afficherAlerte('success',
+          'Un email a été envoyé à votre adresse @multivac.fr. Vérifiez votre boîte de réception.');
+        document.getElementById('reset-email').value = '';
+      } else {
+        afficherAlerte('danger', res.error || 'Impossible d\'envoyer l\'email de réinitialisation.');
+      }
+    });
+
+    /* --------------------------------------------------------
+       Initialisation — vérifier le token au démarrage
+       -------------------------------------------------------- */
+    (async function init() {
+      if (!window.Auth.isAuthenticated()) {
+        /* Pas de token → afficher l'écran d'inscription */
+        afficherVue('register');
+        return;
+      }
+
+      /* Token présent → vérifier sa validité auprès du backend */
+      var valide = await window.Auth.verifyToken();
+      if (valide) {
+        demarrerApp();
+      } else {
+        /* Token expiré ou invalide → écran de connexion */
+        afficherVue('login');
+      }
+    })();
+
+  })();
+  </script>
 
   <!-- ========================================================
        ÉDITEUR TAXONOMIE — modal de verrouillage

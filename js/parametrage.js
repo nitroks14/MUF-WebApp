@@ -18,8 +18,7 @@
   const CLE_STORAGE = 'muf_config';
 
   const CONFIG_DEFAUT = {
-    nom:               '',
-    prenom:            '',
+    /* nom / prenom supprimés — désormais gérés par window.Auth (onboarding) */
     emails_frequents:  [],   /* tableau de { label, adresse } */
     email_maintenance: '',   /* adresse du service maintenance Multivac */
     contacts_support:  [],   /* contacts support technique */
@@ -68,10 +67,19 @@
 
     /**
      * Lire une valeur de configuration.
+     *
+     * Rétrocompatibilité : 'nom' et 'prenom' sont désormais stockés dans
+     * window.Auth (onboarding). Si un plugin les demande via Parametrage,
+     * on les sert depuis Auth.getUser() pour éviter tout refactoring.
+     *
      * @param {string} key
      * @returns {*}
      */
     get(key) {
+      if (key === 'nom' || key === 'prenom') {
+        const user = window.Auth && window.Auth.getUser ? window.Auth.getUser() : null;
+        return (user && user[key]) || '';
+      }
       return _config[key];
     },
 
@@ -83,6 +91,10 @@
     set(key, value) {
       if (key === 'date_format' || key === 'unites') {
         /* Valeurs figées — toute écriture externe est ignorée */
+        return;
+      }
+      if (key === 'nom' || key === 'prenom') {
+        /* Désormais gérés par Auth — écriture ignorée */
         return;
       }
       if (!(key in CONFIG_DEFAUT)) {
