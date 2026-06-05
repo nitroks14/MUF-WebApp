@@ -1,181 +1,297 @@
 /**
- * MUF-WebApp — Module Auth
+ * MUF-WebApp — Module Auth (Supabase)
  *
- * Gère :
- *   - Stockage / lecture / suppression du JWT en localStorage
- *   - Appels API vers le backend Scaleway (register, login, reset)
- *   - Vérification du token au démarrage
- *   - Exposition de l'utilisateur connecté via window.Auth.getUser()
+ * Authentification entièrement déléguée à Supabase Auth (supabase-js v2).
+ * Aucune logique d'auth maison ni serveur applicatif dédié.
  *
- * API publique : window.Auth
- *   .isAuthenticated()         → boolean
- *   .getToken()                → string | null
- *   .getUser()                 → { prenom, nom, email } | null
- *   .login(email, mdp)         → Promise<{ ok, error }>
- *   .register(prenom, nom, email, mdp) → Promise<{ ok, error }>
- *   .resetRequest(email)       → Promise<{ ok, error }>
- *   .logout()                  → void
- *   .verifyToken()             → Promise<boolean>
+ * L'API publique est INCHANGÉE pour ne rien casser côté appelants :
+ *   window.Auth
+ *     .isAuthenticated()                  → boolean (session présente)
+ *     .getToken()                         → string | null (access_token)
+ *     .getUser()                          → { id, prenom, nom, email } | null
+ *     .login(email, mdp)                  → Promise<{ ok, error }>
+ *     .register(prenom, nom, email, mdp)  → Promise<{ ok, error }>
+ *     .resetRequest(email)                → Promise<{ ok, error }>
+ *     .logout()                           → Promise<void>
+ *     .verifyToken()                      → Promise<boolean>
+ *
+ * Ajouts (utilisés par l'overlay auth pour le flux reset) :
+ *     .updatePassword(nouveauMdp)         → Promise<{ ok, error }>
+ *     .ready()                            → Promise<SupabaseClient>
+ *     .onChange(cb)                       → void  (notifié à chaque changement de session)
+ *
+ * La session (access/refresh token) est entièrement gérée et persistée par
+ * supabase-js dans localStorage : multi-appareils → même compte, persistance
+ * au rechargement, rafraîchissement automatique du token.
  */
 
 'use strict';
 
 (function () {
 
-  const CLE_TOKEN = 'muf_jwt';
-  const CLE_USER  = 'muf_user';
-
   /* ----------------------------------------------------------
-     Helpers localStorage
+     Accès au client Supabase partagé (js/supabase-client.js)
+     Le client est un module ES : on l'attend via une Promise.
      ---------------------------------------------------------- */
-  function lireToken() {
-    try { return localStorage.getItem(CLE_TOKEN); } catch (e) { return null; }
-  }
-
-  function sauvegarderToken(token) {
-    try { localStorage.setItem(CLE_TOKEN, token); } catch (e) {
-      console.error('[Auth] Impossible de sauvegarder le token :', e);
-    }
-  }
-
-  function lireUser() {
-    try {
-      const raw = localStorage.getItem(CLE_USER);
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) { return null; }
-  }
-
-  function sauvegarderUser(user) {
-    try { localStorage.setItem(CLE_USER, JSON.stringify(user)); } catch (e) {
-      console.error('[Auth] Impossible de sauvegarder le profil :', e);
-    }
-  }
-
-  function effacerSession() {
-    try {
-      localStorage.removeItem(CLE_TOKEN);
-      localStorage.removeItem(CLE_USER);
-    } catch (e) {
-      console.error('[Auth] Erreur lors de la déconnexion :', e);
-    }
+  function obtenirClientPret() {
+    if (window.MUF_SUPABASE) return Promise.resolve(window.MUF_SUPABASE);
+    if (window.MUF_SUPABASE_READY) return window.MUF_SUPABASE_READY;
+    /* Le module n'a pas encore exécuté : on attend son événement. */
+    return new Promise(function (resolve) {
+      window.addEventListener('muf-supabase-ready', function (e) {
+        resolve(e.detail || window.MUF_SUPABASE);
+      }, { once: true });
+    });
   }
 
   /* ----------------------------------------------------------
-     URL de base du backend
+     Cache synchrone de l'utilisateur courant
+     getUser() est appelé de façon synchrone par certains plugins
+     (et par Parametrage.get('nom'/'prenom')). On maintient donc une
+     vue mémoire mise à jour à chaque changement de session.
      ---------------------------------------------------------- */
-  function backendUrl(chemin) {
-    const base = (window.MUF_CONFIG && window.MUF_CONFIG.BACKEND_URL) || '';
-    if (!base || base.includes('VOTRE-NAMESPACE')) {
-      console.warn('[Auth] BACKEND_URL non configurée dans js/config.js');
+  var _userCache = null;        /* { id, prenom, nom, email } | null */
+  var _session   = null;        /* session supabase courante | null */
+  var _listeners = [];          /* callbacks externes (onChange) */
+
+  /**
+   * Convertit un objet user Supabase en profil applicatif simple,
+   * en conservant le contrat historique { id, prenom, nom, email }.
+   * Prénom / Nom sont lus depuis user_metadata (renseignés à l'inscription)
+   * avec des fallbacks propres.
+   */
+  function mapperUser(supaUser) {
+    if (!supaUser) return null;
+    var meta = supaUser.user_metadata || {};
+    return {
+      id:     supaUser.id || '',
+      prenom: meta.prenom || meta.first_name || '',
+      nom:    meta.nom    || meta.last_name  || '',
+      email:  supaUser.email || meta.email || '',
+    };
+  }
+
+  function majSession(session) {
+    _session   = session || null;
+    _userCache = session && session.user ? mapperUser(session.user) : null;
+    _listeners.forEach(function (cb) {
+      try { cb(_userCache, _session); } catch (e) { /* listener défaillant ignoré */ }
+    });
+  }
+
+  /* Branche l'écoute des changements de session dès que le client est prêt. */
+  obtenirClientPret().then(function (supabase) {
+    /* État initial (session déjà persistée en localStorage le cas échéant). */
+    supabase.auth.getSession().then(function (res) {
+      majSession(res && res.data ? res.data.session : null);
+    });
+
+    /* Mises à jour : login, logout, refresh token, PASSWORD_RECOVERY... */
+    supabase.auth.onAuthStateChange(function (_event, session) {
+      majSession(session);
+    });
+  });
+
+  /* ----------------------------------------------------------
+     Normalisation des messages d'erreur Supabase → FR
+     ---------------------------------------------------------- */
+  function messageErreur(error) {
+    if (!error) return 'Une erreur est survenue.';
+    var m = (error.message || '').toLowerCase();
+
+    if (m.includes('invalid login credentials')) {
+      return 'Email ou mot de passe incorrect.';
     }
-    return base + chemin;
+    if (m.includes('email not confirmed')) {
+      return 'Votre email n\'a pas encore été confirmé. Vérifiez votre boîte de réception.';
+    }
+    if (m.includes('user already registered') || m.includes('already been registered')) {
+      return 'Un compte existe déjà pour cette adresse email.';
+    }
+    if (m.includes('password should be at least')) {
+      return 'Le mot de passe est trop court (8 caractères minimum).';
+    }
+    if (m.includes('rate limit') || m.includes('too many requests') || m.includes('email rate limit')) {
+      return 'Trop de tentatives. Patientez quelques minutes avant de réessayer.';
+    }
+    if (m.includes('failed to fetch') || m.includes('networkerror')) {
+      return 'Impossible de joindre le service. Vérifiez votre connexion.';
+    }
+    /* Message Supabase brut en dernier recours (déjà lisible en général). */
+    return error.message || 'Une erreur est survenue.';
   }
 
   /* ----------------------------------------------------------
-     Appel API générique avec gestion d'erreur
+     URL de redirection pour le lien de reset (retour sur l'app)
+     On revient sur l'app avec un marqueur de vue pour afficher
+     l'écran "définir un nouveau mot de passe".
      ---------------------------------------------------------- */
-  async function appelApi(chemin, corps) {
-    try {
-      const reponse = await fetch(backendUrl(chemin), {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(corps),
-      });
-
-      let data;
-      try { data = await reponse.json(); } catch (e) { data = {}; }
-
-      if (!reponse.ok) {
-        return { ok: false, error: data.error || data.message || 'Erreur serveur.' };
-      }
-
-      return { ok: true, data };
-    } catch (e) {
-      console.error('[Auth] Erreur réseau :', e);
-      return { ok: false, error: 'Impossible de joindre le serveur. Vérifiez votre connexion.' };
-    }
+  function urlRedirectionReset() {
+    var base = window.location.origin + window.location.pathname;
+    return base + '#auth-nouveau-mdp';
   }
 
   /* ----------------------------------------------------------
-     API publique
+     API publique — window.Auth
      ---------------------------------------------------------- */
-  const Auth = {
+  var Auth = {
 
-    isAuthenticated() {
-      return !!lireToken();
+    /** Promesse résolue quand le client Supabase est prêt. */
+    ready: function () {
+      return obtenirClientPret();
     },
 
-    getToken() {
-      return lireToken();
+    /** S'abonner aux changements de session (appelé immédiatement avec l'état courant). */
+    onChange: function (cb) {
+      if (typeof cb !== 'function') return;
+      _listeners.push(cb);
+      cb(_userCache, _session);
     },
 
-    getUser() {
-      return lireUser();
+    /** Une session est-elle active ? (lecture synchrone du cache) */
+    isAuthenticated: function () {
+      return !!_session;
     },
 
-    async login(email, mdp) {
-      const res = await appelApi('/auth/login', { email, password: mdp });
-      if (res.ok && res.data.token) {
-        sauvegarderToken(res.data.token);
-        sauvegarderUser(res.data.user || { email });
-      }
-      return res;
+    /** access_token courant (ou null). */
+    getToken: function () {
+      return _session && _session.access_token ? _session.access_token : null;
     },
 
-    async register(prenom, nom, email, mdp) {
-      const res = await appelApi('/auth/register', {
-        prenom,
-        nom,
-        email,
-        password: mdp,
-      });
-      if (res.ok && res.data.token) {
-        sauvegarderToken(res.data.token);
-        sauvegarderUser(res.data.user || { prenom, nom, email });
-      }
-      return res;
-    },
-
-    async resetRequest(email) {
-      return appelApi('/auth/reset-request', { email });
-    },
-
-    logout() {
-      effacerSession();
+    /** Profil courant { id, prenom, nom, email } ou null (synchrone). */
+    getUser: function () {
+      return _userCache;
     },
 
     /**
-     * Vérifie le token JWT auprès du backend.
-     * Met à jour le profil si le backend renvoie des infos à jour.
-     * Retourne true si le token est valide, false sinon.
+     * Connexion par email / mot de passe.
+     * @returns {Promise<{ok:boolean, error?:string}>}
      */
-    async verifyToken() {
-      const token = lireToken();
-      if (!token) return false;
-
+    login: async function (email, mdp) {
       try {
-        const reponse = await fetch(backendUrl('/auth/me'), {
-          method:  'GET',
-          headers: { Authorization: 'Bearer ' + token },
+        var supabase = await obtenirClientPret();
+        var resultat = await supabase.auth.signInWithPassword({
+          email: (email || '').trim().toLowerCase(),
+          password: mdp,
+        });
+        if (resultat.error) {
+          return { ok: false, error: messageErreur(resultat.error) };
+        }
+        majSession(resultat.data ? resultat.data.session : null);
+        return { ok: true };
+      } catch (e) {
+        console.error('[Auth] login :', e);
+        return { ok: false, error: messageErreur(e) };
+      }
+    },
+
+    /**
+     * Inscription. Prénom / Nom stockés dans user_metadata.
+     * @returns {Promise<{ok:boolean, error?:string, needsConfirmation?:boolean}>}
+     */
+    register: async function (prenom, nom, email, mdp) {
+      try {
+        var supabase = await obtenirClientPret();
+        var resultat = await supabase.auth.signUp({
+          email: (email || '').trim().toLowerCase(),
+          password: mdp,
+          options: {
+            data: {
+              prenom: (prenom || '').trim(),
+              nom:    (nom || '').trim(),
+            },
+            emailRedirectTo: window.location.origin + window.location.pathname,
+          },
         });
 
-        if (!reponse.ok) {
-          effacerSession();
-          return false;
+        if (resultat.error) {
+          return { ok: false, error: messageErreur(resultat.error) };
         }
 
-        let data;
-        try { data = await reponse.json(); } catch (e) { data = {}; }
-
-        if (data.user) {
-          sauvegarderUser(data.user);
+        /* Si la confirmation d'email est activée côté Supabase, signUp ne
+           renvoie pas de session : on le signale à l'appelant. */
+        var session = resultat.data ? resultat.data.session : null;
+        if (!session) {
+          return { ok: true, needsConfirmation: true };
         }
 
-        return true;
+        majSession(session);
+        return { ok: true, needsConfirmation: false };
       } catch (e) {
-        /* Réseau indisponible — on fait confiance au token local */
-        console.warn('[Auth] Vérification token impossible (hors ligne ?), session maintenue.');
-        return !!token;
+        console.error('[Auth] register :', e);
+        return { ok: false, error: messageErreur(e) };
+      }
+    },
+
+    /**
+     * Demande d'email de réinitialisation de mot de passe.
+     * @returns {Promise<{ok:boolean, error?:string}>}
+     */
+    resetRequest: async function (email) {
+      try {
+        var supabase = await obtenirClientPret();
+        var resultat = await supabase.auth.resetPasswordForEmail(
+          (email || '').trim().toLowerCase(),
+          { redirectTo: urlRedirectionReset() }
+        );
+        if (resultat.error) {
+          return { ok: false, error: messageErreur(resultat.error) };
+        }
+        return { ok: true };
+      } catch (e) {
+        console.error('[Auth] resetRequest :', e);
+        return { ok: false, error: messageErreur(e) };
+      }
+    },
+
+    /**
+     * Définit un nouveau mot de passe pour l'utilisateur courant.
+     * Utilisé au retour du lien de reset (une session temporaire est alors
+     * établie par supabase-js via detectSessionInUrl).
+     * @returns {Promise<{ok:boolean, error?:string}>}
+     */
+    updatePassword: async function (nouveauMdp) {
+      try {
+        var supabase = await obtenirClientPret();
+        var resultat = await supabase.auth.updateUser({ password: nouveauMdp });
+        if (resultat.error) {
+          return { ok: false, error: messageErreur(resultat.error) };
+        }
+        return { ok: true };
+      } catch (e) {
+        console.error('[Auth] updatePassword :', e);
+        return { ok: false, error: messageErreur(e) };
+      }
+    },
+
+    /** Déconnexion. */
+    logout: async function () {
+      try {
+        var supabase = await obtenirClientPret();
+        await supabase.auth.signOut();
+      } catch (e) {
+        console.error('[Auth] logout :', e);
+      } finally {
+        majSession(null);
+      }
+    },
+
+    /**
+     * Vérifie qu'une session valide existe (au démarrage de l'app).
+     * supabase-js rafraîchit automatiquement le token si nécessaire.
+     * @returns {Promise<boolean>}
+     */
+    verifyToken: async function () {
+      try {
+        var supabase = await obtenirClientPret();
+        var res = await supabase.auth.getSession();
+        var session = res && res.data ? res.data.session : null;
+        majSession(session);
+        return !!session;
+      } catch (e) {
+        console.warn('[Auth] verifyToken impossible (hors ligne ?) :', e);
+        /* En l'absence de réseau, on s'appuie sur le cache déjà chargé. */
+        return !!_session;
       }
     },
   };

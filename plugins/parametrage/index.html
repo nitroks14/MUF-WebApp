@@ -262,8 +262,16 @@
   if (btnDeconnexion) {
     btnDeconnexion.addEventListener('click', function () {
       if (!confirm('Se déconnecter de MUF-WebApp ?')) return;
-      if (window.Auth) window.Auth.logout();
-      window.location.reload();
+      /* Auth.logout() est asynchrone (Supabase) : on attend la fin
+         avant de recharger pour que la session soit bien effacée. */
+      var fin = function () { window.location.reload(); };
+      if (window.Auth && window.Auth.logout) {
+        var p = window.Auth.logout();
+        if (p && typeof p.then === 'function') { p.then(fin, fin); }
+        else { fin(); }
+      } else {
+        fin();
+      }
     });
   }
 

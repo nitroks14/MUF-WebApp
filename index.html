@@ -99,7 +99,7 @@
                 d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0
                    00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
             </svg>
-            Vos données sont sécurisées selon les normes européennes (RGPD) sur des serveurs français.
+            Vos données sont sécurisées selon les normes européennes (RGPD) sur des serveurs européens.
           </div>
 
           <button type="submit" class="auth-btn-primary" id="btn-register" style="margin-top:20px;">
@@ -181,6 +181,36 @@
         <div class="auth-switch">
           <button type="button" id="lien-retour-login">Retour à la connexion</button>
         </div>
+      </div>
+
+      <!-- ================================================
+           VUE : Définir un nouveau mot de passe (retour du lien reset)
+           ================================================ -->
+      <div id="auth-view-nouveau-mdp" class="auth-view">
+        <h2 class="auth-title">Nouveau mot de passe</h2>
+        <p class="auth-subtitle">Choisissez un nouveau mot de passe pour votre compte.</p>
+
+        <form id="auth-form-nouveau-mdp" novalidate>
+          <div class="auth-form-group">
+            <label class="auth-form-label" for="new-mdp">Nouveau mot de passe</label>
+            <input class="auth-form-control" type="password" id="new-mdp"
+                   name="password" autocomplete="new-password"
+                   placeholder="8 caractères minimum" required minlength="8" />
+            <span class="auth-field-error" id="new-mdp-err"></span>
+          </div>
+
+          <div class="auth-form-group">
+            <label class="auth-form-label" for="new-mdp2">Confirmer le mot de passe</label>
+            <input class="auth-form-control" type="password" id="new-mdp2"
+                   name="password2" autocomplete="new-password"
+                   placeholder="Répéter le mot de passe" required />
+            <span class="auth-field-error" id="new-mdp2-err"></span>
+          </div>
+
+          <button type="submit" class="auth-btn-primary" id="btn-nouveau-mdp" style="margin-top:8px;">
+            Enregistrer le nouveau mot de passe
+          </button>
+        </form>
       </div>
 
     </div><!-- /.auth-card -->
@@ -289,10 +319,13 @@
     </div>
   </nav>
 
-  <!-- Config globale (URL backend) — doit être le premier script -->
+  <!-- Config globale (URL + clé publique Supabase) — doit être le premier script -->
   <script src="./js/config.js"></script>
 
-  <!-- Module Auth — doit être chargé avant app.js -->
+  <!-- Client Supabase partagé (module ES, supabase-js v2 via CDN) -->
+  <script type="module" src="./js/supabase-client.js"></script>
+
+  <!-- Module Auth (Supabase) — doit être chargé avant app.js -->
   <script src="./js/auth.js"></script>
 
   <!-- Librairies QR Code - chargées avant parametrage.js -->
@@ -318,9 +351,10 @@
     var alertBox = document.getElementById('auth-alert');
 
     var views = {
-      register: document.getElementById('auth-view-register'),
-      login:    document.getElementById('auth-view-login'),
-      reset:    document.getElementById('auth-view-reset'),
+      register:    document.getElementById('auth-view-register'),
+      login:       document.getElementById('auth-view-login'),
+      reset:       document.getElementById('auth-view-reset'),
+      'nouveau-mdp': document.getElementById('auth-view-nouveau-mdp'),
     };
 
     /* -- Navigation entre vues -- */
@@ -433,7 +467,13 @@
       var res = await window.Auth.register(prenom, nom, email, mdp);
       setBoutonChargement(btn, false);
 
-      if (res.ok) {
+      if (res.ok && res.needsConfirmation) {
+        /* Confirmation d'email activée côté Supabase : pas de session immédiate. */
+        afficherAlerte('success',
+          'Compte créé. Un email de confirmation vient de vous être envoyé à votre adresse @multivac.fr. ' +
+          'Cliquez sur le lien reçu puis connectez-vous.');
+        afficherVue('login');
+      } else if (res.ok) {
         demarrerApp();
       } else {
         afficherAlerte('danger', res.error || 'Erreur lors de la création du compte.');
@@ -491,7 +531,8 @@
 
       if (res.ok) {
         afficherAlerte('success',
-          'Un email a été envoyé à votre adresse @multivac.fr. Vérifiez votre boîte de réception.');
+          'Si un compte existe pour cette adresse @multivac.fr, un email de réinitialisation a été envoyé. ' +
+          'Vérifiez votre boîte de réception (et les indésirables).');
         document.getElementById('reset-email').value = '';
       } else {
         afficherAlerte('danger', res.error || 'Impossible d\'envoyer l\'email de réinitialisation.');
@@ -499,22 +540,88 @@
     });
 
     /* --------------------------------------------------------
-       Initialisation — vérifier le token au démarrage
+       Formulaire Nouveau mot de passe (retour du lien reset)
        -------------------------------------------------------- */
+    document.getElementById('auth-form-nouveau-mdp').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      effacerErreursFormulaire(['new-mdp-err', 'new-mdp2-err']);
+      masquerAlerte();
+
+      var mdp  = document.getElementById('new-mdp').value;
+      var mdp2 = document.getElementById('new-mdp2').value;
+
+      var ok = true;
+      if (!mdp || mdp.length < 8) {
+        champErreur('new-mdp-err', 'Le mot de passe doit contenir au moins 8 caractères.');
+        ok = false;
+      }
+      if (mdp !== mdp2) {
+        champErreur('new-mdp2-err', 'Les mots de passe ne correspondent pas.');
+        ok = false;
+      }
+      if (!ok) return;
+
+      var btn = document.getElementById('btn-nouveau-mdp');
+      setBoutonChargement(btn, true);
+
+      var res = await window.Auth.updatePassword(mdp);
+      setBoutonChargement(btn, false);
+
+      if (res.ok) {
+        /* Nettoie le hash de reset puis démarre l'app (session déjà active). */
+        if (window.location.hash === '#auth-nouveau-mdp') {
+          history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+        afficherAlerte('success', 'Mot de passe mis à jour.');
+        demarrerApp();
+      } else {
+        afficherAlerte('danger', res.error || 'Impossible de mettre à jour le mot de passe.');
+      }
+    });
+
+    /* --------------------------------------------------------
+       Initialisation — démarre quand le client Supabase est prêt
+       puis vérifie la session persistée.
+       -------------------------------------------------------- */
+    var resetEnCours = false;
+
+    /* Détecte le retour du lien de réinitialisation :
+       - événement supabase PASSWORD_RECOVERY (session temporaire établie)
+       - ou présence du marqueur de hash #auth-nouveau-mdp */
+    if (window.Auth.onChange) {
+      window.Auth.onChange(function () {/* maintient le cache à jour, no-op ici */});
+    }
+
+    window.Auth.ready().then(function (supabase) {
+      supabase.auth.onAuthStateChange(function (event) {
+        if (event === 'PASSWORD_RECOVERY') {
+          resetEnCours = true;
+          overlay.classList.remove('hidden');
+          afficherVue('nouveau-mdp');
+        }
+      });
+    });
+
     (async function init() {
-      if (!window.Auth.isAuthenticated()) {
-        /* Pas de token → afficher l'écran d'inscription */
-        afficherVue('register');
+      /* Cas 1 : retour explicite du lien reset via le hash. */
+      if (window.location.hash === '#auth-nouveau-mdp') {
+        resetEnCours = true;
+        overlay.classList.remove('hidden');
+        afficherVue('nouveau-mdp');
+        /* On laisse supabase-js établir la session depuis l'URL ; pas de bascule auto. */
         return;
       }
 
-      /* Token présent → vérifier sa validité auprès du backend */
+      /* Cas 2 : vérifier une éventuelle session déjà persistée. */
       var valide = await window.Auth.verifyToken();
+
+      /* Si un flux de reset s'est déclenché entre-temps, ne pas le court-circuiter. */
+      if (resetEnCours) return;
+
       if (valide) {
         demarrerApp();
       } else {
-        /* Token expiré ou invalide → écran de connexion */
-        afficherVue('login');
+        afficherVue('register');
       }
     })();
 

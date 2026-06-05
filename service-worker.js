@@ -8,14 +8,21 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache */
-const CACHE_NOM     = 'muf-webapp-v48';
-const CACHE_PLUGINS = 'muf-plugins-v48';
+const CACHE_NOM     = 'muf-webapp-v49';
+const CACHE_PLUGINS = 'muf-plugins-v49';
 
-/* Liste des assets statiques à précacher */
+/* Liste des assets statiques à précacher.
+   Note : supabase-js est servi depuis un CDN cross-origin, donc volontairement
+   NON précaché ici (le SW ignore déjà les requêtes cross-origin). L'auth
+   nécessite de toute façon le réseau pour joindre Supabase. */
 const ASSETS_STATIQUES = [
   './',
   './index.html',
   './css/main.css',
+  './css/auth.css',
+  './js/config.js',
+  './js/supabase-client.js',
+  './js/auth.js',
   './js/app.js',
   './js/parametrage.js',
   './js/libs/lz-string.min.js',
