@@ -406,8 +406,23 @@
             d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/>
         </svg>
       </span>
+      <!--
+        Anti-autofill (Brave/Chrome + gestionnaires de mots de passe) :
+        Brave/Chrome ignorent souvent autocomplete="off" et injectent l'email
+        de connexion du site dans tout champ qui leur paraît être un identifiant.
+        On neutralise cela via :
+          - un name NON identifiable (surtout pas email/username/search)
+          - autocomplete/autocorrect/autocapitalize="off" + spellcheck="false"
+          - data-lpignore / data-1p-ignore / data-form-type=other (LastPass/1Password)
+          - readonly retiré au 1er focus (voir JS) pour casser l'autofill au montage
+        Objectif : le champ reste vide tant que l'utilisateur ne tape rien.
+      -->
       <input class="form-control cli-search-input" id="cli-search" type="search"
-             inputmode="search" autocomplete="off" autocapitalize="off"
+             name="cli-filtre-ref" inputmode="search"
+             autocomplete="off" autocorrect="off" autocapitalize="off"
+             spellcheck="false"
+             data-lpignore="true" data-1p-ignore data-form-type="other"
+             readonly
              placeholder="Rechercher un client, une adresse, une machine…"
              aria-label="Rechercher un client">
       <button class="cli-search-clear" id="cli-search-clear" type="button"
@@ -605,6 +620,11 @@
   var dupCandidate = null;   /* client candidat doublon affiché dans le bandeau */
   var dupIgnored = false;    /* l'utilisateur a choisi "continuer la création" */
   var pendingDeleteId = null;/* id en attente de confirmation de suppression */
+  var rechercheSaisie = false;/* true uniquement quand l'utilisateur a réellement tapé
+                                dans le champ de recherche. Tant que c'est false, on
+                                ignore la valeur du champ (qui peut avoir été remplie
+                                par l'autofill du navigateur) et on affiche la liste
+                                complète. Voir valeurRecherche(). */
   var refreshDiffere = false;/* un clients-db-changed est arrivé pendant qu'une modale
                                 était ouverte : on rejoue le rafraîchissement à la
                                 fermeture pour ne pas perturber la saisie en cours. */
@@ -685,9 +705,22 @@
     });
   }
 
+  /* Valeur de recherche EFFECTIVE, robuste à l'autofill du navigateur.
+     - Tant que l'utilisateur n'a pas tapé lui-même (rechercheSaisie === false),
+       on renvoie '' : une valeur injectée par l'autofill (ex. l'email de
+       connexion) est donc ignorée et la liste complète s'affiche.
+     - Une valeur ne contenant que des espaces est traitée comme vide.
+     C'est le point d'entrée unique pour lire la recherche dans tout le rendu,
+     ce qui rend le comportement identique entre le rendu initial et celui qui
+     suit un enregistrement (suppression de l'incohérence du Bug 2). */
+  function valeurRecherche() {
+    if (!rechercheSaisie || !dom.search) return '';
+    return dom.search.value.trim();
+  }
+
   /* Renvoie la liste filtrée selon la recherche courante (ou tout si vide). */
   function clientsFiltres() {
-    var q = dom.search ? dom.search.value.trim() : '';
+    var q = valeurRecherche();
     if (!q) return clients.slice();
 
     if (fuse) {
@@ -709,7 +742,7 @@
      ---------------------------------------------------------- */
   function rendreListe() {
     var visibles = clientsFiltres();
-    var q = dom.search ? dom.search.value.trim() : '';
+    var q = valeurRecherche();
 
     /* Compteur */
     if (clients.length === 0) {
@@ -1084,13 +1117,32 @@
      Branchement des écouteurs (DOM local — pas de fuite, le DOM
      est remplacé à chaque navigation).
      ---------------------------------------------------------- */
-  /* Recherche */
+  /* Recherche.
+     Anti-autofill : le champ est rendu en readonly (voir HTML) pour empêcher
+     Brave/Chrome d'y injecter l'email de connexion au montage. On lève le
+     readonly au tout premier focus déclenché par l'utilisateur, ce qui rend le
+     champ saisissable sans rouvrir la porte à l'autofill initial. */
+  function activerSaisieRecherche() {
+    if (dom.search.hasAttribute('readonly')) {
+      dom.search.removeAttribute('readonly');
+    }
+  }
+  dom.search.addEventListener('focus', activerSaisieRecherche);
+  dom.search.addEventListener('pointerdown', activerSaisieRecherche);
+
   dom.search.addEventListener('input', function () {
+    /* À partir de cette première frappe réelle, la valeur du champ est prise en
+       compte par le filtre (avant cela, une éventuelle valeur d'autofill est
+       ignorée — voir valeurRecherche). */
+    rechercheSaisie = true;
     dom.searchClear.classList.toggle('cli-visible', dom.search.value.length > 0);
     rendreListe();
   });
   dom.searchClear.addEventListener('click', function () {
     dom.search.value = '';
+    /* Vider via la croix = retour à l'état "aucune recherche" : on réaffiche la
+       liste complète et on neutralise toute valeur résiduelle d'autofill. */
+    rechercheSaisie = false;
     dom.searchClear.classList.remove('cli-visible');
     rendreListe();
     dom.search.focus();
@@ -1164,6 +1216,24 @@
     window.removeEventListener(EVENT_CHANGE, onDbChange);
     document.removeEventListener('keydown', onKeydown);
   };
+
+  /* ----------------------------------------------------------
+     Anti-autofill — nettoyage défensif du champ de recherche.
+     Bien que le champ soit en readonly au montage, certains navigateurs
+     peuvent injecter une valeur juste avant/après l'exécution du script. On
+     force donc le champ à vide tant que l'utilisateur n'a rien saisi, avec
+     quelques passages différés pour couvrir l'autofill tardif de Brave/Chrome.
+     ---------------------------------------------------------- */
+  function nettoyerAutofillRecherche() {
+    if (!rechercheSaisie && dom.search && dom.search.value !== '') {
+      dom.search.value = '';
+      dom.searchClear.classList.remove('cli-visible');
+    }
+  }
+  nettoyerAutofillRecherche();
+  [120, 400, 1000].forEach(function (delai) {
+    setTimeout(nettoyerAutofillRecherche, delai);
+  });
 
   /* ----------------------------------------------------------
      Démarrage : attendre que la base soit prête puis charger.
