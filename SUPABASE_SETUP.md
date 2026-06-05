@@ -4,7 +4,7 @@ L'authentification (inscription, connexion, réinitialisation de mot de passe)
 repose sur **Supabase Auth**. Aucun backend maison n'est nécessaire : tout passe
 par `supabase-js` v2 chargé via CDN, côté navigateur.
 
-> Projet Supabase : `https://audwdqqrrnubbzszzdgw.supabase.co`
+> Projet Supabase : `https://uzvoihrglczwdnlnsrvf.supabase.co`
 > Les valeurs `SUPABASE_URL` et `SUPABASE_ANON_KEY` (clé *publishable*) sont
 > **publiques par conception** et vivent dans `js/config.js`. Elles peuvent
 > figurer dans le dépôt sans risque ; la sécurité repose sur les politiques

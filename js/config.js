@@ -18,13 +18,13 @@
     /**
      * URL du projet Supabase (sans slash final).
      */
-    SUPABASE_URL: 'https://audwdqqrrnubbzszzdgw.supabase.co',
+    SUPABASE_URL: 'https://uzvoihrglczwdnlnsrvf.supabase.co',
 
     /**
      * Clé "publishable" (anon) Supabase — publique par conception.
      * Format sb_publishable_... : nécessite supabase-js v2 récent.
      */
-    SUPABASE_ANON_KEY: 'sb_publishable_-AjDH0UMjucDE5MI_9A6QQ_Ip2BzSbC',
+    SUPABASE_ANON_KEY: 'sb_publishable_-XTtMQlv_ePEPly8NFjAFA_LuUscg36',
 
     /**
      * Domaine email autorisé à l'inscription (garde-fou frontend).
