@@ -24,11 +24,24 @@ create table if not exists public.clients (
   nom         text        not null,
   adresse     text,
   contact     text,
-  machines    jsonb       not null default '[]'::jsonb,  -- liste de { type, numero }
+  email       text,                                       -- email de l'interlocuteur (optionnel)
+  code_client text,                                       -- code client interne (optionnel, "si connu")
+  machines    jsonb       not null default '[]'::jsonb,  -- liste de { type, numero, annee? }
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
   deleted     boolean     not null default false
 );
+
+-- ---------------------------------------------------------------------
+-- Migration (colonnes ajoutées après la création initiale de la table).
+-- Idempotent : à rejouer sans risque si la table existe déjà.
+--   email       : email de l'interlocuteur
+--   code_client : code client interne
+-- L'année des machines voyage dans le JSONB `machines` (objets
+-- { type, numero, annee }) — aucun changement de schéma requis pour elle.
+-- ---------------------------------------------------------------------
+alter table public.clients add column if not exists email       text;
+alter table public.clients add column if not exists code_client text;
 
 -- Index d'appui pour la synchro delta (updated_at) et le filtrage par usager.
 create index if not exists clients_user_id_idx    on public.clients (user_id);

@@ -6,7 +6,8 @@
   Supabase est assurée automatiquement par window.SyncManager après chaque
   mutation locale — ce plugin n'appelle JAMAIS la synchro ni Supabase.
 
-  Modèle client : { id, nom, adresse, contact, machines:[{type,numero}], updated_at, deleted }
+  Modèle client : { id, nom, adresse, contact, email, code_client,
+                    machines:[{type,numero,annee?}], updated_at, deleted }
 
   Le plugin écoute l'événement window `clients-db-changed` pour se rafraîchir
   automatiquement (mutation locale ou pull de synchro).
@@ -111,6 +112,19 @@
     font-size: var(--font-size-sm);
     color: var(--color-text-muted);
     margin-top: 2px;
+    word-break: break-word;
+  }
+  /* Code client (sous le nom) — badge discret monospace */
+  .cli-item-code {
+    display: inline-block;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 1px 8px;
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
     word-break: break-word;
   }
   /* Puces "machines" */
@@ -254,17 +268,24 @@
   }
   .cli-modal-footer .btn { flex: 1; }
 
-  /* ---- Liste dynamique de machines (dans le formulaire) ---- */
+  /* ---- Liste dynamique de machines (dans le formulaire) ----
+     Layout : (type + numéro) sur une ligne, (année + bouton retirer) sur la
+     suivante. flex-wrap garantit qu'aucun champ n'est écrasé sur iPhone SE. */
   .cli-machines-editor { margin-top: 4px; }
   .cli-machine-row {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     align-items: center;
     margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--color-border);
   }
+  .cli-machine-row:last-child { border-bottom: none; padding-bottom: 0; }
   .cli-machine-row .form-control { margin: 0; }
   .cli-machine-row .cli-m-type   { flex: 1 1 45%; min-width: 0; }
   .cli-machine-row .cli-m-numero { flex: 1 1 45%; min-width: 0; }
+  .cli-machine-row .cli-m-annee  { flex: 1 1 0; min-width: 0; }
   .cli-machine-remove {
     width: 40px;
     height: 44px;
@@ -507,6 +528,25 @@
                  placeholder="Ex. Jean Martin — 06 12 34 56 78">
         </div>
 
+        <!-- Email de l'interlocuteur (optionnel) -->
+        <div class="form-group">
+          <label class="form-label" for="cli-email">Email de l'interlocuteur</label>
+          <input class="form-control" id="cli-email" type="email" autocomplete="off"
+                 autocorrect="off" autocapitalize="off" spellcheck="false"
+                 data-lpignore="true" data-1p-ignore data-form-type="other"
+                 inputmode="email"
+                 placeholder="Ex. contact@boulangerie-martin.fr">
+        </div>
+
+        <!-- Code client (optionnel, "si connu") -->
+        <div class="form-group">
+          <label class="form-label" for="cli-code-client">Code client <span class="text-muted">(si connu)</span></label>
+          <input class="form-control" id="cli-code-client" type="text" autocomplete="off"
+                 autocorrect="off" autocapitalize="off" spellcheck="false"
+                 data-lpignore="true" data-1p-ignore data-form-type="other"
+                 placeholder="Ex. C-10245">
+        </div>
+
         <!-- Machines (liste dynamique) -->
         <div class="form-group">
           <label class="form-label">Machines</label>
@@ -594,6 +634,8 @@
     nom:           el('cli-nom'),
     adresse:       el('cli-adresse'),
     contact:       el('cli-contact'),
+    email:         el('cli-email'),
+    codeClient:    el('cli-code-client'),
     machinesEditor: el('cli-machines-editor'),
     machinesEmpty: el('cli-machines-empty'),
     machineAdd:    el('cli-machine-add'),
@@ -652,11 +694,12 @@
     return normaliser(a.nom).localeCompare(normaliser(b.nom), 'fr');
   }
 
-  /* Construit le sous-titre (adresse / contact) d'une carte. */
+  /* Construit le sous-titre (adresse / contact / email) d'une carte. */
   function sousTitre(c) {
     var parts = [];
     if (c.adresse) parts.push(c.adresse);
     if (c.contact) parts.push(c.contact);
+    if (c.email) parts.push(c.email);
     return parts.join(' • ');
   }
 
@@ -678,8 +721,10 @@
         nom: c.nom || '',
         adresse: c.adresse || '',
         contact: c.contact || '',
+        email: c.email || '',
+        code_client: c.code_client || '',
         machines: (c.machines || [])
-          .map(function (m) { return [m.type, m.numero].filter(Boolean).join(' '); })
+          .map(function (m) { return [m.type, m.numero, m.annee].filter(Boolean).join(' '); })
           .join(' '),
       };
     });
@@ -690,10 +735,12 @@
       threshold: 0.4,         /* tolérance aux fautes (0 = strict, 1 = tout) */
       minMatchCharLength: 2,
       keys: [
-        { name: 'nom', weight: 0.6 },
-        { name: 'adresse', weight: 0.2 },
-        { name: 'contact', weight: 0.1 },
-        { name: 'machines', weight: 0.1 },
+        { name: 'nom', weight: 0.5 },
+        { name: 'code_client', weight: 0.2 },
+        { name: 'adresse', weight: 0.15 },
+        { name: 'contact', weight: 0.05 },
+        { name: 'email', weight: 0.05 },
+        { name: 'machines', weight: 0.05 },
       ],
       /* Fuse normalise déjà la casse ; on lui passe aussi une fonction de
          normalisation pour neutraliser les accents (recherche "boulangri"). */
@@ -733,14 +780,28 @@
     return clients.filter(function (c) {
       return normaliser(c.nom).indexOf(n) !== -1
           || normaliser(c.adresse).indexOf(n) !== -1
-          || normaliser(c.contact).indexOf(n) !== -1;
+          || normaliser(c.contact).indexOf(n) !== -1
+          || normaliser(c.email).indexOf(n) !== -1
+          || normaliser(c.code_client).indexOf(n) !== -1;
     });
   }
 
   /* ----------------------------------------------------------
      Rendu de la liste
-     ---------------------------------------------------------- */
+     ----------------------------------------------------------
+     GARDE GLOBALE anti-plantage : reconstruire la <ul> (innerHTML = '')
+     pendant qu'une modale est ouverte n'a aucun intérêt visuel (la liste est
+     masquée derrière l'overlay) et peut être ressenti comme une fermeture si
+     le rendu est déclenché par un effet de bord (timer, paste, sync). On
+     refuse donc tout rendu tant qu'une modale est ouverte, et on note qu'il
+     faudra rejouer le rafraîchissement à la fermeture.
+     NB : modaleOuverte/refreshDiffere sont définies plus bas mais hoistées
+     (fonction) / accessibles (var de closure) au moment de l'appel. */
   function rendreListe() {
+    if (modaleOuverte()) {
+      refreshDiffere = true; /* rejoué par appliquerRafraichissementDiffere() */
+      return;
+    }
     var visibles = clientsFiltres();
     var q = valeurRecherche();
 
@@ -798,13 +859,18 @@
     main.setAttribute('aria-label', 'Modifier ' + (c.nom || 'le client'));
 
     var html = '<div class="cli-item-nom">' + escapeHtml(c.nom || '(sans nom)') + '</div>';
+    if (c.code_client) {
+      html += '<div class="cli-item-code">Code : ' + escapeHtml(c.code_client) + '</div>';
+    }
     var sub = sousTitre(c);
     if (sub) html += '<div class="cli-item-sub">' + escapeHtml(sub) + '</div>';
 
     if (Array.isArray(c.machines) && c.machines.length) {
       html += '<div class="cli-machines">';
       c.machines.forEach(function (m) {
+        /* Libellé : "Type N° (Année)" — l'année est affichée si renseignée. */
         var label = [m.type, m.numero].filter(Boolean).join(' ');
+        if (m.annee) label += (label ? ' ' : '') + '(' + m.annee + ')';
         if (!label) return;
         html += '<span class="cli-machine-tag">' +
           '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">' +
@@ -868,7 +934,7 @@
     dom.machinesEmpty.style.display = vide ? 'block' : 'none';
   }
 
-  function ajouterLigneMachine(type, numero) {
+  function ajouterLigneMachine(type, numero, annee) {
     var row = document.createElement('div');
     row.className = 'cli-machine-row';
 
@@ -886,6 +952,16 @@
     inNum.autocomplete = 'off';
     inNum.value = numero || '';
 
+    /* Année (optionnelle, "si connue") — saisie numérique 4 chiffres. */
+    var inAnnee = document.createElement('input');
+    inAnnee.type = 'text';
+    inAnnee.className = 'form-control cli-m-annee';
+    inAnnee.placeholder = 'Année (si connue)';
+    inAnnee.autocomplete = 'off';
+    inAnnee.inputMode = 'numeric';
+    inAnnee.maxLength = 4;
+    inAnnee.value = annee || '';
+
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'cli-machine-remove';
@@ -899,6 +975,7 @@
 
     row.appendChild(inType);
     row.appendChild(inNum);
+    row.appendChild(inAnnee);
     row.appendChild(btn);
     dom.machinesEditor.appendChild(row);
     majMachinesEmpty();
@@ -910,8 +987,14 @@
     dom.machinesEditor.querySelectorAll('.cli-machine-row').forEach(function (row) {
       var type = row.querySelector('.cli-m-type').value.trim();
       var numero = row.querySelector('.cli-m-numero').value.trim();
-      /* On ignore les lignes totalement vides. */
-      if (type || numero) out.push({ type: type, numero: numero });
+      var annee = row.querySelector('.cli-m-annee').value.trim();
+      /* On ignore les lignes totalement vides (aucun des trois champs rempli). */
+      if (type || numero || annee) {
+        var m = { type: type, numero: numero };
+        /* annee n'est ajoutée que si renseignée, pour ne pas polluer le JSONB. */
+        if (annee) m.annee = annee;
+        out.push(m);
+      }
     });
     return out;
   }
@@ -991,6 +1074,8 @@
     dom.nom.value = '';
     dom.adresse.value = '';
     dom.contact.value = '';
+    dom.email.value = '';
+    dom.codeClient.value = '';
     dom.machinesEditor.innerHTML = '';
     majMachinesEmpty();
     masquerDoublon();
@@ -1006,12 +1091,18 @@
       dom.nom.value = client.nom || '';
       dom.adresse.value = client.adresse || '';
       dom.contact.value = client.contact || '';
+      dom.email.value = client.email || '';
+      dom.codeClient.value = client.code_client || '';
       (client.machines || []).forEach(function (m) {
-        ajouterLigneMachine(m.type, m.numero);
+        ajouterLigneMachine(m.type, m.numero, m.annee);
       });
     } else {
       dom.formTitle.textContent = 'Nouveau client';
     }
+
+    /* On annule tout passage de nettoyage anti-autofill encore en attente : il
+       ne doit pas se déclencher pendant la saisie/le collage dans la modale. */
+    annulerTimersAutofill();
 
     dom.formOverlay.classList.add('cli-open');
     /* Focus sur le nom (léger délai pour l'ouverture). */
@@ -1023,6 +1114,8 @@
     /* Une synchro a pu modifier la base pendant la saisie : on rejoue
        maintenant le rafraîchissement qui avait été différé. */
     appliquerRafraichissementDiffere();
+    /* On reprogramme le nettoyage anti-autofill (annulé à l'ouverture). */
+    reprogrammerNettoyageAutofill();
   }
 
   /* ----------------------------------------------------------
@@ -1041,6 +1134,8 @@
       nom: nom,
       adresse: dom.adresse.value.trim() || null,
       contact: dom.contact.value.trim() || null,
+      email: dom.email.value.trim() || null,
+      code_client: dom.codeClient.value.trim() || null,
       machines: lireMachines(),
     };
 
@@ -1082,6 +1177,9 @@
     pendingDeleteId = client.id;
     dom.confirmText.textContent = 'Le client « ' + (client.nom || 'sans nom')
       + ' » sera retiré de la liste.';
+    /* Même garde que pour le formulaire : pas de nettoyage différé pendant
+       que la confirmation (une modale) est affichée. */
+    annulerTimersAutofill();
     dom.confirmOverlay.classList.add('cli-open');
   }
 
@@ -1091,6 +1189,9 @@
     /* Idem : rejoue un éventuel rafraîchissement différé (sauf si la
        modale formulaire est encore ouverte derrière la confirmation). */
     appliquerRafraichissementDiffere();
+    /* Reprogramme le nettoyage anti-autofill seulement si plus aucune modale
+       n'est ouverte (le formulaire peut être encore ouvert derrière). */
+    if (!modaleOuverte()) reprogrammerNettoyageAutofill();
   }
 
   function confirmerSuppression() {
@@ -1154,13 +1255,61 @@
   dom.formCancel.addEventListener('click', fermerFormulaire);
   dom.formSave.addEventListener('click', enregistrer);
   dom.machineAdd.addEventListener('click', function () {
-    var input = ajouterLigneMachine('', '');
+    var input = ajouterLigneMachine('', '', '');
     try { input.focus(); } catch (e) {}
   });
 
-  /* Fermer la modale au clic sur le fond (hors carte). */
+  /* ----------------------------------------------------------
+     Collage (copier/coller) robuste dans les champs du formulaire.
+     Objectif : un paste ne doit JAMAIS fermer la modale, perdre le focus ni
+     casser la mise en page. La garde sur rendreListe() empêche déjà tout
+     re-render destructeur ; ici on se contente d'assainir le contenu collé
+     dans les champs mono-ligne (sauts de ligne / tabulations → espaces),
+     SANS toucher au reste de la modale ni à la liste. On laisse le navigateur
+     insérer le texte nativement (respect du curseur / undo), puis on nettoie
+     la seule valeur du champ concerné.
+     IMPORTANT : on n'appelle pas preventDefault pour préserver le collage natif
+     et le comportement d'annulation (Ctrl+Z). */
+  function assainirChampMonoLigne(input) {
+    if (!input) return;
+    input.addEventListener('paste', function () {
+      /* Laisse le paste natif se faire, puis normalise la valeur. */
+      setTimeout(function () {
+        var v = input.value;
+        var nettoye = v.replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ');
+        if (nettoye !== v) input.value = nettoye;
+      }, 0);
+    });
+  }
+  [dom.nom, dom.adresse, dom.contact, dom.email, dom.codeClient].forEach(assainirChampMonoLigne);
+
+  /* Délégation paste pour les champs machines (créés dynamiquement) : un seul
+     écouteur sur le conteneur couvre toutes les lignes présentes et futures. */
+  dom.machinesEditor.addEventListener('paste', function (e) {
+    var cible = e.target;
+    if (cible && cible.classList && cible.classList.contains('form-control')) {
+      setTimeout(function () {
+        var v = cible.value;
+        var nettoye = v.replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ');
+        if (nettoye !== v) cible.value = nettoye;
+      }, 0);
+    }
+  });
+
+  /* Fermer la modale au clic sur le fond (hors carte).
+     On NE ferme que sur un vrai clic isolé sur l'overlay : si un geste de
+     sélection de texte (souris) démarre dans un champ et se relâche sur
+     l'overlay, le navigateur émet tout de même un 'click' dont la cible est
+     l'overlay. On vérifie donc que le pointeur a aussi été pressé sur l'overlay
+     (mousedown), ce qui évite une fermeture accidentelle après une sélection /
+     un copier-coller à la souris. */
+  var pointerDownSurOverlay = false;
+  dom.formOverlay.addEventListener('pointerdown', function (e) {
+    pointerDownSurOverlay = (e.target === dom.formOverlay);
+  });
   dom.formOverlay.addEventListener('click', function (e) {
-    if (e.target === dom.formOverlay) fermerFormulaire();
+    if (e.target === dom.formOverlay && pointerDownSurOverlay) fermerFormulaire();
+    pointerDownSurOverlay = false;
   });
 
   /* Détection de doublon pendant la frappe du nom. */
@@ -1177,8 +1326,15 @@
   /* Confirmation de suppression */
   dom.confirmCancel.addEventListener('click', fermerConfirmation);
   dom.confirmOk.addEventListener('click', confirmerSuppression);
+  /* Même protection que le formulaire : on ne ferme que si le geste a été à la
+     fois pressé ET relâché sur le fond (évite la fermeture après une sélection). */
+  var pointerDownSurConfirm = false;
+  dom.confirmOverlay.addEventListener('pointerdown', function (e) {
+    pointerDownSurConfirm = (e.target === dom.confirmOverlay);
+  });
   dom.confirmOverlay.addEventListener('click', function (e) {
-    if (e.target === dom.confirmOverlay) fermerConfirmation();
+    if (e.target === dom.confirmOverlay && pointerDownSurConfirm) fermerConfirmation();
+    pointerDownSurConfirm = false;
   });
 
   /* Échap ferme la modale ouverte (confirmation prioritaire). */
@@ -1215,6 +1371,9 @@
   window.__cliCleanup = function () {
     window.removeEventListener(EVENT_CHANGE, onDbChange);
     document.removeEventListener('keydown', onKeydown);
+    /* Annule les timers anti-autofill encore en attente : sans cela, un timer
+       survivant à la navigation toucherait un DOM déjà remplacé. */
+    annulerTimersAutofill();
   };
 
   /* ----------------------------------------------------------
@@ -1223,17 +1382,52 @@
      peuvent injecter une valeur juste avant/après l'exécution du script. On
      force donc le champ à vide tant que l'utilisateur n'a rien saisi, avec
      quelques passages différés pour couvrir l'autofill tardif de Brave/Chrome.
-     ---------------------------------------------------------- */
+
+     ⚠️ CAUSE DU PLANTAGE INTERMITTENT (paste) :
+     ces passages différés s'exécutent ~120/400/1000 ms après le montage.
+     Si l'utilisateur ouvre la modale et colle du texte dans ce laps de temps,
+     le timer touchait le DOM de la barre de recherche pendant la saisie.
+     Désormais, tout passage est NO-OP tant qu'une modale est ouverte, et il est
+     re-planifié à la fermeture de la modale (voir reprogrammerNettoyageAutofill).
+     On conserve aussi les ids de timers pour pouvoir les annuler à l'ouverture
+     d'une modale, afin qu'aucun nettoyage différé ne se déclenche pendant la
+     saisie / le collage. */
+  var timersAutofill = [];
+
+  function annulerTimersAutofill() {
+    timersAutofill.forEach(function (id) { clearTimeout(id); });
+    timersAutofill = [];
+  }
+
   function nettoyerAutofillRecherche() {
+    /* Ne JAMAIS toucher au DOM tant qu'une modale est ouverte : un nettoyage
+       pendant la saisie/le collage peut être ressenti comme une fermeture. */
+    if (modaleOuverte()) return;
     if (!rechercheSaisie && dom.search && dom.search.value !== '') {
       dom.search.value = '';
       dom.searchClear.classList.remove('cli-visible');
     }
   }
+
+  /* (Re)planifie les passages d'anti-autofill. Appelé au montage et à chaque
+     fermeture de modale (au cas où des timers auraient été annulés/sautés). */
+  function reprogrammerNettoyageAutofill() {
+    annulerTimersAutofill();
+    /* Inutile d'insister une fois que l'utilisateur a saisi sa recherche. */
+    if (rechercheSaisie) return;
+    [120, 400, 1000].forEach(function (delai) {
+      var id = setTimeout(function () {
+        /* Retire l'id consommé puis tente le nettoyage (no-op si modale ouverte). */
+        var i = timersAutofill.indexOf(id);
+        if (i !== -1) timersAutofill.splice(i, 1);
+        nettoyerAutofillRecherche();
+      }, delai);
+      timersAutofill.push(id);
+    });
+  }
+
   nettoyerAutofillRecherche();
-  [120, 400, 1000].forEach(function (delai) {
-    setTimeout(nettoyerAutofillRecherche, delai);
-  });
+  reprogrammerNettoyageAutofill();
 
   /* ----------------------------------------------------------
      Démarrage : attendre que la base soit prête puis charger.

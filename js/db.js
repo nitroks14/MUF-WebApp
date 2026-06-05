@@ -13,7 +13,9 @@
  *     nom:         string  (NOT NULL applicatif)
  *     adresse:     string | null
  *     contact:     string | null
- *     machines:    Array<{ type, numero }>   (défaut [])
+ *     email:       string | null
+ *     code_client: string | null
+ *     machines:    Array<{ type, numero, annee? }>   (défaut [])
  *     created_at:  string ISO  | null
  *     updated_at:  string ISO  | null
  *     deleted:     boolean      (soft-delete — défaut false)
@@ -166,11 +168,13 @@
   function normaliser(client) {
     var c = Object.assign({}, client);
     if (!c.id) c.id = genererId();
-    c.nom      = c.nom != null ? String(c.nom) : '';
-    c.adresse  = c.adresse != null ? c.adresse : null;
-    c.contact  = c.contact != null ? c.contact : null;
-    c.machines = Array.isArray(c.machines) ? c.machines : [];
-    c.deleted  = !!c.deleted;
+    c.nom         = c.nom != null ? String(c.nom) : '';
+    c.adresse     = c.adresse != null ? c.adresse : null;
+    c.contact     = c.contact != null ? c.contact : null;
+    c.email       = c.email != null ? c.email : null;
+    c.code_client = c.code_client != null ? c.code_client : null;
+    c.machines    = Array.isArray(c.machines) ? c.machines : [];
+    c.deleted     = !!c.deleted;
     return c;
   }
 

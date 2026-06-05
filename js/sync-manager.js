@@ -37,8 +37,9 @@
   var TABLE = 'clients';
 
   /* Colonnes métier réellement persistées côté Supabase (on ne pousse jamais
-     les champs internes préfixés _, ni created_at/updated_at gérés serveur). */
-  var COLONNES = ['id', 'nom', 'adresse', 'contact', 'machines', 'deleted'];
+     les champs internes préfixés _, ni created_at/updated_at gérés serveur).
+     email et code_client : colonnes text ajoutées côté Supabase (push + pull). */
+  var COLONNES = ['id', 'nom', 'adresse', 'contact', 'email', 'code_client', 'machines', 'deleted'];
 
   /* Débounce des synchros déclenchées par les mutations locales. */
   var DEBOUNCE_MS = 1500;
@@ -98,16 +99,18 @@
   /** Convertit une ligne serveur en enregistrement local (synchronisé). */
   function versEnregistrementLocal(ligne) {
     return {
-      id:         ligne.id,
-      user_id:    ligne.user_id,
-      nom:        ligne.nom,
-      adresse:    ligne.adresse,
-      contact:    ligne.contact,
-      machines:   Array.isArray(ligne.machines) ? ligne.machines : [],
-      created_at: ligne.created_at,
-      updated_at: ligne.updated_at,
-      deleted:    !!ligne.deleted,
-      _dirty:     false,
+      id:          ligne.id,
+      user_id:     ligne.user_id,
+      nom:         ligne.nom,
+      adresse:     ligne.adresse,
+      contact:     ligne.contact,
+      email:       ligne.email != null ? ligne.email : null,
+      code_client: ligne.code_client != null ? ligne.code_client : null,
+      machines:    Array.isArray(ligne.machines) ? ligne.machines : [],
+      created_at:  ligne.created_at,
+      updated_at:  ligne.updated_at,
+      deleted:     !!ligne.deleted,
+      _dirty:      false,
       _localUpdatedAt: ligne.updated_at,
     };
   }
