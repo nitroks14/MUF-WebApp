@@ -1,0 +1,1137 @@
+<!--
+  Plugin : Clients (référentiel)
+  Phase A — CRUD complet + recherche fuzzy (Fuse.js) + détection de doublons.
+
+  Données : 100 % via window.ClientsDB (IndexedDB, offline-first). La synchro
+  Supabase est assurée automatiquement par window.SyncManager après chaque
+  mutation locale — ce plugin n'appelle JAMAIS la synchro ni Supabase.
+
+  Modèle client : { id, nom, adresse, contact, machines:[{type,numero}], updated_at, deleted }
+
+  Le plugin écoute l'événement window `clients-db-changed` pour se rafraîchir
+  automatiquement (mutation locale ou pull de synchro).
+-->
+
+<style>
+  /* ============================================================
+     Styles du plugin Clients — préfixe "cli-"
+     Charte Multivac via les variables CSS de main.css
+     ============================================================ */
+
+  /* ---- Barre d'actions (recherche + ajout) ---- */
+  .cli-toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .cli-search-wrap {
+    position: relative;
+    flex: 1 1 220px;
+    min-width: 0;
+  }
+  .cli-search-wrap .cli-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+    pointer-events: none;
+  }
+  .cli-search-input {
+    padding-left: 38px;
+  }
+  /* Bouton croix pour vider la recherche */
+  .cli-search-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cli-search-clear:hover { background: var(--color-bg); }
+  .cli-search-clear.cli-visible { display: flex; }
+
+  .cli-btn-add { flex-shrink: 0; }
+
+  /* ---- Compteur / sous-titre ---- */
+  .cli-count {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin-bottom: 12px;
+  }
+
+  /* ---- Liste des clients ---- */
+  .cli-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    list-style: none;
+  }
+
+  .cli-item {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: border-color var(--transition), box-shadow var(--transition);
+  }
+  .cli-item:hover {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-md);
+  }
+
+  .cli-item-main {
+    flex: 1;
+    min-width: 0; /* autorise l'ellipsis */
+    cursor: pointer;
+  }
+  .cli-item-nom {
+    font-weight: 600;
+    color: var(--color-primary);
+    font-size: var(--font-size-base);
+    word-break: break-word;
+  }
+  .cli-item-sub {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin-top: 2px;
+    word-break: break-word;
+  }
+  /* Puces "machines" */
+  .cli-machines {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .cli-machine-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    padding: 2px 10px;
+    font-size: var(--font-size-xs);
+    color: var(--color-text);
+  }
+
+  /* Actions de la carte (éditer / supprimer) */
+  .cli-item-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .cli-icon-btn {
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background-color: var(--color-surface);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: background-color var(--transition), color var(--transition), border-color var(--transition);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cli-icon-btn:hover {
+    background-color: var(--color-bg);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+  }
+  .cli-icon-btn.cli-danger:hover {
+    color: #E53E3E;
+    border-color: #E53E3E;
+  }
+
+  /* ---- État vide ---- */
+  .cli-empty {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--color-text-muted);
+  }
+  .cli-empty svg { color: var(--color-border); margin-bottom: 12px; }
+  .cli-empty-title { font-weight: 600; color: var(--color-text); margin-bottom: 4px; }
+  .cli-empty-msg { font-size: var(--font-size-sm); }
+
+  /* ============================================================
+     MODALE Formulaire (ajout / édition)
+     100dvh + safe-areas pour iPhone SE / notch
+     ============================================================ */
+  .cli-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 9000;
+    align-items: flex-end;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+  }
+  .cli-modal-overlay.cli-open { display: flex; }
+
+  .cli-modal {
+    background: var(--color-surface);
+    width: 100%;
+    max-width: 540px;
+    max-height: 92dvh;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.3);
+    /* Safe-area iOS (bas) */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (min-width: 768px) {
+    .cli-modal-overlay { align-items: center; }
+    .cli-modal {
+      border-radius: var(--radius-lg);
+      max-height: 88dvh;
+    }
+  }
+
+  .cli-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+  }
+  .cli-modal-title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--color-primary);
+  }
+  .cli-modal-close {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cli-modal-close:hover { background: var(--color-bg); color: var(--color-text); }
+
+  /* Corps scrollable — garantit qu'aucun contenu n'est coupé sur petit écran */
+  .cli-modal-body {
+    padding: 18px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    flex: 1;
+  }
+
+  .cli-modal-footer {
+    display: flex;
+    gap: 10px;
+    padding: 14px 18px;
+    border-top: 1px solid var(--color-border);
+    flex-shrink: 0;
+  }
+  .cli-modal-footer .btn { flex: 1; }
+
+  /* ---- Liste dynamique de machines (dans le formulaire) ---- */
+  .cli-machines-editor { margin-top: 4px; }
+  .cli-machine-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .cli-machine-row .form-control { margin: 0; }
+  .cli-machine-row .cli-m-type   { flex: 1 1 45%; min-width: 0; }
+  .cli-machine-row .cli-m-numero { flex: 1 1 45%; min-width: 0; }
+  .cli-machine-remove {
+    width: 40px;
+    height: 44px;
+    flex-shrink: 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cli-machine-remove:hover { color: #E53E3E; border-color: #E53E3E; }
+  .cli-machines-empty {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    font-style: italic;
+    margin-bottom: 8px;
+  }
+
+  /* ---- Bandeau "doublon possible" (non bloquant) ---- */
+  .cli-dup {
+    display: none;
+    align-items: flex-start;
+    gap: 10px;
+    background-color: #FEF8EC;
+    border: 1px solid #F5D98B;
+    color: #7A5A00;
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-top: 10px;
+    font-size: var(--font-size-sm);
+  }
+  .cli-dup.cli-visible { display: flex; }
+  .cli-dup-icon { flex-shrink: 0; margin-top: 1px; }
+  .cli-dup-body { flex: 1; min-width: 0; }
+  .cli-dup-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .cli-dup-actions button {
+    font-family: var(--font-family);
+    font-size: var(--font-size-sm);
+    padding: 6px 12px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    border: 1px solid transparent;
+    min-height: 36px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cli-dup-open {
+    background-color: var(--color-primary);
+    color: var(--color-white);
+    border-color: var(--color-primary);
+  }
+  .cli-dup-open:hover { background-color: var(--color-primary-dark); }
+  .cli-dup-ignore {
+    background-color: transparent;
+    color: #7A5A00;
+    border-color: #E6C36B;
+  }
+  .cli-dup-ignore:hover { background-color: rgba(245, 217, 139, 0.35); }
+
+  /* Champ requis manquant */
+  .form-control.cli-invalid {
+    border-color: #E53E3E;
+    box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.15);
+  }
+
+  /* ---- Confirmation de suppression ---- */
+  .cli-confirm-box {
+    width: 300px;
+    max-width: calc(100vw - 32px);
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  }
+  .cli-confirm-box h3 {
+    font-size: var(--font-size-lg);
+    color: var(--color-primary);
+    margin-bottom: 8px;
+  }
+  .cli-confirm-box p {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin-bottom: 20px;
+    word-break: break-word;
+  }
+  .cli-confirm-actions { display: flex; gap: 10px; }
+  .cli-confirm-actions .btn { flex: 1; }
+  .cli-btn-danger {
+    background-color: #E53E3E;
+    color: var(--color-white);
+    border-color: #E53E3E;
+  }
+  .cli-btn-danger:hover {
+    background-color: #C53030;
+    border-color: #C53030;
+    color: var(--color-white);
+  }
+
+  /* La confirmation est centrée même sur mobile */
+  #cli-confirm-overlay { align-items: center; }
+  #cli-confirm-overlay .cli-modal { background: transparent; box-shadow: none; }
+</style>
+
+<!-- ============================================================
+     EN-TÊTE DU PLUGIN
+     ============================================================ -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h2 class="card-title">Clients</h2>
+    <span class="badge badge-secondary">Référentiel</span>
+  </div>
+  <div class="card-body">
+    <p class="text-muted text-sm">
+      Annuaire des clients et de leurs machines. Disponible hors ligne ;
+      les modifications sont synchronisées automatiquement dès que possible.
+    </p>
+  </div>
+</div>
+
+<!-- ============================================================
+     LISTE + RECHERCHE
+     ============================================================ -->
+<div class="card">
+  <div class="cli-toolbar">
+    <div class="cli-search-wrap">
+      <span class="cli-search-icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/>
+        </svg>
+      </span>
+      <input class="form-control cli-search-input" id="cli-search" type="search"
+             inputmode="search" autocomplete="off" autocapitalize="off"
+             placeholder="Rechercher un client, une adresse, une machine…"
+             aria-label="Rechercher un client">
+      <button class="cli-search-clear" id="cli-search-clear" type="button"
+              aria-label="Effacer la recherche" title="Effacer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <button class="btn btn-primary cli-btn-add" id="cli-btn-add" type="button">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
+           viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
+      </svg>
+      Nouveau
+    </button>
+  </div>
+
+  <p class="cli-count" id="cli-count" aria-live="polite"></p>
+
+  <ul class="cli-list" id="cli-list" role="list">
+    <!-- Items injectés par JS -->
+  </ul>
+</div>
+
+<!-- ============================================================
+     MODALE FORMULAIRE (ajout / édition)
+     ============================================================ -->
+<div class="cli-modal-overlay" id="cli-form-overlay" role="dialog" aria-modal="true"
+     aria-labelledby="cli-form-title">
+  <div class="cli-modal">
+    <div class="cli-modal-header">
+      <span class="cli-modal-title" id="cli-form-title">Nouveau client</span>
+      <button class="cli-modal-close" id="cli-form-close" type="button" aria-label="Fermer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="cli-modal-body">
+      <form id="cli-form" novalidate>
+        <!-- Nom (obligatoire) -->
+        <div class="form-group">
+          <label class="form-label" for="cli-nom">Nom du client <span aria-hidden="true">*</span></label>
+          <input class="form-control" id="cli-nom" type="text" autocomplete="off"
+                 placeholder="Ex. Boulangerie Martin" required>
+
+          <!-- Bandeau de doublon possible (uniquement en création) -->
+          <div class="cli-dup" id="cli-dup" role="status" aria-live="polite">
+            <span class="cli-dup-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
+                   viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0
+                     001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+              </svg>
+            </span>
+            <div class="cli-dup-body">
+              <span id="cli-dup-text"></span>
+              <div class="cli-dup-actions">
+                <button type="button" class="cli-dup-open" id="cli-dup-open">Ouvrir l'existant</button>
+                <button type="button" class="cli-dup-ignore" id="cli-dup-ignore">Continuer la création</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Adresse -->
+        <div class="form-group">
+          <label class="form-label" for="cli-adresse">Adresse</label>
+          <input class="form-control" id="cli-adresse" type="text" autocomplete="off"
+                 placeholder="Ex. 12 rue des Champs, 75000 Paris">
+        </div>
+
+        <!-- Contact -->
+        <div class="form-group">
+          <label class="form-label" for="cli-contact">Contact</label>
+          <input class="form-control" id="cli-contact" type="text" autocomplete="off"
+                 placeholder="Ex. Jean Martin — 06 12 34 56 78">
+        </div>
+
+        <!-- Machines (liste dynamique) -->
+        <div class="form-group">
+          <label class="form-label">Machines</label>
+          <div class="cli-machines-empty" id="cli-machines-empty">
+            Aucune machine. Ajoutez-en une si nécessaire.
+          </div>
+          <div class="cli-machines-editor" id="cli-machines-editor">
+            <!-- Lignes machine injectées par JS -->
+          </div>
+          <button type="button" class="btn btn-outline btn-sm mt-8" id="cli-machine-add">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
+            </svg>
+            Ajouter une machine
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div class="cli-modal-footer">
+      <button class="btn btn-outline" id="cli-form-cancel" type="button">Annuler</button>
+      <button class="btn btn-primary" id="cli-form-save" type="button">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     CONFIRMATION DE SUPPRESSION
+     ============================================================ -->
+<div class="cli-modal-overlay" id="cli-confirm-overlay" role="dialog" aria-modal="true"
+     aria-labelledby="cli-confirm-title">
+  <div class="cli-modal">
+    <div class="cli-confirm-box">
+      <h3 id="cli-confirm-title">Supprimer le client ?</h3>
+      <p id="cli-confirm-text">Cette action retire le client de la liste.</p>
+      <div class="cli-confirm-actions">
+        <button class="btn btn-outline" id="cli-confirm-cancel" type="button">Annuler</button>
+        <button class="btn cli-btn-danger" id="cli-confirm-ok" type="button">Supprimer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     LOGIQUE DU PLUGIN
+     ============================================================ -->
+<script>
+(function () {
+  'use strict';
+
+  /* ----------------------------------------------------------
+     Garde anti-double-exécution : app.js réexécute les <script>
+     du plugin à chaque navigation. On nettoie systématiquement les
+     écouteurs window posés lors d'un précédent montage avant d'en
+     reposer, et on ne garde qu'une instance active.
+     ---------------------------------------------------------- */
+  if (window.__cliCleanup) {
+    try { window.__cliCleanup(); } catch (e) { /* no-op */ }
+    window.__cliCleanup = null;
+  }
+
+  function el(id) { return document.getElementById(id); }
+
+  /* Sécurité : si le DOM du plugin n'est pas présent (montage partiel), on sort. */
+  var listeEl = el('cli-list');
+  if (!listeEl) return;
+
+  /* ----------------------------------------------------------
+     Références DOM
+     ---------------------------------------------------------- */
+  var dom = {
+    search:        el('cli-search'),
+    searchClear:   el('cli-search-clear'),
+    btnAdd:        el('cli-btn-add'),
+    count:         el('cli-count'),
+    list:          listeEl,
+
+    /* Formulaire */
+    formOverlay:   el('cli-form-overlay'),
+    formTitle:     el('cli-form-title'),
+    formClose:     el('cli-form-close'),
+    formCancel:    el('cli-form-cancel'),
+    formSave:      el('cli-form-save'),
+    nom:           el('cli-nom'),
+    adresse:       el('cli-adresse'),
+    contact:       el('cli-contact'),
+    machinesEditor: el('cli-machines-editor'),
+    machinesEmpty: el('cli-machines-empty'),
+    machineAdd:    el('cli-machine-add'),
+
+    /* Doublon */
+    dup:           el('cli-dup'),
+    dupText:       el('cli-dup-text'),
+    dupOpen:       el('cli-dup-open'),
+    dupIgnore:     el('cli-dup-ignore'),
+
+    /* Confirmation suppression */
+    confirmOverlay: el('cli-confirm-overlay'),
+    confirmText:    el('cli-confirm-text'),
+    confirmCancel:  el('cli-confirm-cancel'),
+    confirmOk:      el('cli-confirm-ok'),
+  };
+
+  /* ----------------------------------------------------------
+     État local
+     ---------------------------------------------------------- */
+  var clients = [];          /* cache courant (non supprimés), trié par nom */
+  var fuse = null;           /* instance Fuse.js (reconstruite à chaque rafraîchissement) */
+  var editingId = null;      /* id du client en édition, null = création */
+  var dupCandidate = null;   /* client candidat doublon affiché dans le bandeau */
+  var dupIgnored = false;    /* l'utilisateur a choisi "continuer la création" */
+  var pendingDeleteId = null;/* id en attente de confirmation de suppression */
+
+  /* ----------------------------------------------------------
+     Utilitaires
+     ---------------------------------------------------------- */
+
+  /* Normalisation pour comparaison : minuscules + suppression des accents. */
+  function normaliser(str) {
+    return String(str == null ? '' : str)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') /* diacritiques combinants */
+      .trim();
+  }
+
+  function escapeHtml(str) {
+    var d = document.createElement('div');
+    d.textContent = (str == null ? '' : String(str));
+    return d.innerHTML;
+  }
+
+  function triParNom(a, b) {
+    return normaliser(a.nom).localeCompare(normaliser(b.nom), 'fr');
+  }
+
+  /* Construit le sous-titre (adresse / contact) d'une carte. */
+  function sousTitre(c) {
+    var parts = [];
+    if (c.adresse) parts.push(c.adresse);
+    if (c.contact) parts.push(c.contact);
+    return parts.join(' • ');
+  }
+
+  /* ----------------------------------------------------------
+     Recherche fuzzy (Fuse.js)
+     - tolère fautes de frappe, accents, casse
+     - cherche sur nom + adresse + contact + n° et type de machine
+     ---------------------------------------------------------- */
+  function construireFuse() {
+    if (typeof window.Fuse !== 'function') {
+      fuse = null;
+      return;
+    }
+    /* On indexe une version "aplatie" des machines pour que Fuse puisse
+       chercher dedans (type + numéro concaténés). */
+    var docs = clients.map(function (c) {
+      return {
+        ref: c,
+        nom: c.nom || '',
+        adresse: c.adresse || '',
+        contact: c.contact || '',
+        machines: (c.machines || [])
+          .map(function (m) { return [m.type, m.numero].filter(Boolean).join(' '); })
+          .join(' '),
+      };
+    });
+
+    fuse = new window.Fuse(docs, {
+      includeScore: true,
+      ignoreLocation: true,   /* la correspondance peut être n'importe où dans le champ */
+      threshold: 0.4,         /* tolérance aux fautes (0 = strict, 1 = tout) */
+      minMatchCharLength: 2,
+      keys: [
+        { name: 'nom', weight: 0.6 },
+        { name: 'adresse', weight: 0.2 },
+        { name: 'contact', weight: 0.1 },
+        { name: 'machines', weight: 0.1 },
+      ],
+      /* Fuse normalise déjà la casse ; on lui passe aussi une fonction de
+         normalisation pour neutraliser les accents (recherche "boulangri"). */
+      getFn: function (obj, path) {
+        var v = window.Fuse.config.getFn(obj, path);
+        if (Array.isArray(v)) return v.map(normaliser);
+        return normaliser(v);
+      },
+    });
+  }
+
+  /* Renvoie la liste filtrée selon la recherche courante (ou tout si vide). */
+  function clientsFiltres() {
+    var q = dom.search ? dom.search.value.trim() : '';
+    if (!q) return clients.slice();
+
+    if (fuse) {
+      var terme = normaliser(q);
+      return fuse.search(terme).map(function (r) { return r.item.ref; });
+    }
+
+    /* Repli si Fuse indisponible : filtre "contient" insensible accents/casse. */
+    var n = normaliser(q);
+    return clients.filter(function (c) {
+      return normaliser(c.nom).indexOf(n) !== -1
+          || normaliser(c.adresse).indexOf(n) !== -1
+          || normaliser(c.contact).indexOf(n) !== -1;
+    });
+  }
+
+  /* ----------------------------------------------------------
+     Rendu de la liste
+     ---------------------------------------------------------- */
+  function rendreListe() {
+    var visibles = clientsFiltres();
+    var q = dom.search ? dom.search.value.trim() : '';
+
+    /* Compteur */
+    if (clients.length === 0) {
+      dom.count.textContent = '';
+    } else if (q) {
+      dom.count.textContent = visibles.length + ' résultat'
+        + (visibles.length > 1 ? 's' : '') + ' sur ' + clients.length;
+    } else {
+      dom.count.textContent = clients.length + ' client'
+        + (clients.length > 1 ? 's' : '');
+    }
+
+    /* État vide */
+    if (visibles.length === 0) {
+      dom.list.innerHTML = '';
+      var vide = document.createElement('li');
+      vide.className = 'cli-empty';
+      if (clients.length === 0) {
+        vide.innerHTML =
+          '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.3" aria-hidden="true">' +
+          '<path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 100-8 4 4 0 000 8z"/></svg>' +
+          '<div class="cli-empty-title">Aucun client enregistré</div>' +
+          '<div class="cli-empty-msg">Cliquez sur « Nouveau » pour créer votre premier client.</div>';
+      } else {
+        vide.innerHTML =
+          '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.3" aria-hidden="true">' +
+          '<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>' +
+          '<div class="cli-empty-title">Aucun résultat</div>' +
+          '<div class="cli-empty-msg">Aucun client ne correspond à « ' + escapeHtml(q) + ' ».</div>';
+      }
+      dom.list.appendChild(vide);
+      return;
+    }
+
+    /* Construction des cartes via fragment (perf + pas de reflow multiple) */
+    var frag = document.createDocumentFragment();
+    visibles.forEach(function (c) {
+      frag.appendChild(creerCarte(c));
+    });
+    dom.list.innerHTML = '';
+    dom.list.appendChild(frag);
+  }
+
+  function creerCarte(c) {
+    var li = document.createElement('li');
+    li.className = 'cli-item';
+
+    /* Zone principale (clic = édition) */
+    var main = document.createElement('div');
+    main.className = 'cli-item-main';
+    main.setAttribute('role', 'button');
+    main.setAttribute('tabindex', '0');
+    main.setAttribute('aria-label', 'Modifier ' + (c.nom || 'le client'));
+
+    var html = '<div class="cli-item-nom">' + escapeHtml(c.nom || '(sans nom)') + '</div>';
+    var sub = sousTitre(c);
+    if (sub) html += '<div class="cli-item-sub">' + escapeHtml(sub) + '</div>';
+
+    if (Array.isArray(c.machines) && c.machines.length) {
+      html += '<div class="cli-machines">';
+      c.machines.forEach(function (m) {
+        var label = [m.type, m.numero].filter(Boolean).join(' ');
+        if (!label) return;
+        html += '<span class="cli-machine-tag">' +
+          '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">' +
+          '<path stroke-linecap="round" stroke-linejoin="round" d="M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>' +
+          escapeHtml(label) + '</span>';
+      });
+      html += '</div>';
+    }
+    main.innerHTML = html;
+    main.addEventListener('click', function () { ouvrirFormulaire(c); });
+    main.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvrirFormulaire(c); }
+    });
+
+    /* Actions */
+    var actions = document.createElement('div');
+    actions.className = 'cli-item-actions';
+
+    var btnEdit = document.createElement('button');
+    btnEdit.type = 'button';
+    btnEdit.className = 'cli-icon-btn';
+    btnEdit.title = 'Modifier';
+    btnEdit.setAttribute('aria-label', 'Modifier ' + (c.nom || 'le client'));
+    btnEdit.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>';
+    btnEdit.addEventListener('click', function () { ouvrirFormulaire(c); });
+
+    var btnDel = document.createElement('button');
+    btnDel.type = 'button';
+    btnDel.className = 'cli-icon-btn cli-danger';
+    btnDel.title = 'Supprimer';
+    btnDel.setAttribute('aria-label', 'Supprimer ' + (c.nom || 'le client'));
+    btnDel.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>';
+    btnDel.addEventListener('click', function () { demanderSuppression(c); });
+
+    actions.appendChild(btnEdit);
+    actions.appendChild(btnDel);
+
+    li.appendChild(main);
+    li.appendChild(actions);
+    return li;
+  }
+
+  /* ----------------------------------------------------------
+     Chargement / rafraîchissement depuis ClientsDB
+     ---------------------------------------------------------- */
+  function rafraichir() {
+    return window.ClientsDB.getAll().then(function (liste) {
+      clients = (liste || []).slice().sort(triParNom);
+      construireFuse();
+      rendreListe();
+    }).catch(function (err) {
+      console.error('[Clients] Lecture impossible :', err);
+    });
+  }
+
+  /* ----------------------------------------------------------
+     Éditeur de machines (liste dynamique)
+     ---------------------------------------------------------- */
+  function majMachinesEmpty() {
+    var vide = dom.machinesEditor.children.length === 0;
+    dom.machinesEmpty.style.display = vide ? 'block' : 'none';
+  }
+
+  function ajouterLigneMachine(type, numero) {
+    var row = document.createElement('div');
+    row.className = 'cli-machine-row';
+
+    var inType = document.createElement('input');
+    inType.type = 'text';
+    inType.className = 'form-control cli-m-type';
+    inType.placeholder = 'Type (ex. R230)';
+    inType.autocomplete = 'off';
+    inType.value = type || '';
+
+    var inNum = document.createElement('input');
+    inNum.type = 'text';
+    inNum.className = 'form-control cli-m-numero';
+    inNum.placeholder = 'N° de série';
+    inNum.autocomplete = 'off';
+    inNum.value = numero || '';
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'cli-machine-remove';
+    btn.title = 'Retirer cette machine';
+    btn.setAttribute('aria-label', 'Retirer cette machine');
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/></svg>';
+    btn.addEventListener('click', function () {
+      row.remove();
+      majMachinesEmpty();
+    });
+
+    row.appendChild(inType);
+    row.appendChild(inNum);
+    row.appendChild(btn);
+    dom.machinesEditor.appendChild(row);
+    majMachinesEmpty();
+    return inType;
+  }
+
+  function lireMachines() {
+    var out = [];
+    dom.machinesEditor.querySelectorAll('.cli-machine-row').forEach(function (row) {
+      var type = row.querySelector('.cli-m-type').value.trim();
+      var numero = row.querySelector('.cli-m-numero').value.trim();
+      /* On ignore les lignes totalement vides. */
+      if (type || numero) out.push({ type: type, numero: numero });
+    });
+    return out;
+  }
+
+  /* ----------------------------------------------------------
+     Détection de doublon (création uniquement)
+     Score fuzzy élevé sur le nom => suggestion non bloquante.
+     ---------------------------------------------------------- */
+  function masquerDoublon() {
+    dom.dup.classList.remove('cli-visible');
+    dupCandidate = null;
+  }
+
+  function verifierDoublon() {
+    /* Jamais en édition, ni si l'utilisateur a déjà choisi de continuer. */
+    if (editingId || dupIgnored) { masquerDoublon(); return; }
+
+    var saisie = normaliser(dom.nom.value);
+    if (saisie.length < 3) { masquerDoublon(); return; }
+
+    var meilleur = null;
+    var meilleurScore = 1; /* plus c'est petit, mieux c'est (0 = identique) */
+
+    if (fuse) {
+      /* Recherche restreinte au nom pour la détection de doublon. */
+      var res = fuse.search({ nom: saisie });
+      if (res.length) {
+        meilleur = res[0].item.ref;
+        meilleurScore = res[0].score == null ? 0 : res[0].score;
+      }
+    } else {
+      /* Repli : égalité normalisée stricte. */
+      clients.some(function (c) {
+        if (normaliser(c.nom) === saisie) { meilleur = c; meilleurScore = 0; return true; }
+        return false;
+      });
+    }
+
+    /* Seuil strict : on ne suggère que des correspondances très proches
+       (score <= 0.34) pour éviter le bruit. */
+    if (meilleur && meilleurScore <= 0.34) {
+      dupCandidate = meilleur;
+      dom.dupText.innerHTML = 'Un client similaire existe déjà : <strong>'
+        + escapeHtml(meilleur.nom) + '</strong>.';
+      dom.dup.classList.add('cli-visible');
+    } else {
+      masquerDoublon();
+    }
+  }
+
+  /* ----------------------------------------------------------
+     Ouverture / fermeture de la modale formulaire
+     ---------------------------------------------------------- */
+  function reinitFormulaire() {
+    editingId = null;
+    dupIgnored = false;
+    dom.nom.value = '';
+    dom.adresse.value = '';
+    dom.contact.value = '';
+    dom.machinesEditor.innerHTML = '';
+    majMachinesEmpty();
+    masquerDoublon();
+    dom.nom.classList.remove('cli-invalid');
+  }
+
+  function ouvrirFormulaire(client) {
+    reinitFormulaire();
+
+    if (client) {
+      editingId = client.id;
+      dom.formTitle.textContent = 'Modifier le client';
+      dom.nom.value = client.nom || '';
+      dom.adresse.value = client.adresse || '';
+      dom.contact.value = client.contact || '';
+      (client.machines || []).forEach(function (m) {
+        ajouterLigneMachine(m.type, m.numero);
+      });
+    } else {
+      dom.formTitle.textContent = 'Nouveau client';
+    }
+
+    dom.formOverlay.classList.add('cli-open');
+    /* Focus sur le nom (léger délai pour l'ouverture). */
+    setTimeout(function () { try { dom.nom.focus(); } catch (e) {} }, 60);
+  }
+
+  function fermerFormulaire() {
+    dom.formOverlay.classList.remove('cli-open');
+  }
+
+  /* ----------------------------------------------------------
+     Enregistrement (création ou édition)
+     ---------------------------------------------------------- */
+  function enregistrer() {
+    var nom = dom.nom.value.trim();
+    if (!nom) {
+      dom.nom.classList.add('cli-invalid');
+      dom.nom.focus();
+      return;
+    }
+    dom.nom.classList.remove('cli-invalid');
+
+    var donnees = {
+      nom: nom,
+      adresse: dom.adresse.value.trim() || null,
+      contact: dom.contact.value.trim() || null,
+      machines: lireMachines(),
+    };
+
+    dom.formSave.disabled = true;
+
+    var op;
+    if (editingId) {
+      /* Édition : on récupère l'enregistrement existant pour conserver
+         les champs non éditables (created_at, etc.) puis put(). */
+      op = window.ClientsDB.get(editingId).then(function (existant) {
+        var fusion = Object.assign({}, existant || {}, donnees, { id: editingId });
+        return window.ClientsDB.put(fusion);
+      });
+    } else {
+      op = window.ClientsDB.add(donnees);
+    }
+
+    op.then(function () {
+      dom.formSave.disabled = false;
+      fermerFormulaire();
+      /* La liste se rafraîchit aussi via l'event clients-db-changed, mais on
+         rafraîchit immédiatement pour un retour visuel instantané. */
+      return rafraichir();
+    }).catch(function (err) {
+      dom.formSave.disabled = false;
+      console.error('[Clients] Enregistrement impossible :', err);
+      alert('Impossible d\'enregistrer le client. Veuillez réessayer.');
+    });
+  }
+
+  /* ----------------------------------------------------------
+     Suppression (soft-delete via ClientsDB.remove)
+     ---------------------------------------------------------- */
+  function demanderSuppression(client) {
+    pendingDeleteId = client.id;
+    dom.confirmText.textContent = 'Le client « ' + (client.nom || 'sans nom')
+      + ' » sera retiré de la liste.';
+    dom.confirmOverlay.classList.add('cli-open');
+  }
+
+  function fermerConfirmation() {
+    dom.confirmOverlay.classList.remove('cli-open');
+    pendingDeleteId = null;
+  }
+
+  function confirmerSuppression() {
+    if (!pendingDeleteId) { fermerConfirmation(); return; }
+    var id = pendingDeleteId;
+    dom.confirmOk.disabled = true;
+    window.ClientsDB.remove(id).then(function () {
+      dom.confirmOk.disabled = false;
+      fermerConfirmation();
+      /* Si on supprimait le client en cours d'édition, on ferme le formulaire. */
+      if (editingId === id) fermerFormulaire();
+      return rafraichir();
+    }).catch(function (err) {
+      dom.confirmOk.disabled = false;
+      console.error('[Clients] Suppression impossible :', err);
+      alert('Impossible de supprimer le client. Veuillez réessayer.');
+    });
+  }
+
+  /* ----------------------------------------------------------
+     Branchement des écouteurs (DOM local — pas de fuite, le DOM
+     est remplacé à chaque navigation).
+     ---------------------------------------------------------- */
+  /* Recherche */
+  dom.search.addEventListener('input', function () {
+    dom.searchClear.classList.toggle('cli-visible', dom.search.value.length > 0);
+    rendreListe();
+  });
+  dom.searchClear.addEventListener('click', function () {
+    dom.search.value = '';
+    dom.searchClear.classList.remove('cli-visible');
+    rendreListe();
+    dom.search.focus();
+  });
+
+  /* Ajout / formulaire */
+  dom.btnAdd.addEventListener('click', function () { ouvrirFormulaire(null); });
+  dom.formClose.addEventListener('click', fermerFormulaire);
+  dom.formCancel.addEventListener('click', fermerFormulaire);
+  dom.formSave.addEventListener('click', enregistrer);
+  dom.machineAdd.addEventListener('click', function () {
+    var input = ajouterLigneMachine('', '');
+    try { input.focus(); } catch (e) {}
+  });
+
+  /* Fermer la modale au clic sur le fond (hors carte). */
+  dom.formOverlay.addEventListener('click', function (e) {
+    if (e.target === dom.formOverlay) fermerFormulaire();
+  });
+
+  /* Détection de doublon pendant la frappe du nom. */
+  dom.nom.addEventListener('input', verifierDoublon);
+  dom.dupOpen.addEventListener('click', function () {
+    if (dupCandidate) ouvrirFormulaire(dupCandidate);
+  });
+  dom.dupIgnore.addEventListener('click', function () {
+    dupIgnored = true;
+    masquerDoublon();
+    try { dom.nom.focus(); } catch (e) {}
+  });
+
+  /* Confirmation de suppression */
+  dom.confirmCancel.addEventListener('click', fermerConfirmation);
+  dom.confirmOk.addEventListener('click', confirmerSuppression);
+  dom.confirmOverlay.addEventListener('click', function (e) {
+    if (e.target === dom.confirmOverlay) fermerConfirmation();
+  });
+
+  /* Échap ferme la modale ouverte (confirmation prioritaire). */
+  function onKeydown(e) {
+    if (e.key !== 'Escape') return;
+    if (dom.confirmOverlay.classList.contains('cli-open')) { fermerConfirmation(); return; }
+    if (dom.formOverlay.classList.contains('cli-open')) { fermerFormulaire(); }
+  }
+  document.addEventListener('keydown', onKeydown);
+
+  /* ----------------------------------------------------------
+     Rafraîchissement automatique sur mutation de la base
+     (mutation locale ou pull de synchro) — écouteur window à nettoyer.
+     ---------------------------------------------------------- */
+  function onDbChange() { rafraichir(); }
+  var EVENT_CHANGE = (window.ClientsDB && window.ClientsDB.EVENT_CHANGE) || 'clients-db-changed';
+  window.addEventListener(EVENT_CHANGE, onDbChange);
+
+  /* Nettoyage exposé : retiré au prochain montage du plugin. */
+  window.__cliCleanup = function () {
+    window.removeEventListener(EVENT_CHANGE, onDbChange);
+    document.removeEventListener('keydown', onKeydown);
+  };
+
+  /* ----------------------------------------------------------
+     Démarrage : attendre que la base soit prête puis charger.
+     ---------------------------------------------------------- */
+  if (window.ClientsDB && typeof window.ClientsDB.ready === 'function') {
+    window.ClientsDB.ready()
+      .then(rafraichir)
+      .catch(function (err) {
+        console.error('[Clients] Base indisponible :', err);
+        dom.list.innerHTML =
+          '<li class="cli-empty"><div class="cli-empty-title">Stockage indisponible</div>' +
+          '<div class="cli-empty-msg">Le référentiel local n\'a pas pu être ouvert sur cet appareil.</div></li>';
+      });
+  } else {
+    dom.list.innerHTML =
+      '<li class="cli-empty"><div class="cli-empty-title">Module de données absent</div>' +
+      '<div class="cli-empty-msg">ClientsDB n\'est pas chargé.</div></li>';
+  }
+
+})();
+</script>

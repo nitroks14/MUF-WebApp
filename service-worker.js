@@ -8,8 +8,8 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache */
-const CACHE_NOM     = 'muf-webapp-v51';
-const CACHE_PLUGINS = 'muf-plugins-v51';
+const CACHE_NOM     = 'muf-webapp-v52';
+const CACHE_PLUGINS = 'muf-plugins-v52';
 
 /* Liste des assets statiques à précacher.
    Note : supabase-js est servi depuis un CDN cross-origin, donc volontairement
@@ -28,6 +28,7 @@ const ASSETS_STATIQUES = [
   './js/app.js',
   './js/parametrage.js',
   './js/libs/lz-string.min.js',
+  './js/libs/fuse.min.js',
   './manifest.json',
 ];
 

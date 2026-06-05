@@ -14,6 +14,17 @@
    ============================================================ */
 const PLUGINS = [
   {
+    id:   'clients',
+    nom:  'Clients',
+    desc: 'Référentiel des clients et de leurs machines (recherche, doublons)',
+    icone: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+              viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4
+                   4 0 100-8 4 4 0 000 8zm6-8a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>`,
+  },
+  {
     id:   'parametrage',
     nom:  'Paramétrage',
     desc: 'Configuration de l\'application',
