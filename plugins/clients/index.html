@@ -269,12 +269,25 @@
   .cli-modal-footer .btn { flex: 1; }
 
   /* ---- Liste dynamique de machines (dans le formulaire) ----
-     Layout : (type + numéro) sur une ligne, (année + bouton retirer) sur la
-     suivante. flex-wrap garantit qu'aucun champ n'est écrasé sur iPhone SE. */
+     Layout en CSS Grid, robuste sur toutes les largeurs.
+
+     • Petit écran (iPhone SE, < 480px) : 2 colonnes.
+         ┌──────── Type ────────┬──── N° de série ────┐
+         ├──── Année ───────────┴──── [bouton — ] ────┤
+       Type et Numéro occupent chacun une colonne sur la 1re ligne ; Année et le
+       bouton retirer (largeur fixe) sont alignés sur la 2e ligne. Rien n'est
+       écrasé ni coupé.
+
+     • iPad / PC (≥ 480px) : tout sur une seule ligne.
+         [ Type ][ N° de série ][ Année ][ — ]
+       Les trois champs partagent l'espace via minmax() (l'Année garde une
+       largeur lisible et n'est jamais compressée à zéro), le bouton retirer
+       occupe une colonne fixe alignée en bout de ligne. */
   .cli-machines-editor { margin-top: 4px; }
   .cli-machine-row {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-auto-rows: auto;
     gap: 8px;
     align-items: center;
     margin-bottom: 8px;
@@ -282,14 +295,32 @@
     border-bottom: 1px dashed var(--color-border);
   }
   .cli-machine-row:last-child { border-bottom: none; padding-bottom: 0; }
-  .cli-machine-row .form-control { margin: 0; }
-  .cli-machine-row .cli-m-type   { flex: 1 1 45%; min-width: 0; }
-  .cli-machine-row .cli-m-numero { flex: 1 1 45%; min-width: 0; }
-  .cli-machine-row .cli-m-annee  { flex: 1 1 0; min-width: 0; }
+  .cli-machine-row .form-control { margin: 0; min-width: 0; width: 100%; }
+
+  /* Petit écran : Type + Numéro en haut, Année + bouton en bas. */
+  .cli-machine-row .cli-m-type   { grid-column: 1 / 2; }
+  .cli-machine-row .cli-m-numero { grid-column: 2 / 3; }
+  .cli-machine-row .cli-m-annee  { grid-column: 1 / 2; }
+  .cli-machine-remove            { grid-column: 2 / 3; justify-self: end; }
+
+  /* iPad / PC : tout sur une seule ligne, Année jamais écrasée. */
+  @media (min-width: 480px) {
+    .cli-machine-row {
+      grid-template-columns:
+        minmax(0, 1.4fr)   /* Type   */
+        minmax(0, 1.4fr)   /* Numéro */
+        minmax(96px, 1fr)  /* Année — plancher lisible, jamais à zéro */
+        44px;              /* Bouton retirer */
+    }
+    .cli-machine-row .cli-m-type   { grid-column: 1 / 2; }
+    .cli-machine-row .cli-m-numero { grid-column: 2 / 3; }
+    .cli-machine-row .cli-m-annee  { grid-column: 3 / 4; }
+    .cli-machine-remove            { grid-column: 4 / 5; }
+  }
+
   .cli-machine-remove {
-    width: 40px;
+    width: 44px;
     height: 44px;
-    flex-shrink: 0;
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
     background: var(--color-surface);
@@ -956,7 +987,7 @@
     var inAnnee = document.createElement('input');
     inAnnee.type = 'text';
     inAnnee.className = 'form-control cli-m-annee';
-    inAnnee.placeholder = 'Année (si connue)';
+    inAnnee.placeholder = 'Année';
     inAnnee.autocomplete = 'off';
     inAnnee.inputMode = 'numeric';
     inAnnee.maxLength = 4;
