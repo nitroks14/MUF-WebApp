@@ -605,6 +605,9 @@
   var dupCandidate = null;   /* client candidat doublon affiché dans le bandeau */
   var dupIgnored = false;    /* l'utilisateur a choisi "continuer la création" */
   var pendingDeleteId = null;/* id en attente de confirmation de suppression */
+  var refreshDiffere = false;/* un clients-db-changed est arrivé pendant qu'une modale
+                                était ouverte : on rejoue le rafraîchissement à la
+                                fermeture pour ne pas perturber la saisie en cours. */
 
   /* ----------------------------------------------------------
      Utilitaires
@@ -927,6 +930,26 @@
   }
 
   /* ----------------------------------------------------------
+     Modales : une modale (formulaire OU confirmation de suppression)
+     est-elle actuellement ouverte ?
+     Sert à différer tout rafraîchissement déclenché par une synchro
+     en arrière-plan tant que l'utilisateur saisit dans une modale.
+     ---------------------------------------------------------- */
+  function modaleOuverte() {
+    return dom.formOverlay.classList.contains('cli-open')
+        || dom.confirmOverlay.classList.contains('cli-open');
+  }
+
+  /* Rejoue, si nécessaire, un rafraîchissement mis en attente pendant
+     qu'une modale était ouverte. À appeler à chaque fermeture de modale. */
+  function appliquerRafraichissementDiffere() {
+    if (refreshDiffere && !modaleOuverte()) {
+      refreshDiffere = false;
+      rafraichir();
+    }
+  }
+
+  /* ----------------------------------------------------------
      Ouverture / fermeture de la modale formulaire
      ---------------------------------------------------------- */
   function reinitFormulaire() {
@@ -964,6 +987,9 @@
 
   function fermerFormulaire() {
     dom.formOverlay.classList.remove('cli-open');
+    /* Une synchro a pu modifier la base pendant la saisie : on rejoue
+       maintenant le rafraîchissement qui avait été différé. */
+    appliquerRafraichissementDiffere();
   }
 
   /* ----------------------------------------------------------
@@ -1001,6 +1027,10 @@
 
     op.then(function () {
       dom.formSave.disabled = false;
+      /* Le rafraîchissement explicite ci-dessous remplace tout rafraîchissement
+         qui aurait été différé pendant la saisie : on consomme le drapeau pour
+         éviter un double rendu à la fermeture de la modale. */
+      refreshDiffere = false;
       fermerFormulaire();
       /* La liste se rafraîchit aussi via l'event clients-db-changed, mais on
          rafraîchit immédiatement pour un retour visuel instantané. */
@@ -1025,6 +1055,9 @@
   function fermerConfirmation() {
     dom.confirmOverlay.classList.remove('cli-open');
     pendingDeleteId = null;
+    /* Idem : rejoue un éventuel rafraîchissement différé (sauf si la
+       modale formulaire est encore ouverte derrière la confirmation). */
+    appliquerRafraichissementDiffere();
   }
 
   function confirmerSuppression() {
@@ -1033,6 +1066,9 @@
     dom.confirmOk.disabled = true;
     window.ClientsDB.remove(id).then(function () {
       dom.confirmOk.disabled = false;
+      /* Rafraîchissement explicite ci-dessous : on consomme le drapeau de
+         rafraîchissement différé pour éviter un double rendu aux fermetures. */
+      refreshDiffere = false;
       fermerConfirmation();
       /* Si on supprimait le client en cours d'édition, on ferme le formulaire. */
       if (editingId === id) fermerFormulaire();
@@ -1104,8 +1140,22 @@
   /* ----------------------------------------------------------
      Rafraîchissement automatique sur mutation de la base
      (mutation locale ou pull de synchro) — écouteur window à nettoyer.
+
+     IMPORTANT : ce handler est aussi appelé pour des changements qui ne
+     viennent PAS d'une action de l'utilisateur dans ce plugin (un cycle de
+     SyncManager en arrière-plan peut émettre l'événement). Si une modale est
+     ouverte, reconstruire la liste pendant la saisie est au mieux inutile, au
+     pire perturbant (perte de la saisie / fermeture ressentie). On DIFFÈRE
+     donc le rafraîchissement tant qu'une modale est ouverte, puis on le rejoue
+     à sa fermeture (voir appliquerRafraichissementDiffere).
      ---------------------------------------------------------- */
-  function onDbChange() { rafraichir(); }
+  function onDbChange() {
+    if (modaleOuverte()) {
+      refreshDiffere = true; /* on rejouera à la fermeture de la modale */
+      return;
+    }
+    rafraichir();
+  }
   var EVENT_CHANGE = (window.ClientsDB && window.ClientsDB.EVENT_CHANGE) || 'clients-db-changed';
   window.addEventListener(EVENT_CHANGE, onDbChange);
 
