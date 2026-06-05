@@ -190,6 +190,7 @@ img {
 /* ---- CONTENU PRINCIPAL ---- */
 .main-content {
   flex: 1;
+  min-width: 0; /* Autorise le flex-item à rétrécir sous la largeur min-content de son contenu (corrige le débordement horizontal) */
   margin-left: var(--sidebar-width);
   display: flex;
   flex-direction: column;
@@ -217,6 +218,7 @@ img {
 
 #app-content {
   flex: 1;
+  min-width: 0; /* Défensif : empêche le contenu large d'un plugin d'élargir la zone (corrige le débordement horizontal) */
   padding: 24px;
 }
 

@@ -328,8 +328,11 @@
     padding: 12px 14px;
     font-family: monospace;
     font-size: 0.78rem;
-    white-space: pre;
+    white-space: pre; /* Formatage monospace aligné (séparateurs/points) préservé pour la copie — NE PAS passer en pre-wrap */
     max-height: 300px;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto; /* Scroll horizontal interne explicite : la boîte ne déborde plus du conteneur sur petit écran */
     overflow-y: auto;
     line-height: 1.5;
     color: var(--color-text);
