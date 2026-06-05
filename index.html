@@ -328,6 +328,13 @@
   <!-- Module Auth (Supabase) — doit être chargé avant app.js -->
   <script src="./js/auth.js"></script>
 
+  <!-- Couche de données offline-first (référentiel clients) :
+       db.js (IndexedDB, source de vérité locale) puis sync-manager.js
+       (synchro IndexedDB ↔ Supabase). Chargés après auth.js (dépendance
+       à window.Auth) et avant app.js. -->
+  <script src="./js/db.js"></script>
+  <script src="./js/sync-manager.js"></script>
+
   <!-- Librairies QR Code - chargées avant parametrage.js -->
   <script src="./js/libs/qrcode.min.js"></script>
   <script src="./js/libs/jsQR.min.js"></script>
