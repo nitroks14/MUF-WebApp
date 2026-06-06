@@ -11,6 +11,31 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v71
+
+- Correction d'un **effet de bord du fix anti-contamination v70** : l'auto-
+  apprentissage ne proposait plus de **mise à jour** quand on modifiait un seul
+  champ d'un **client connu** « pauvre ». Cause racine : dans
+  `js/client-learning.js`, `evaluate()` faisait `if (!estComplet()) return;`
+  AVANT tout calcul, où `estComplet()` exige que TOUS les champs base du plugin
+  soient remplis. Depuis le vidage des champs absents (v70), un client dépourvu
+  d'un champ requis (ex. WHAT'S COOKING FRANCE sans email, requis par Liste de
+  pièces) ne passait plus ce gate → aucune proposition, même en saisissant un
+  autre champ (le contact).
+- Correctif : **dissociation « client connu » / « nouveau client »** dans
+  `evaluate()`. La référence (`chercherReference`) est désormais calculée AVANT
+  le gate. Pour un **client connu**, les diffs (maj scalaire / ajout machine /
+  ajout PN) sont proposés SANS exiger la complétude globale ; chaque item reste
+  conditionné à un champ réellement saisi ET différent de la base
+  (`if (!saisi) return;` inchangé). Pour un **nouveau client**, la complétude
+  (`estComplet()`) reste exigée avant de proposer la création.
+- `calculerPropositions` séparait déjà parfaitement le cas création (ref nulle)
+  des cas update/ajout (ref connue) : inchangé.
+- Non-régression : changement de client (A puis B) sans saisie ⇒ aucun bandeau
+  (champs absents vidés en v70, scalaires vides sans item) ; dédup par signature
+  conservée ; évaluation toujours sur blur/change uniquement.
+- Bump de cache requis car `js/client-learning.js` (précaché) change.
+
 ## v70
 
 - Correction de la **contamination croisée des champs client** au changement de

@@ -797,14 +797,22 @@
 
     function evaluate() {
       if (detruit || !window.ClientsDB) return;
-      if (!estComplet()) {
-        /* Pas tous les champs remplis : on ne propose rien (et si le bandeau
-           courant venait de ce plugin, on le laisse — l'utilisateur agit dessus). */
-        return;
-      }
       rechargerClients().then(function () {
         if (detruit) return;
         var ref = chercherReference(config, clientsCache);
+
+        /* Dissociation « client connu » / « nouveau client » :
+           - CLIENT CONNU (ref.client) : on propose toujours les diffs
+             (maj champ scalaire / ajout machine / ajout PN) SANS exiger la
+             complétude globale. calculerPropositions ne génère un item que
+             pour un champ réellement saisi ET différent de la base
+             (`if (!saisi) return;`), donc un client « pauvre » dont on ne
+             modifie qu'un champ produit bien sa proposition de mise à jour.
+           - NOUVEAU CLIENT (ref.client null) : on ne propose la création
+             qu'une fois TOUS les champs base remplis, pour ne pas créer une
+             fiche à moitié vide. Sinon on sort sans rien proposer. */
+        if (!ref.client && !estComplet()) return;
+
         var propositions = calculerPropositions(config, ref);
         controller._signatureCourante = propositions.signature;
 
