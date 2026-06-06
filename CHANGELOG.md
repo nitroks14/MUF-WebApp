@@ -11,6 +11,29 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v70
+
+- Correction de la **contamination croisée des champs client** au changement de
+  client via l'auto-complétion (et du **faux positif d'auto-apprentissage** qui en
+  découlait). Cause racine : dans le callback `onSelect` (`appliquerClient`) des
+  plugins, le pré-remplissage ne posait une valeur QUE si le client la possédait.
+  En changeant pour un client B dépourvu de certains champs (contact / email /
+  code client / machine), ceux-ci conservaient les valeurs du client A précédent.
+  L'auto-apprentissage comparait alors le formulaire (B + résidus de A) au client B
+  et proposait à tort une « mise à jour » de B avec les données de A.
+- Correctif : **remplacement COMPLET** des champs client/machine mappés à la
+  sélection (`champ.value = client.<prop> || ''`), y compris vidage de la machine
+  si le client n'en a aucune. Appliqué aux 4 plugins concernés :
+  - `plugins/liste-pieces/index.html` : code client, contact, email, adresse,
+    machine (type / n° / année).
+  - `plugins/demande-os/index.html` : contact, machine (combinée).
+  - `plugins/calcul-vide/index.html` : machine.
+  - `plugins/retour-garantie/index.html` : machine (type + n°).
+- Non touchés : technicien (vient de `user_metadata`), lignes de pièces, type de
+  demande, dates, descriptif. Les cas légitimes d'auto-apprentissage restent
+  fonctionnels (édition manuelle d'un champ après sélection).
+- Bump de cache requis car les 4 `plugins/*/index.html` (précachés) changent.
+
 ## v69
 
 - Dette technique post-Phase B (revue Tech Lead, sans régression fonctionnelle) :

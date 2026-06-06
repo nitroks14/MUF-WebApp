@@ -1244,17 +1244,27 @@
     var emailEl   = document.getElementById("lp-clientEmail");
     var addressEl = document.getElementById("lp-clientAddress");
 
+    /* Remplacement COMPLET : on pose la valeur du client si présente, SINON on
+       vide le champ. Changer de client repart ainsi sur une fiche propre et
+       cohérente : aucune valeur résiduelle du client précédent ne subsiste, ce
+       qui évite les faux positifs d'auto-apprentissage. On ne touche QUE les
+       champs client/machine ; le technicien et les champs non-client (pièces,
+       type de demande, date, descriptif) restent intacts. */
     if (nameEl) nameEl.classList.remove("lp-invalid");
-    if (client.code_client && numberEl)  numberEl.value  = client.code_client;
-    if (client.contact     && contactEl) { contactEl.value = client.contact; contactEl.classList.remove("lp-invalid"); }
-    if (client.email       && emailEl)   { emailEl.value   = client.email;   emailEl.classList.remove("lp-invalid"); }
-    if (client.adresse     && addressEl) addressEl.value = client.adresse;
+    if (numberEl)  numberEl.value  = client.code_client || "";
+    if (contactEl) { contactEl.value = client.contact || ""; contactEl.classList.remove("lp-invalid"); }
+    if (emailEl)   { emailEl.value   = client.email   || ""; emailEl.classList.remove("lp-invalid"); }
+    if (addressEl) addressEl.value = client.adresse || "";
 
-    /* Machines : pré-remplit la 1re ; propose un choix de chips si plusieurs. */
+    /* Machines : pré-remplit la 1re ; propose un choix de chips si plusieurs.
+       Si le client n'a AUCUNE machine, on vide les 3 champs machine (via
+       appliquerMachine(null)) pour ne pas conserver la machine du client A. */
     var machines = Array.isArray(client.machines) ? client.machines : [];
     if (machines.length >= 1) {
       appliquerMachine(machines[0]);
       if (machines.length > 1) proposerChoixMachine(machines);
+    } else {
+      appliquerMachine(null);
     }
 
     scheduleAutosave();

@@ -792,18 +792,30 @@
     refClientId = client.id || null;
     retirerChoixMachine();
 
+    /* Remplacement COMPLET : on pose la valeur du client si présente, SINON on
+       vide le champ. Changer de client repart ainsi sur une fiche propre :
+       aucune valeur résiduelle du client précédent ne subsiste (évite les faux
+       positifs d'auto-apprentissage). On ne touche QUE les champs client/machine. */
+
     /* Contact du client (mappé vers "Contact chez le client"). */
-    if (client.contact) {
-      domContact.value = client.contact;
+    if (domContact) {
+      domContact.value = client.contact || '';
       domContact.classList.remove('dos-invalid');
     }
 
-    /* Machines : pré-remplit la 1re ; propose un choix si plusieurs. */
+    /* Machines : pré-remplit la 1re ; propose un choix si plusieurs.
+       Si le client n'a AUCUNE machine, on vide le champ machine pour ne pas
+       conserver la machine du client précédent. */
     var machines = Array.isArray(client.machines) ? client.machines : [];
-    if (machines.length >= 1) {
-      domMachine.value = valeurMachine(machines[0]);
-      domMachine.classList.remove('dos-invalid');
-      if (machines.length > 1) proposerChoixMachine(machines);
+    if (domMachine) {
+      if (machines.length >= 1) {
+        domMachine.value = valeurMachine(machines[0]);
+        domMachine.classList.remove('dos-invalid');
+        if (machines.length > 1) proposerChoixMachine(machines);
+      } else {
+        domMachine.value = '';
+        domMachine.classList.remove('dos-invalid');
+      }
     }
   }
 

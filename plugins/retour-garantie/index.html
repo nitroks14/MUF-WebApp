@@ -1335,14 +1335,21 @@
     refClientId = client.id || null;
     retirerChoixMachine();
 
+    /* Remplacement COMPLET : on pose la machine du client si présente, SINON on
+       vide les champs. Si le client n'a AUCUNE machine, on vide type + n° pour
+       ne pas conserver la machine du client précédent (évite les résidus et les
+       faux positifs d'auto-apprentissage). */
     var machines = Array.isArray(client.machines) ? client.machines : [];
     if (machines.length >= 1) {
       domTypeMachine.value = valeurMachineType(machines[0]);
       domNumMachine.value  = valeurMachineNum(machines[0]);
-      domTypeMachine.classList.remove('brg-invalid');
-      domNumMachine.classList.remove('brg-invalid');
       if (machines.length > 1) { proposerChoixMachine(machines); }
+    } else {
+      domTypeMachine.value = '';
+      domNumMachine.value  = '';
     }
+    domTypeMachine.classList.remove('brg-invalid');
+    domNumMachine.classList.remove('brg-invalid');
 
     /* Le nom est déjà posé par le helper dans le champ ; on retire l'erreur. */
     domClient.classList.remove('brg-invalid');

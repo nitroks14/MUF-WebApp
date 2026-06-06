@@ -2517,10 +2517,18 @@
     refClientId = client.id || null;
     retirerChoixMachine();
 
+    /* Remplacement COMPLET : on pose la machine du client si présente, SINON on
+       vide le champ. Si le client n'a AUCUNE machine, on vide le champ pour ne
+       pas conserver la machine du client précédent (évite les résidus et les
+       faux positifs d'auto-apprentissage). */
     var machines = Array.isArray(client.machines) ? client.machines : [];
-    if (elMachine && machines.length >= 1) {
-      elMachine.value = valeurMachine(machines[0]);
-      if (machines.length > 1) proposerChoixMachine(machines);
+    if (elMachine) {
+      if (machines.length >= 1) {
+        elMachine.value = valeurMachine(machines[0]);
+        if (machines.length > 1) proposerChoixMachine(machines);
+      } else {
+        elMachine.value = '';
+      }
     }
 
     scheduleSave();
