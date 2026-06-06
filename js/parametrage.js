@@ -1,11 +1,29 @@
 /**
  * MUF-WebApp — Module Paramétrage
- * Gestion de la configuration persistée en localStorage.
+ * Gestion de la configuration des préférences technicien.
+ *
+ * Stratégie de stockage — offline-first « cloud + cache local » :
+ *   - Source de vérité     = Supabase user_metadata (multi-appareils).
+ *   - Cache local          = localStorage (instantané, fonctionne hors-ligne).
+ *
+ *   • Lecture : le cache localStorage est servi immédiatement. Au retour/au
+ *     démarrage online, on rafraîchit depuis user_metadata, on met à jour le
+ *     cache, et on notifie les abonnés (le plugin re-render si les valeurs
+ *     diffèrent).
+ *   • Écriture : le cache localStorage est écrit tout de suite, puis on pousse
+ *     vers user_metadata (merge NON destructif). Si offline / échec réseau, un
+ *     flag « dirty » est posé et la synchro est rejouée automatiquement au
+ *     retour du réseau.
+ *   • Migration douce : au 1er chargement online, si user_metadata ne contient
+ *     pas encore les préférences mais que le localStorage en a → push unique.
  *
  * API publique : window.Parametrage
  *   .get(key)          → valeur d'un champ
- *   .set(key, value)   → écriture + sauvegarde localStorage
+ *   .set(key, value)   → écriture (cache immédiat + push cloud / dirty)
  *   .getAll()          → objet complet de configuration
+ *   .syncFromCloud()   → Promise<boolean>  (refresh manuel depuis user_metadata ;
+ *                        résout à true si le cache a changé)
+ *   .onChange(cb)      → void  (notifié { config } à chaque maj du cache)
  */
 
 'use strict';
@@ -13,9 +31,14 @@
 (function () {
 
   /* ----------------------------------------------------------
-     Clé localStorage et structure par défaut
+     Clés localStorage et structure par défaut
      ---------------------------------------------------------- */
   const CLE_STORAGE = 'muf_config';
+  const CLE_DIRTY   = 'muf_config_dirty';          /* flag : push cloud en attente */
+
+  /* Préfixe sous lequel les préférences sont rangées dans user_metadata afin de
+     cohabiter proprement avec les champs existants (prenom, nom…). */
+  const META_PREFIX = 'param_';
 
   const CONFIG_DEFAUT = {
     /* nom / prenom supprimés — désormais gérés par window.Auth (onboarding) */
@@ -26,8 +49,17 @@
     unites:           'SI',
   };
 
+  /* Champs réellement synchronisés dans user_metadata (date_format / unites sont
+     figés en dur → jamais persistés ni synchronisés). */
+  const CHAMPS_SYNC = ['emails_frequents', 'email_maintenance', 'contacts_support'];
+
   /* ----------------------------------------------------------
-     Chargement initial depuis localStorage
+     État interne
+     ---------------------------------------------------------- */
+  var _listeners = [];
+
+  /* ----------------------------------------------------------
+     Chargement initial depuis localStorage (cache)
      ---------------------------------------------------------- */
   function chargerDepuisStorage() {
     try {
@@ -46,11 +78,11 @@
     }
   }
 
-  /* État interne du module — initialisé une seule fois */
+  /* État courant — initialisé une seule fois depuis le cache (instantané). */
   let _config = chargerDepuisStorage();
 
   /* ----------------------------------------------------------
-     Sauvegarde vers localStorage
+     Helpers cache localStorage
      ---------------------------------------------------------- */
   function sauvegarderStorage() {
     try {
@@ -60,13 +92,196 @@
     }
   }
 
+  function estDirty() {
+    try { return localStorage.getItem(CLE_DIRTY) === '1'; }
+    catch (e) { return false; }
+  }
+
+  function marquerDirty(valeur) {
+    try {
+      if (valeur) localStorage.setItem(CLE_DIRTY, '1');
+      else        localStorage.removeItem(CLE_DIRTY);
+    } catch (e) { /* quota / mode privé : on ignore */ }
+  }
+
+  /* ----------------------------------------------------------
+     Helpers cloud (user_metadata)
+     ---------------------------------------------------------- */
+  function authPret() {
+    return !!(window.Auth && typeof window.Auth.updateUserMetadata === 'function');
+  }
+
+  function sessionActive() {
+    return !!(window.Auth && window.Auth.isAuthenticated && window.Auth.isAuthenticated());
+  }
+
+  function estOnline() {
+    return typeof navigator === 'undefined' || navigator.onLine !== false;
+  }
+
+  /** Construit le sous-objet à pousser dans user_metadata (champs préfixés). */
+  function versMetadata(config) {
+    var data = {};
+    CHAMPS_SYNC.forEach(function (key) {
+      data[META_PREFIX + key] = config[key];
+    });
+    return data;
+  }
+
+  /**
+   * Extrait les préférences d'un user_metadata.
+   * @returns {{config:object, present:boolean}} present=true si au moins un
+   *          champ préfixé existe (sert à détecter le besoin de migration).
+   */
+  function depuisMetadata(meta) {
+    meta = meta || {};
+    var config = {};
+    var present = false;
+    CHAMPS_SYNC.forEach(function (key) {
+      var cle = META_PREFIX + key;
+      if (Object.prototype.hasOwnProperty.call(meta, cle)) {
+        config[key] = meta[cle];
+        present = true;
+      }
+    });
+    return { config: config, present: present };
+  }
+
+  function notifierChangement() {
+    var copie = Object.assign({}, _config);
+    _listeners.forEach(function (cb) {
+      try { cb(copie); } catch (e) { /* listener défaillant ignoré */ }
+    });
+  }
+
+  /** Compare deux valeurs de préférence (objets/tableaux via JSON). */
+  function memeValeur(a, b) {
+    try { return JSON.stringify(a) === JSON.stringify(b); }
+    catch (e) { return a === b; }
+  }
+
+  /* ----------------------------------------------------------
+     Push vers le cloud (user_metadata)
+     Pose le flag dirty si offline / échec, le retire si succès.
+     ---------------------------------------------------------- */
+  function pousserCloud() {
+    if (!authPret() || !sessionActive() || !estOnline()) {
+      marquerDirty(true);
+      return Promise.resolve(false);
+    }
+    return window.Auth.updateUserMetadata(versMetadata(_config)).then(function (res) {
+      if (res && res.ok) {
+        marquerDirty(false);
+        return true;
+      }
+      marquerDirty(true);
+      return false;
+    }).catch(function () {
+      marquerDirty(true);
+      return false;
+    });
+  }
+
+  /* ----------------------------------------------------------
+     Refresh depuis le cloud (au démarrage / retour online)
+     - migration douce si user_metadata vide mais cache non vide ;
+     - sinon adoption des valeurs cloud (source de vérité) ;
+     - notifie les abonnés uniquement si le cache a réellement changé.
+     @returns {Promise<boolean>} true si le cache local a changé
+     ---------------------------------------------------------- */
+  function syncFromCloud() {
+    if (!authPret() || !sessionActive() || !estOnline()) {
+      return Promise.resolve(false);
+    }
+
+    return window.Auth.refreshUser().then(function () {
+      var meta = window.Auth.getUserMetadata ? window.Auth.getUserMetadata() : {};
+      var extrait = depuisMetadata(meta);
+
+      /* Migration douce : le cloud n'a pas encore les préférences mais on a un
+         cache local non vide → on pousse une fois. */
+      if (!extrait.present) {
+        if (estDirty() || aDesPreferencesLocales()) {
+          return pousserCloud().then(function () { return false; });
+        }
+        return false;
+      }
+
+      /* Le cloud fait foi : on applique ses valeurs sur le cache. Si une écriture
+         locale est en attente (dirty), on la pousse plutôt que de l'écraser. */
+      if (estDirty()) {
+        return pousserCloud().then(function () { return false; });
+      }
+
+      var change = false;
+      CHAMPS_SYNC.forEach(function (key) {
+        if (Object.prototype.hasOwnProperty.call(extrait.config, key)) {
+          if (!memeValeur(_config[key], extrait.config[key])) {
+            _config[key] = extrait.config[key];
+            change = true;
+          }
+        }
+      });
+
+      if (change) {
+        sauvegarderStorage();
+        notifierChangement();
+      }
+      return change;
+    }).catch(function (e) {
+      console.warn('[Parametrage] syncFromCloud impossible :', e);
+      return false;
+    });
+  }
+
+  function aDesPreferencesLocales() {
+    return CHAMPS_SYNC.some(function (key) {
+      var v = _config[key];
+      if (Array.isArray(v)) return v.length > 0;
+      return !!v;
+    });
+  }
+
+  /* ----------------------------------------------------------
+     Flush des écritures en attente au retour online
+     ---------------------------------------------------------- */
+  function flushSiDirty() {
+    if (estDirty() && sessionActive() && estOnline()) {
+      pousserCloud();
+    }
+  }
+
+  /* ----------------------------------------------------------
+     Déclencheurs de synchronisation
+     ---------------------------------------------------------- */
+  (function installerDeclencheurs() {
+    /* Retour du réseau → on rejoue les écritures en attente puis on rafraîchit. */
+    window.addEventListener('online', function () {
+      flushSiDirty();
+      syncFromCloud();
+    });
+
+    /* Changement de session (login / refresh) → push dirty + refresh cloud. */
+    if (window.Auth && typeof window.Auth.onChange === 'function') {
+      var dejaConnecte = false;
+      window.Auth.onChange(function (user) {
+        var connecte = !!user;
+        if (connecte && !dejaConnecte) {
+          flushSiDirty();
+          syncFromCloud();
+        }
+        dejaConnecte = connecte;
+      });
+    }
+  })();
+
   /* ----------------------------------------------------------
      API publique
      ---------------------------------------------------------- */
   const Parametrage = {
 
     /**
-     * Lire une valeur de configuration.
+     * Lire une valeur de configuration (depuis le cache, synchrone).
      *
      * Rétrocompatibilité : 'nom' et 'prenom' sont désormais stockés dans
      * window.Auth (onboarding). Si un plugin les demande via Parametrage,
@@ -84,7 +299,8 @@
     },
 
     /**
-     * Écrire une valeur et persister en localStorage.
+     * Écrire une valeur : cache localStorage immédiat + push cloud (ou dirty
+     * si offline). L'écriture locale n'attend jamais le réseau.
      * @param {string} key
      * @param {*} value
      */
@@ -102,14 +318,34 @@
       }
       _config[key] = value;
       sauvegarderStorage();
+      /* Push cloud non bloquant (pose un flag dirty si offline/échec). */
+      if (CHAMPS_SYNC.indexOf(key) !== -1) {
+        pousserCloud();
+      }
     },
 
     /**
-     * Retourner une copie de toute la configuration.
+     * Retourner une copie de toute la configuration (depuis le cache).
      * @returns {object}
      */
     getAll() {
       return Object.assign({}, _config);
+    },
+
+    /**
+     * Rafraîchit le cache depuis user_metadata (source de vérité).
+     * @returns {Promise<boolean>} true si le cache a changé
+     */
+    syncFromCloud() {
+      return syncFromCloud();
+    },
+
+    /**
+     * S'abonner aux changements du cache (ex : refresh cloud → re-render UI).
+     * @param {function(object)} cb appelé avec une copie de la config
+     */
+    onChange(cb) {
+      if (typeof cb === 'function') _listeners.push(cb);
     },
   };
 

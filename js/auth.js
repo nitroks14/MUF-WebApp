@@ -17,6 +17,9 @@
  *
  * Ajouts (utilisés par l'overlay auth pour le flux reset) :
  *     .updatePassword(nouveauMdp)         → Promise<{ ok, error }>
+ *     .updateUserMetadata(champs)         → Promise<{ ok, error }>  (merge NON destructif dans user_metadata)
+ *     .getUserMetadata()                  → object  (copie de user_metadata courant, synchrone)
+ *     .refreshUser()                      → Promise<object|null>  (recharge le profil depuis Supabase)
  *     .ready()                            → Promise<SupabaseClient>
  *     .onChange(cb)                       → void  (notifié à chaque changement de session)
  *
@@ -51,6 +54,7 @@
      vue mémoire mise à jour à chaque changement de session.
      ---------------------------------------------------------- */
   var _userCache = null;        /* { id, prenom, nom, email } | null */
+  var _metaCache = {};          /* copie de supaUser.user_metadata (brut) — pour merge non destructif */
   var _session   = null;        /* session supabase courante | null */
   var _listeners = [];          /* callbacks externes (onChange) */
 
@@ -73,7 +77,13 @@
 
   function majSession(session) {
     _session   = session || null;
-    _userCache = session && session.user ? mapperUser(session.user) : null;
+    var supaUser = session && session.user ? session.user : null;
+    _userCache = supaUser ? mapperUser(supaUser) : null;
+    /* Conserve une copie du user_metadata brut afin de pouvoir le fusionner
+       sans écraser les champs existants (prénom, nom, préférences…). */
+    _metaCache = supaUser && supaUser.user_metadata
+      ? Object.assign({}, supaUser.user_metadata)
+      : {};
     _listeners.forEach(function (cb) {
       try { cb(_userCache, _session); } catch (e) { /* listener défaillant ignoré */ }
     });
@@ -261,6 +271,73 @@
       } catch (e) {
         console.error('[Auth] updatePassword :', e);
         return { ok: false, error: messageErreur(e) };
+      }
+    },
+
+    /**
+     * Copie synchrone du user_metadata courant (ou {} si pas de session).
+     * Sert de source de vérité « cloud » pour les préférences (Paramétrage).
+     * @returns {object}
+     */
+    getUserMetadata: function () {
+      return Object.assign({}, _metaCache);
+    },
+
+    /**
+     * Met à jour user_metadata de façon NON destructive : les champs passés
+     * sont fusionnés avec l'existant (prénom, nom, autres préférences conservés).
+     * @param {object} champs - clés/valeurs à fusionner dans user_metadata
+     * @returns {Promise<{ok:boolean, error?:string}>}
+     */
+    updateUserMetadata: async function (champs) {
+      if (!champs || typeof champs !== 'object') {
+        return { ok: false, error: 'Données invalides.' };
+      }
+      try {
+        var supabase = await obtenirClientPret();
+        /* Merge non destructif : on repart de la dernière vue connue du metadata. */
+        var fusion = Object.assign({}, _metaCache, champs);
+        var resultat = await supabase.auth.updateUser({ data: fusion });
+        if (resultat.error) {
+          return { ok: false, error: messageErreur(resultat.error) };
+        }
+        /* Rafraîchit le cache local à partir de l'utilisateur renvoyé. */
+        var maj = resultat.data ? resultat.data.user : null;
+        if (maj && maj.user_metadata) {
+          _metaCache = Object.assign({}, maj.user_metadata);
+          _userCache = mapperUser(maj);
+        } else {
+          _metaCache = fusion;
+        }
+        return { ok: true };
+      } catch (e) {
+        console.error('[Auth] updateUserMetadata :', e);
+        return { ok: false, error: messageErreur(e) };
+      }
+    },
+
+    /**
+     * Recharge le profil utilisateur depuis Supabase (source de vérité) et met
+     * à jour les caches synchrones. À appeler au retour online pour récupérer
+     * les éventuelles modifications faites depuis un autre appareil.
+     * @returns {Promise<object|null>} profil { id, prenom, nom, email } ou null
+     */
+    refreshUser: async function () {
+      try {
+        var supabase = await obtenirClientPret();
+        var res = await supabase.auth.getUser();
+        var supaUser = res && res.data ? res.data.user : null;
+        if (res.error || !supaUser) {
+          return _userCache;
+        }
+        _userCache = mapperUser(supaUser);
+        _metaCache = supaUser.user_metadata
+          ? Object.assign({}, supaUser.user_metadata)
+          : {};
+        return _userCache;
+      } catch (e) {
+        console.warn('[Auth] refreshUser impossible (hors ligne ?) :', e);
+        return _userCache;
       }
     },
 

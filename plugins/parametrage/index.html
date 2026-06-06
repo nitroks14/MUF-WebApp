@@ -527,5 +527,34 @@
      ---------------------------------------------------------- */
   remplirFormulaire();
 
+  /* ----------------------------------------------------------
+     Synchronisation cloud (offline-first)
+     Le cache localStorage est déjà affiché ci-dessus (instantané, hors-ligne).
+     On rafraîchit ensuite depuis user_metadata (source de vérité) et on
+     re-render le formulaire si les valeurs ont changé — sans interrompre une
+     saisie en cours (on ne re-render pas si un champ du plugin a le focus).
+     ---------------------------------------------------------- */
+  function unChampALeFocus() {
+    var actif = document.activeElement;
+    return !!(actif && (actif.closest('.parametrage-wrap')) &&
+              (actif.tagName === 'INPUT' || actif.tagName === 'TEXTAREA'));
+  }
+
+  if (window.Parametrage && typeof window.Parametrage.onChange === 'function') {
+    window.Parametrage.onChange(function () {
+      /* Évite d'écraser ce que l'utilisateur est en train de taper. */
+      if (unChampALeFocus()) return;
+      remplirFormulaire();
+    });
+  }
+
+  if (window.Parametrage && typeof window.Parametrage.syncFromCloud === 'function') {
+    window.Parametrage.syncFromCloud().then(function (change) {
+      /* onChange a déjà re-rendu si nécessaire ; ce then sert de filet
+         au cas où le plugin serait chargé avant l'enregistrement du listener. */
+      if (change && !unChampALeFocus()) remplirFormulaire();
+    });
+  }
+
 })();
 </script>
