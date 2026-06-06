@@ -2508,8 +2508,13 @@
      Calcul vide ne conserve que nom client + machine : on pré-remplit
      donc uniquement la machine avec la 1re (un menu permet d'en choisir
      une autre si plusieurs). */
+  /* Id du dernier client sélectionné via l'auto-complétion (référence haute
+     confiance pour l'auto-apprentissage). Réinitialisé dès qu'on retape le nom. */
+  var refClientId = null;
+
   function appliquerClient(client) {
     if (!client) return;
+    refClientId = client.id || null;
     retirerChoixMachine();
 
     var machines = Array.isArray(client.machines) ? client.machines : [];
@@ -2530,6 +2535,32 @@
     acController = window.ClientAutocomplete.attach(elClient, {
       onSelect: appliquerClient,
     });
+    /* Toute frappe dans le nom invalide la référence haute confiance. */
+    if (elClient) elClient.addEventListener('input', function () { refClientId = null; });
+  }
+
+  /* ----------------------------------------------------------
+     Auto-apprentissage clients (window.ClientLearning) — proposition non
+     bloquante d'ajout/MAJ en 1 clic. Calcul vide ne capte que nom client +
+     machine (champ combiné « type n° »). « Tous champs base remplis » = nom +
+     machine renseignés (le client est optionnel pour le calcul, mais dès que
+     les deux sont là on peut apprendre).
+     ---------------------------------------------------------- */
+  var clController = null;
+  function brancherApprentissage() {
+    if (!window.ClientLearning || typeof window.ClientLearning.attach !== 'function') return;
+    clController = window.ClientLearning.attach({
+      prefix: 'cv',
+      fields: {
+        nom:          '#cv-client',
+        machineCombo: '#cv-machine',
+      },
+      isComplete: function () {
+        return !!(elClient && elClient.value.trim()
+          && elMachine && elMachine.value.trim());
+      },
+      getReferenceId: function () { return refClientId; },
+    });
   }
 
   /* Cleanup au démontage (app.js réexécute les scripts à chaque navigation :
@@ -2543,6 +2574,10 @@
       try { acController.destroy(); } catch (e) { /* no-op */ }
     }
     acController = null;
+    if (clController && typeof clController.destroy === 'function') {
+      try { clController.destroy(); } catch (e) { /* no-op */ }
+    }
+    clController = null;
     retirerChoixMachine();
   };
 
@@ -2557,6 +2592,7 @@
   updateVisibility();
   compute();
   brancherAutocompletion();
+  brancherApprentissage();
 
 })();
 </script>

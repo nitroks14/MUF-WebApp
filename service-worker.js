@@ -12,8 +12,8 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache */
-const CACHE_NOM     = 'muf-webapp-v66';
-const CACHE_PLUGINS = 'muf-plugins-v66';
+const CACHE_NOM     = 'muf-webapp-v67';
+const CACHE_PLUGINS = 'muf-plugins-v67';
 
 /* Document de repli pour les navigations hors-ligne (PWA / refresh offline). */
 const FALLBACK_DOC = './index.html';
@@ -36,6 +36,7 @@ const ASSETS_STATIQUES = [
   './js/app.js',
   './js/parametrage.js',
   './js/client-autocomplete.js',
+  './js/client-learning.js',
   './js/aruco-marker.js',
   './js/aruco-vision.js',
   './js/libs/lz-string.min.js',
@@ -60,7 +61,11 @@ const ASSETS_STATIQUES = [
      v66 : aucun nouvel asset (auto-complétion clients branchée dans le plugin
      Liste de pièces — mapping complet nom/code/contact/email/adresse + machine
      type/n°/année + multi-machines ; js/client-autocomplete.js déjà précaché,
-     seul plugins/liste-pieces/index.html change, déjà listé dans ASSETS_PLUGINS). */
+     seul plugins/liste-pieces/index.html change, déjà listé dans ASSETS_PLUGINS).
+     v67 : NOUVEL asset js/client-learning.js (auto-apprentissage clients —
+     proposition non bloquante d'ajout/MAJ en 1 clic, branchée dans les 4 plugins
+     Demande d'OS / Calcul vide / Retour garantie / Liste de pièces). Les 4
+     plugins concernés changent mais sont déjà listés dans ASSETS_PLUGINS. */
   './js/libs/jspdf.umd.min.js',
   './js/libs/xlsx.full.min.js',
   './js/libs/exceljs.min.js',

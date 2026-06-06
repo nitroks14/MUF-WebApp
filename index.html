@@ -354,6 +354,12 @@
        d'être disponible quand un plugin l'invoque. -->
   <script src="./js/client-autocomplete.js"></script>
 
+  <!-- Auto-apprentissage clients réutilisable (window.ClientLearning) :
+       propose, sans bloquer, d'ajouter/mettre à jour un client/machine/PN
+       lorsqu'une saisie diffère du référentiel. Dépend de ClientsDB (db.js)
+       + Fuse.js + ClientAutocomplete. Chargé avant app.js / les plugins. -->
+  <script src="./js/client-learning.js"></script>
+
   <!-- Module Paramétrage - doit être chargé avant app.js -->
   <script src="./js/parametrage.js"></script>
 

@@ -783,8 +783,13 @@
     domMachineChoix = wrap;
   }
 
+  /* Id du dernier client sélectionné via l'auto-complétion (référence haute
+     confiance pour l'auto-apprentissage). Réinitialisé dès qu'on retape le nom. */
+  var refClientId = null;
+
   function appliquerClient(client) {
     if (!client) return;
+    refClientId = client.id || null;
     retirerChoixMachine();
 
     /* Contact du client (mappé vers "Contact chez le client"). */
@@ -814,6 +819,33 @@
     acController = window.ClientAutocomplete.attach(domClient, {
       onSelect: appliquerClient,
     });
+    /* Toute frappe dans le nom invalide la référence haute confiance. */
+    if (domClient) domClient.addEventListener('input', function () { refClientId = null; });
+  }
+
+  /* ----------------------------------------------------------
+     Auto-apprentissage clients (window.ClientLearning) — proposition non
+     bloquante d'ajout/MAJ en 1 clic. Demande d'OS capte : nom client, machine
+     (champ combiné « type n° ») et contact. « Tous champs base remplis » = nom
+     + machine + contact (tous trois requis du formulaire).
+     ---------------------------------------------------------- */
+  var clController = null;
+  function brancherApprentissage() {
+    if (!window.ClientLearning || typeof window.ClientLearning.attach !== 'function') return;
+    clController = window.ClientLearning.attach({
+      prefix: 'dos',
+      fields: {
+        nom:          '#dos-client',
+        machineCombo: '#dos-machine',
+        contact:      '#dos-contact',
+      },
+      isComplete: function () {
+        return !!(domClient && domClient.value.trim()
+          && domMachine && domMachine.value.trim()
+          && domContact && domContact.value.trim());
+      },
+      getReferenceId: function () { return refClientId; },
+    });
   }
 
   /* Nettoyage au démontage du plugin (app.js réexécute les scripts à chaque
@@ -827,6 +859,10 @@
       try { acController.destroy(); } catch (e) { /* no-op */ }
     }
     acController = null;
+    if (clController && typeof clController.destroy === 'function') {
+      try { clController.destroy(); } catch (e) { /* no-op */ }
+    }
+    clController = null;
   };
 
   /* Réinitialisation : en plus du reset de base (déjà branché plus haut), on
@@ -844,6 +880,7 @@
   preremplirDepuisParametrage();
   preremplirTechnicien();
   brancherAutocompletion();
+  brancherApprentissage();
 
 })();
 </script>

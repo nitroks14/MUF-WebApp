@@ -1325,9 +1325,14 @@
     domMachineChoix = wrap;
   }
 
+  /* Id du dernier client sélectionné via l'auto-complétion (référence haute
+     confiance pour l'auto-apprentissage). Réinitialisé dès qu'on retape le nom. */
+  var refClientId = null;
+
   /* Mapping d'un client choisi → champs existants du formulaire. */
   function appliquerClient(client) {
     if (!client) { return; }
+    refClientId = client.id || null;
     retirerChoixMachine();
 
     var machines = Array.isArray(client.machines) ? client.machines : [];
@@ -1354,6 +1359,36 @@
     acController = window.ClientAutocomplete.attach(domClient, {
       onSelect: appliquerClient,
     });
+    /* Toute frappe dans le nom invalide la référence haute confiance. */
+    if (domClient) { domClient.addEventListener('input', function () { refClientId = null; }); }
+  }
+
+  /* ----------------------------------------------------------
+     Auto-apprentissage clients (window.ClientLearning) — proposition non
+     bloquante d'ajout/MAJ en 1 clic. Retour garantie capte : nom client,
+     machine (champs séparés type + n°) et numéro de projet PN. Le PN est
+     rattaché à la machine concernée (tableau additif machine.pns, synchronisé
+     dans le jsonb « machines » sans migration SQL). « Tous champs base remplis »
+     = nom + type + n° (le PN reste optionnel : présent → proposé en plus).
+     ---------------------------------------------------------- */
+  var clController = null;
+  function brancherApprentissage() {
+    if (!window.ClientLearning || typeof window.ClientLearning.attach !== 'function') { return; }
+    clController = window.ClientLearning.attach({
+      prefix: 'brg',
+      fields: {
+        nom:           '#brg-client',
+        machineType:   '#brg-type-machine',
+        machineNumber: '#brg-num-machine',
+        pn:            '#brg-pn',
+      },
+      isComplete: function () {
+        return !!(domClient && domClient.value.trim()
+          && domTypeMachine && domTypeMachine.value.trim()
+          && domNumMachine && domNumMachine.value.trim());
+      },
+      getReferenceId: function () { return refClientId; },
+    });
   }
 
   /* Cleanup au démontage (app.js réexécute les scripts à chaque navigation :
@@ -1367,6 +1402,10 @@
       try { acController.destroy(); } catch (e) { /* no-op */ }
     }
     acController = null;
+    if (clController && typeof clController.destroy === 'function') {
+      try { clController.destroy(); } catch (e) { /* no-op */ }
+    }
+    clController = null;
     retirerChoixMachine();
   };
 
@@ -1380,6 +1419,7 @@
   restaurerBrouillon(); /* écrase les valeurs par défaut si un brouillon existe */
   preremplirTechnicienAuth();
   brancherAutocompletion();
+  brancherApprentissage();
 
 })();
 </script>

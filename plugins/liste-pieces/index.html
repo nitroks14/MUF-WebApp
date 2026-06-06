@@ -1228,8 +1228,14 @@
   /* Mapping COMPLET d'un client choisi → champs existants du formulaire.
      Chaque champ n'est rempli que si la donnée correspondante existe ; le nom
      est déjà posé dans lp-clientName par le helper lui-même. */
+  /* Id du dernier client sélectionné via l'auto-complétion (référence haute
+     confiance pour l'auto-apprentissage). Réinitialisé dès que l'utilisateur
+     retape le nom (saisie manuelle = on retombe sur un matching par nom). */
+  var refClientId = null;
+
   function appliquerClient(client) {
     if (!client) return;
+    refClientId = client.id || null;
     retirerChoixMachine();
 
     var nameEl    = document.getElementById("lp-clientName");
@@ -1264,6 +1270,39 @@
     acController = window.ClientAutocomplete.attach(nameEl, {
       onSelect: appliquerClient,
     });
+    /* Toute frappe dans le nom invalide la référence haute confiance. */
+    nameEl.addEventListener("input", function () { refClientId = null; });
+  }
+
+  /* ----------------------------------------------------------
+     Auto-apprentissage clients (window.ClientLearning) — proposition non
+     bloquante d'ajout/MAJ en 1 clic. Liste de pièces capte le mapping le plus
+     complet : nom + code client + contact + email + adresse + machine
+     (type/n°/année). « Tous champs base remplis » = les champs requis client
+     + machine (mêmes que la validation : nom, contact, email, type, n°).
+     ---------------------------------------------------------- */
+  var clController = null;
+  function brancherApprentissage() {
+    if (!window.ClientLearning || typeof window.ClientLearning.attach !== "function") return;
+    clController = window.ClientLearning.attach({
+      prefix: "lp",
+      fields: {
+        nom:           "#lp-clientName",
+        code_client:   "#lp-clientNumber",
+        contact:       "#lp-clientContact",
+        email:         "#lp-clientEmail",
+        adresse:       "#lp-clientAddress",
+        machineType:   "#lp-machineType",
+        machineNumber: "#lp-machineNumber",
+        machineYear:   "#lp-machineYear",
+      },
+      isComplete: function () {
+        function v(id) { var e = document.getElementById(id); return e ? e.value.trim() : ""; }
+        return !!(v("lp-clientName") && v("lp-clientContact") && v("lp-clientEmail")
+          && v("lp-machineType") && v("lp-machineNumber"));
+      },
+      getReferenceId: function () { return refClientId; },
+    });
   }
 
   /* Cleanup au démontage (app.js réexécute les scripts à chaque navigation :
@@ -1277,6 +1316,10 @@
       try { acController.destroy(); } catch (e) { /* no-op */ }
     }
     acController = null;
+    if (clController && typeof clController.destroy === "function") {
+      try { clController.destroy(); } catch (e) { /* no-op */ }
+    }
+    clController = null;
     retirerChoixMachine();
   };
 
@@ -1308,6 +1351,9 @@
 
     /* 4. Brancher l'auto-complétion clients sur le champ « Client ». */
     brancherAutocompletion();
+
+    /* 5. Brancher l'auto-apprentissage clients (proposition non bloquante). */
+    brancherApprentissage();
   })();
 
 })();
