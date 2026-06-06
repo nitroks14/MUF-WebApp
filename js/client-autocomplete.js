@@ -53,10 +53,17 @@
       .trim();
   }
 
+  /* Échappement HTML par regex (pas de DOM créé à chaque appel — module
+     indépendant, dupliqué à l'identique dans client-learning.js).
+     Les 5 caractères sensibles sont échappés ; « & » EN PREMIER pour ne pas
+     ré-échapper les entités qu'on vient d'introduire. */
   function escapeHtml(str) {
-    var d = document.createElement('div');
-    d.textContent = (str == null ? '' : String(str));
-    return d.innerHTML;
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   /* Sous-titre informatif d'une suggestion (adresse / contact / machines). */
@@ -97,6 +104,12 @@
     return new window.Fuse(docs, {
       includeScore: true,
       ignoreLocation: true,
+      /* Seuil Fuse PERMISSIF (0 = identique, 1 = aucun rapport). 0.4 ici car
+         l'auto-complétion sert à SUGGÉRER largement pendant la frappe : on
+         préfère proposer un peu trop que rater un client à cause d'une faute de
+         frappe. C'est l'utilisateur qui valide en cliquant, donc aucun risque
+         d'attribution erronée. À comparer avec le seuil STRICT 0.34 de
+         client-learning.js (SEUIL_FUSE_NOM), où un mauvais match écrirait en base. */
       threshold: 0.4,
       minMatchCharLength: 2,
       keys: [

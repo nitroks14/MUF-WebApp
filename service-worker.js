@@ -11,9 +11,10 @@
 
 'use strict';
 
-/* Nom du cache — incrémenter la version pour invalider l'ancien cache */
-const CACHE_NOM     = 'muf-webapp-v68';
-const CACHE_PLUGINS = 'muf-plugins-v68';
+/* Nom du cache — incrémenter la version pour invalider l'ancien cache.
+   Version courante : v69. Historique des versions → voir CHANGELOG.md. */
+const CACHE_NOM     = 'muf-webapp-v69';
+const CACHE_PLUGINS = 'muf-plugins-v69';
 
 /* Document de repli pour les navigations hors-ligne (PWA / refresh offline). */
 const FALLBACK_DOC = './index.html';
@@ -43,34 +44,9 @@ const ASSETS_STATIQUES = [
   './js/libs/fuse.min.js',
   './js/libs/qrcode.min.js',
   './js/libs/jsQR.min.js',
-  /* Libs de plugins VENDORISÉES (offline complet) — v60 :
-     jsPDF (calcul-vide / retour-garantie / aruco-marker), xlsx + ExcelJS (liste-pieces),
-     Blockly (editeur-taxonomie). Précachées ici car chargées en lazy depuis la racine.
-     v61 : aucun nouvel asset (auto-complétion clients branchée dans calcul-vide,
-     js/client-autocomplete.js déjà précaché).
-     v62 : aucun nouvel asset (carte « Client » de calcul-vide réduite à
-     nom client + machine type+n°, bloc PDF Identification condensé sur 1 ligne).
-     v63 : aucun nouvel asset (fix course au démarrage de l'auto-complétion clients
-     dans js/client-autocomplete.js — re-render du menu ouvert dès que ClientsDB est
-     prête ; corrige l'absence de suggestions dans calcul-vide ouvert à froid).
-     v64 : aucun nouvel asset (auto-complétion clients branchée dans le plugin
-     retour-garantie — js/client-autocomplete.js déjà précaché ; seul
-     plugins/retour-garantie/index.html change, déjà listé dans ASSETS_PLUGINS).
-     v65 : aucun nouvel asset (correction du placeholder du n° de garantie d'origine
-     dans plugins/retour-garantie/index.html — déjà listé dans ASSETS_PLUGINS).
-     v66 : aucun nouvel asset (auto-complétion clients branchée dans le plugin
-     Liste de pièces — mapping complet nom/code/contact/email/adresse + machine
-     type/n°/année + multi-machines ; js/client-autocomplete.js déjà précaché,
-     seul plugins/liste-pieces/index.html change, déjà listé dans ASSETS_PLUGINS).
-     v67 : NOUVEL asset js/client-learning.js (auto-apprentissage clients —
-     proposition non bloquante d'ajout/MAJ en 1 clic, branchée dans les 4 plugins
-     Demande d'OS / Calcul vide / Retour garantie / Liste de pièces). Les 4
-     plugins concernés changent mais sont déjà listés dans ASSETS_PLUGINS.
-     v68 : aucun nouvel asset (correction du bouton « Tout appliquer » du bandeau
-     d'auto-apprentissage — js/client-learning.js déjà précaché). « Tout appliquer »
-     devient atomique : fusion de tous les items en UNE écriture ClientsDB.put()
-     (au lieu de writes parallèles qui s'écrasaient), et le re-render déclenché par
-     clients-db-changed est neutralisé pendant l'application en cours. */
+  /* Libs de plugins VENDORISÉES (offline complet) : jsPDF, xlsx + ExcelJS,
+     Blockly. Précachées ici car chargées en lazy depuis la racine.
+     Historique détaillé des versions du Service Worker → voir CHANGELOG.md. */
   './js/libs/jspdf.umd.min.js',
   './js/libs/xlsx.full.min.js',
   './js/libs/exceljs.min.js',

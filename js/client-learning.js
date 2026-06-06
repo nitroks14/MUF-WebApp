@@ -72,7 +72,14 @@
   var EVENT_CHANGE = (window.ClientsDB && window.ClientsDB.EVENT_CHANGE) || 'clients-db-changed';
 
   /* Seuil de score Fuse (0 = identique, 1 = aucun rapport) au-delà duquel on ne
-     considère plus un nom comme « connu ». Strict volontairement. */
+     considère plus un nom comme « connu ».
+     STRICT volontairement (0.34, < 0.4 de l'auto-complétion) : ici un match
+     déclenche une PROPOSITION D'ÉCRITURE en base (MAJ contact/email/adresse… ou
+     ajout machine) rattachée à CE client. Un faux positif attribuerait la mise à
+     jour au mauvais client. On préfère donc afficher « nouveau client » à tort
+     (l'utilisateur agira explicitement) plutôt que de matcher trop largement.
+     À comparer avec le seuil PERMISSIF 0.4 de client-autocomplete.js, où la
+     suggestion est sans conséquence tant que l'utilisateur ne clique pas. */
   var SEUIL_FUSE_NOM = 0.34;
 
   /* ----------------------------------------------------------
@@ -88,10 +95,17 @@
       .trim();
   }
 
+  /* Échappement HTML par regex (pas de DOM créé à chaque appel — module
+     indépendant, dupliqué à l'identique dans client-autocomplete.js).
+     Les 5 caractères sensibles sont échappés ; « & » EN PREMIER pour ne pas
+     ré-échapper les entités qu'on vient d'introduire. */
   function escapeHtml(str) {
-    var d = document.createElement('div');
-    d.textContent = (str == null ? '' : String(str));
-    return d.innerHTML;
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   /* ----------------------------------------------------------
@@ -261,10 +275,28 @@
 
   /* ----------------------------------------------------------
      Parsing d'une machine combinée « type n° » (Demande d'OS / Calcul vide).
-     Heuristique : 1er token = type, le reste = numéro.
-     Limites (documentées) : un type composé d'espaces (rare) verrait son 2e mot
-     classé en numéro ; on accepte ce compromis car le format saisi est « Type N° »
-     (ex. « R230 924 »). Comparaison/ajout faits sur ces deux parties normalisées.
+
+     Heuristique (volontairement simple et figée) :
+       - on compacte les espaces, puis on coupe au PREMIER espace ;
+       - 1er token  → type ;
+       - tout le reste (espaces internes conservés) → numéro.
+     Exemple : « R230 924 » → { type: 'R230', numero: '924' }.
+
+     Pourquoi cette heuristique et pas mieux : le format réellement saisi sur le
+     terrain est « Type N° » (le type est un mononme — R230, C200, etc.). On
+     préfère donc une règle déterministe et prévisible plutôt qu'un découpage
+     « intelligent ».
+
+     Limite assumée : un type composé de plusieurs mots (rare/inexistant en
+     pratique) verrait ses mots suivants reversés dans le numéro. On accepte ce
+     compromis. Une amélioration possible (NON faite ici, car elle complexifie la
+     signature et présente un risque de mauvais découpage) serait, lorsqu'un
+     client de référence est connu, de tenter de matcher le préfixe saisi contre
+     les `type` déjà enregistrés de ses machines. À n'envisager que si un cas
+     terrain le justifie.
+
+     La comparaison/ajout (memeMachine) se fait ensuite sur ces deux parties
+     normalisées (type ET numéro), le numéro de série étant l'identifiant fort.
      ---------------------------------------------------------- */
   function parserMachineCombo(valeur) {
     var v = String(valeur || '').trim().replace(/\s+/g, ' ');
