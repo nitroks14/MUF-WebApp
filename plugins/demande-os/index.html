@@ -156,8 +156,19 @@
   <div class="dos-grid">
     <div class="form-group">
       <label class="form-label" for="dos-client">Nom du client <span aria-hidden="true">*</span></label>
+      <!--
+        Anti-autofill (Brave/Chrome + gestionnaires de mots de passe) : mêmes
+        gardes que la recherche du plugin Clients pour éviter l'injection de
+        valeurs parasites. Le name reste propre au plugin (surtout pas
+        email/username). Le helper ClientAutocomplete renforce ces attributs.
+      -->
       <input class="form-control" id="dos-client" type="text"
-             placeholder="Ex. Société Martin" autocomplete="off" required>
+             name="dos-nom-client"
+             placeholder="Ex. Société Martin"
+             autocomplete="off" autocorrect="off" autocapitalize="off"
+             spellcheck="false"
+             data-lpignore="true" data-1p-ignore data-form-type="other"
+             required>
     </div>
     <div class="form-group">
       <label class="form-label" for="dos-machine">Type et N° de la machine <span aria-hidden="true">*</span></label>
@@ -691,11 +702,148 @@
   });
 
   /* ----------------------------------------------------------
+     Pré-remplissage du technicien (prénom / nom) depuis Auth.
+     Cible le champ "Technicien 1" du bloc OS splitté, seul champ
+     "technicien" du formulaire. Non bloquant : si Auth indisponible
+     ou champ déjà saisi, on ne touche à rien.
+     ---------------------------------------------------------- */
+  function preremplirTechnicien() {
+    if (!domTech1 || domTech1.value.trim()) return;
+    if (!window.Auth || typeof window.Auth.getUserMetadata !== 'function') return;
+    var meta = window.Auth.getUserMetadata() || {};
+    var prenom = meta.prenom || meta.first_name || '';
+    var nom    = meta.nom    || meta.last_name  || '';
+    var complet = [prenom, nom].filter(Boolean).join(' ').trim();
+    if (complet) domTech1.value = complet;
+  }
+
+  /* ----------------------------------------------------------
+     Mapping d'un client choisi → champs existants du formulaire.
+     Demande d'OS ne possède PAS de champ adresse / email / code client
+     dédié : on ne remplit donc QUE les champs réellement présents :
+       • dos-machine  ← "Type N°" de la machine
+       • dos-contact  ← contact du client
+     Cas multi-machines : on pré-remplit la 1re machine (choix le plus
+     simple) ; un petit menu permet d'en choisir une autre si besoin.
+     Le pré-remplissage n'écrase un champ déjà saisi par l'utilisateur
+     que lorsqu'il choisit explicitement un client (action volontaire).
+     ---------------------------------------------------------- */
+  function libelleMachine(m) {
+    if (!m) return '';
+    var base = [m.type, m.numero].filter(Boolean).join(' ');
+    if (m.annee) base += (base ? ' ' : '') + '(' + m.annee + ')';
+    return base.trim();
+  }
+
+  /* Valeur réellement injectée dans le champ machine (sans l'année
+     entre parenthèses, pour rester cohérent avec le format attendu
+     "Type N°", ex. "R230 924"). */
+  function valeurMachine(m) {
+    if (!m) return '';
+    return [m.type, m.numero].filter(Boolean).join(' ').trim();
+  }
+
+  /* Menu de choix de machine (multi-machines) — supprimé/recréé à chaque
+     sélection de client. Discret, sous le champ machine. */
+  var domMachineChoix = null;
+  function retirerChoixMachine() {
+    if (domMachineChoix && domMachineChoix.parentNode) {
+      domMachineChoix.parentNode.removeChild(domMachineChoix);
+    }
+    domMachineChoix = null;
+  }
+
+  function proposerChoixMachine(machines) {
+    retirerChoixMachine();
+    if (!Array.isArray(machines) || machines.length < 2) return;
+
+    var wrap = document.createElement('div');
+    wrap.className = 'dos-note';
+    wrap.style.marginTop = '6px';
+    wrap.textContent = 'Plusieurs machines pour ce client — choisir : ';
+
+    machines.forEach(function (m) {
+      var libelle = libelleMachine(m);
+      if (!libelle) return;
+      var chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'dos-email-chip';
+      chip.style.marginRight = '6px';
+      chip.textContent = libelle;
+      chip.addEventListener('click', function () {
+        domMachine.value = valeurMachine(m);
+        domMachine.classList.remove('dos-invalid');
+        retirerChoixMachine();
+      });
+      wrap.appendChild(chip);
+    });
+
+    /* Insère le menu juste après le champ machine. */
+    domMachine.parentNode.appendChild(wrap);
+    domMachineChoix = wrap;
+  }
+
+  function appliquerClient(client) {
+    if (!client) return;
+    retirerChoixMachine();
+
+    /* Contact du client (mappé vers "Contact chez le client"). */
+    if (client.contact) {
+      domContact.value = client.contact;
+      domContact.classList.remove('dos-invalid');
+    }
+
+    /* Machines : pré-remplit la 1re ; propose un choix si plusieurs. */
+    var machines = Array.isArray(client.machines) ? client.machines : [];
+    if (machines.length >= 1) {
+      domMachine.value = valeurMachine(machines[0]);
+      domMachine.classList.remove('dos-invalid');
+      if (machines.length > 1) proposerChoixMachine(machines);
+    }
+  }
+
+  /* ----------------------------------------------------------
+     Branchement de l'auto-complétion clients sur le champ "Nom du client".
+     Le helper est générique ; on lui passe notre mapping via onSelect.
+     ---------------------------------------------------------- */
+  var acController = null;
+  function brancherAutocompletion() {
+    if (!window.ClientAutocomplete || typeof window.ClientAutocomplete.attach !== 'function') {
+      return; /* helper absent : le champ reste un simple <input> texte. */
+    }
+    acController = window.ClientAutocomplete.attach(domClient, {
+      onSelect: appliquerClient,
+    });
+  }
+
+  /* Nettoyage au démontage du plugin (app.js réexécute les scripts à chaque
+     navigation : on détache proprement le helper précédent s'il existe). */
+  if (window.__dosCleanup) {
+    try { window.__dosCleanup(); } catch (e) { /* no-op */ }
+    window.__dosCleanup = null;
+  }
+  window.__dosCleanup = function () {
+    if (acController && typeof acController.destroy === 'function') {
+      try { acController.destroy(); } catch (e) { /* no-op */ }
+    }
+    acController = null;
+  };
+
+  /* Réinitialisation : en plus du reset de base (déjà branché plus haut), on
+     retire le menu de choix machine et on re-pré-remplit le technicien. */
+  domBtnReset.addEventListener('click', function () {
+    retirerChoixMachine();
+    preremplirTechnicien();
+  });
+
+  /* ----------------------------------------------------------
      Initialisation
      ---------------------------------------------------------- */
   majVisibilite();
   majVisibiliteSplit();
   preremplirDepuisParametrage();
+  preremplirTechnicien();
+  brancherAutocompletion();
 
 })();
 </script>
