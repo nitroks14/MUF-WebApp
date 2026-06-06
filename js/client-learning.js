@@ -127,6 +127,9 @@
       '  pointer-events: none;',
       '}',
       '.mcl-hint.mcl-hint-show { opacity: 1; animation: mcl-blink 0.6s ease-in-out 2; }',
+      /* Mode persistant (nouveau client à compléter) : visible en continu,
+         sans clignotement répété (non intrusif), reste lisible sur petit écran. */
+      '.mcl-hint.mcl-hint-show.mcl-hint-persist { animation: none; }',
       '.mcl-hint-new   { color: #b45309; }',  /* ambre Multivac (nouveau) */
       '.mcl-hint-known { color: #047857; }',  /* vert (connu) */
       '@keyframes mcl-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }',
@@ -560,9 +563,22 @@
     construireBanner();
     bannerOwner = controller;
 
-    bannerTitleEl.textContent = propositions.items.length > 1
-      ? 'Mettre à jour la base clients ?'
-      : 'Proposition base clients';
+    /* Titre contextuel selon la nature des items proposés.
+       - 'create' (nouveau client) n'apparaît jamais mélangé : calculerPropositions
+         fait un return dédié → on annonce un AJOUT de client.
+       - sinon, si TOUS les items sont des ajouts à une fiche existante
+         (add-machine / add-pn) → on parle de COMPLÉTER la fiche.
+       - sinon (présence d'au moins un 'update', éventuellement mêlé d'ajouts)
+         → on garde « mettre à jour ». */
+    var aCreation = propositions.items.some(function (it) { return it.kind === 'create'; });
+    var aUpdate = propositions.items.some(function (it) { return it.kind === 'update'; });
+    if (aCreation) {
+      bannerTitleEl.textContent = 'Nouveau client — l’ajouter à la base ?';
+    } else if (!aUpdate) {
+      bannerTitleEl.textContent = 'Compléter la fiche client ?';
+    } else {
+      bannerTitleEl.textContent = 'Mettre à jour la base clients ?';
+    }
 
     bannerListEl.innerHTML = '';
     bannerFootEl.innerHTML = '';
@@ -758,13 +774,64 @@
     if (nomEl.parentNode) nomEl.parentNode.insertBefore(hintEl, nomEl.nextSibling);
     var hintTimer = null;
 
-    function afficherHint(estNouveau) {
-      hintEl.textContent = estNouveau ? 'Nouveau client' : 'Client connu';
-      hintEl.className = 'mcl-hint mcl-hint-show ' + (estNouveau ? 'mcl-hint-new' : 'mcl-hint-known');
+    /* Indicateur précoce sous le champ nom.
+       - estNouveau + !complet → message GUIDANT et PERSISTANT : tant que le nom
+         reste non vide, le client non reconnu et le formulaire incomplet, on
+         garde « Nouveau client — remplir tous les champs pour l'ajouter ». La
+         proposition d'ajout n'apparaît en effet (gate estComplet()) qu'une fois
+         tous les champs base remplis : l'utilisateur sait quoi faire.
+       - estNouveau + complet → le bandeau « Ajouter » prend le relais : indicateur
+         bref de confirmation, puis masquage.
+       - client connu → bref, inchangé. */
+    function afficherHint(estNouveau, complet) {
+      var persistant = estNouveau && !complet;
+      if (estNouveau) {
+        hintEl.textContent = persistant
+          ? 'Nouveau client — remplir tous les champs pour l’ajouter'
+          : 'Nouveau client';
+      } else {
+        hintEl.textContent = 'Client connu';
+      }
+      hintEl.className = 'mcl-hint mcl-hint-show '
+        + (estNouveau ? 'mcl-hint-new' : 'mcl-hint-known')
+        + (persistant ? ' mcl-hint-persist' : '');
       if (hintTimer) clearTimeout(hintTimer);
-      hintTimer = setTimeout(function () {
-        hintEl.classList.remove('mcl-hint-show');
-      }, 2200);
+      /* En mode persistant, pas d'auto-masquage : c'est rafraichirHint() (sur
+         changement de champ) qui retire l'indicateur quand il n'est plus
+         pertinent (formulaire complété, client reconnu ou nom vidé). */
+      if (!persistant) {
+        hintTimer = setTimeout(function () {
+          hintEl.classList.remove('mcl-hint-show');
+        }, 2200);
+      }
+    }
+
+    /* Masque l'indicateur (état non pertinent). */
+    function masquerHint() {
+      if (hintTimer) clearTimeout(hintTimer);
+      hintEl.classList.remove('mcl-hint-show');
+    }
+
+    /* Recalcule l'état de l'indicateur à partir du nom + de la base + de la
+       complétude. Utilisé au blur du nom et sur changement des autres champs,
+       afin que le message persistant « nouveau client » disparaisse dès que le
+       formulaire est complété (le bandeau prend alors le relais) ou que le nom
+       correspond à un client connu. Non bloquant. */
+    function rafraichirHint() {
+      if (detruit) return;
+      var nom = valeurDe(config.fields.nom);
+      if (!nom) { masquerHint(); return; }
+      rechargerClients().then(function () {
+        if (detruit) return;
+        var ref = chercherReference(config, clientsCache);
+        var estNouveau = !ref.client;
+        /* Un client connu réaffiché brièvement risquerait de clignoter à chaque
+           champ : on ne (re)montre l'indicateur que s'il a du sens. Pour un
+           client connu déjà signalé, on laisse l'état courant tel quel. */
+        if (estNouveau) {
+          afficherHint(true, estComplet());
+        }
+      });
     }
 
     /* --- Lecture des clients (mémorisée, rafraîchie sur changement DB) --- */
@@ -781,11 +848,11 @@
     function onBlurNom() {
       if (detruit) return;
       var nom = valeurDe(config.fields.nom);
-      if (!nom) { hintEl.classList.remove('mcl-hint-show'); return; }
+      if (!nom) { masquerHint(); return; }
       rechargerClients().then(function () {
         if (detruit) return;
         var ref = chercherReference(config, clientsCache);
-        afficherHint(!ref.client);
+        afficherHint(!ref.client, estComplet());
       });
     }
 
@@ -845,7 +912,14 @@
       var el = resoudre(config.fields[role]);
       if (el && champsSurveilles.indexOf(el) === -1) champsSurveilles.push(el);
     });
-    function onChampChange() { if (!detruit) evaluateDifferee(); }
+    function onChampChange() {
+      if (detruit) return;
+      /* Maintient l'indicateur « nouveau client » à jour : il disparaît dès que
+         le formulaire devient complet (le bandeau « Ajouter » prend le relais)
+         ou que le nom correspond à un client connu. */
+      rafraichirHint();
+      evaluateDifferee();
+    }
     champsSurveilles.forEach(function (el) {
       el.addEventListener('change', onChampChange);
       el.addEventListener('blur', onChampChange);

@@ -11,6 +11,36 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v72
+
+- **UX auto-apprentissage** (`js/client-learning.js`), 2 corrections sur le cas
+  « nouveau client » (suite aux retours de test) :
+- **Titre du bandeau contextuel** : il était figé à « Mettre à jour la base
+  clients ? » même pour une création. Il est désormais calculé selon les `kind`
+  des items affichés :
+  - au moins un item `create` (nouveau client) → **« Nouveau client — l’ajouter
+    à la base ? »** ;
+  - sinon, tous les items sont des ajouts à une fiche existante (`add-machine` /
+    `add-pn`) → **« Compléter la fiche client ? »** ;
+  - sinon (présence d’un `update`, éventuellement mêlé d’ajouts) → **« Mettre à
+    jour la base clients ? »** (inchangé).
+- **Indicateur « nouveau client » guidant et persistant** : au lieu d’un simple
+  « Nouveau client » qui clignotait 3 cycles puis disparaissait, l’indicateur
+  affiche désormais **« Nouveau client — remplir tous les champs pour l’ajouter »**
+  et reste **visible en continu** (sans clignotement répété, non intrusif) tant
+  que le nom est non vide, le client non reconnu et le formulaire incomplet —
+  rappel utile car la proposition d’ajout est gardée par `estComplet()`. Il
+  disparaît automatiquement dès que le formulaire est complété (le bandeau
+  « Ajouter » prend le relais) ou que le nom correspond à un client connu.
+  L’indicateur « Client connu » reste bref et inchangé.
+- Mise en œuvre : `afficherHint(estNouveau, complet)` (mode persistant via classe
+  CSS `mcl-hint-persist` qui désactive l’animation de clignotement), `masquerHint()`
+  et `rafraichirHint()` appelée sur changement des champs base pour réévaluer
+  l’état. Aucune modification de la détection, de la dédup, du gate création/client
+  connu (v71), de l’application 1 clic, du « Tout appliquer » ni du déclenchement
+  blur/change.
+- Bump de cache requis car `js/client-learning.js` (précaché) change.
+
 ## v71
 
 - Correction d'un **effet de bord du fix anti-contamination v70** : l'auto-
