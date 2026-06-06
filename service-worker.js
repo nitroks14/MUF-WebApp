@@ -1,46 +1,97 @@
 /**
  * MUF-WebApp — Service Worker
  * Stratégie :
- *   - Cache-first pour les assets statiques (CSS, JS, HTML principal, manifest)
- *   - Network-first pour les plugins (afin de toujours avoir la version fraîche)
+ *   - Cache-first pour les assets statiques (CSS, JS, HTML principal, manifest, libs)
+ *   - Network-first pour les plugins (afin de toujours avoir la version fraîche),
+ *     avec repli cache hors-ligne.
+ *   - Navigation fallback : toute requête de navigation (ouverture de l'app,
+ *     PWA installée) qui échoue hors-ligne renvoie index.html depuis le cache.
+ *     C'est ce qui permet à l'app de S'OUVRIR sans réseau.
  */
 
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache */
-const CACHE_NOM     = 'muf-webapp-v58';
-const CACHE_PLUGINS = 'muf-plugins-v58';
+const CACHE_NOM     = 'muf-webapp-v59';
+const CACHE_PLUGINS = 'muf-plugins-v59';
+
+/* Document de repli pour les navigations hors-ligne (PWA / refresh offline). */
+const FALLBACK_DOC = './index.html';
 
 /* Liste des assets statiques à précacher.
-   Note : supabase-js est servi depuis un CDN cross-origin, donc volontairement
-   NON précaché ici (le SW ignore déjà les requêtes cross-origin). L'auth
-   nécessite de toute façon le réseau pour joindre Supabase. */
+   supabase-js est désormais VENDORISÉ en local (js/libs/supabase.umd.js) :
+   il est donc précaché ici, ce qui permet le démarrage hors-ligne. */
 const ASSETS_STATIQUES = [
   './',
   './index.html',
+  './manifest.json',
   './css/main.css',
   './css/auth.css',
   './js/config.js',
+  './js/libs/supabase.umd.js',
   './js/supabase-client.js',
   './js/auth.js',
   './js/db.js',
   './js/sync-manager.js',
   './js/app.js',
   './js/parametrage.js',
+  './js/client-autocomplete.js',
+  './js/aruco-marker.js',
+  './js/aruco-vision.js',
   './js/libs/lz-string.min.js',
   './js/libs/fuse.min.js',
-  './js/client-autocomplete.js',
-  './manifest.json',
+  './js/libs/qrcode.min.js',
+  './js/libs/jsQR.min.js',
+];
+
+/* Plugins : leur HTML est précaché pour garantir la navigation hors-ligne.
+   (Sans ça, un plugin déjà visité online pourrait n'être en cache que partiellement.) */
+const ASSETS_PLUGINS = [
+  './plugins/clients/index.html',
+  './plugins/parametrage/index.html',
+  './plugins/demande-os/index.html',
+  './plugins/calage-embiellages/index.html',
+  './plugins/liste-pieces/index.html',
+  './plugins/calcul-vide/index.html',
+  './plugins/rapport-intervention/index.html',
+  './plugins/retour-garantie/index.html',
+  './plugins/editeur-taxonomie/index.html',
 ];
 
 /* ============================================================
-   Installation — précache des assets statiques
+   Helper — précache résilient
+   cache.addAll() échoue ENTIÈREMENT si un seul asset est KO. On précache
+   donc chaque asset individuellement : un asset manquant (optionnel) ne doit
+   jamais faire échouer toute l'installation du SW (cause classique de
+   « l'app ne s'ouvre plus offline »).
+   ============================================================ */
+async function precacheResilient(nomCache, liste) {
+  const cache = await caches.open(nomCache);
+  await Promise.all(
+    liste.map(async (url) => {
+      try {
+        const reponse = await fetch(url, { cache: 'reload' });
+        if (reponse && reponse.ok) {
+          await cache.put(url, reponse.clone());
+        } else {
+          console.warn('[SW] Précache ignoré (réponse non OK) :', url);
+        }
+      } catch (err) {
+        console.warn('[SW] Précache ignoré (échec réseau) :', url);
+      }
+    })
+  );
+}
+
+/* ============================================================
+   Installation — précache des assets statiques + plugins
    ============================================================ */
 self.addEventListener('install', evenement => {
   evenement.waitUntil(
-    caches.open(CACHE_NOM).then(cache => {
-      return cache.addAll(ASSETS_STATIQUES);
-    })
+    (async () => {
+      await precacheResilient(CACHE_NOM, ASSETS_STATIQUES);
+      await precacheResilient(CACHE_PLUGINS, ASSETS_PLUGINS);
+    })()
   );
 
   /* Activation immédiate sans attendre la fermeture des onglets existants */
@@ -69,21 +120,63 @@ self.addEventListener('activate', evenement => {
    Interception des requêtes
    ============================================================ */
 self.addEventListener('fetch', evenement => {
-  const url = new URL(evenement.request.url);
+  const requete = evenement.request;
+  const url = new URL(requete.url);
 
-  /* Ignorer les requêtes non-GET et celles vers d'autres origines */
-  if (evenement.request.method !== 'GET') return;
+  /* Ignorer les requêtes non-GET et celles vers d'autres origines
+     (ex. API Supabase) : elles ne sont pas mises en cache. */
+  if (requete.method !== 'GET') return;
   if (url.origin !== self.location.origin) return;
+
+  /* ---- Navigation (ouverture de l'app / refresh / PWA) ----
+     C'est le point clé pour l'offline : on tente le réseau, et en cas
+     d'échec on sert TOUJOURS index.html depuis le cache, afin que le shell
+     de l'app s'ouvre même sans réseau. */
+  if (requete.mode === 'navigate') {
+    evenement.respondWith(strategieNavigation(requete));
+    return;
+  }
 
   /* ---- Plugins : stratégie Network-first ---- */
   if (url.pathname.includes('/plugins/')) {
-    evenement.respondWith(strategieNetworkFirst(evenement.request, CACHE_PLUGINS));
+    evenement.respondWith(strategieNetworkFirst(requete, CACHE_PLUGINS));
     return;
   }
 
   /* ---- Assets statiques : stratégie Cache-first ---- */
-  evenement.respondWith(strategieCacheFirst(evenement.request, CACHE_NOM));
+  evenement.respondWith(strategieCacheFirst(requete, CACHE_NOM));
 });
+
+/* ============================================================
+   Stratégie Navigation (offline-first pour l'ouverture de l'app)
+   1. Tente le réseau (pour récupérer la version fraîche du shell)
+   2. Si échec → index.html du cache
+   3. Si même index.html absent → réponse cache générique
+   ============================================================ */
+async function strategieNavigation(requete) {
+  const cache = await caches.open(CACHE_NOM);
+  try {
+    const reponseReseau = await fetch(requete);
+    if (reponseReseau && reponseReseau.ok) {
+      /* Met à jour le cache du document de repli. */
+      cache.put(FALLBACK_DOC, reponseReseau.clone());
+    }
+    return reponseReseau;
+  } catch (erreur) {
+    const fallback =
+      (await cache.match(FALLBACK_DOC)) ||
+      (await cache.match('./')) ||
+      (await cache.match(requete));
+    if (fallback) return fallback;
+
+    return new Response(
+      '<!DOCTYPE html><meta charset="utf-8"><title>Hors ligne</title>' +
+        '<p>Application indisponible hors ligne : ouvrez-la une fois en ligne ' +
+        'pour activer le mode hors-ligne.</p>',
+      { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+    );
+  }
+}
 
 /* ============================================================
    Stratégie Cache-first

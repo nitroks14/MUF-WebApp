@@ -1,14 +1,18 @@
 /**
  * MUF-WebApp — Client Supabase partagé
  *
- * Charge supabase-js v2 (récent — requis par les clés au format
- * sb_publishable_...) depuis le CDN esm.sh, crée UNE SEULE instance du
- * client et l'expose globalement pour tout le reste de l'application.
+ * Crée UNE SEULE instance du client supabase-js v2 et l'expose globalement
+ * pour tout le reste de l'application.
  *
- * Comme supabase-js v2 est un module ES, ce fichier est lui-même un module
- * (chargé via <script type="module">). Il publie :
+ * IMPORTANT (offline-first) : supabase-js est désormais VENDORISÉ en local
+ * (js/libs/supabase.umd.js, build UMD officiel v2.107.0) et chargé AVANT ce
+ * script via une balise <script> classique. Il expose le global
+ * `window.supabase` (avec createClient). On n'importe plus rien depuis un CDN :
+ * l'application peut donc démarrer hors-ligne (les techniciens terrain n'ont
+ * pas toujours de réseau). L'auth réseau (login, sync) reste best-effort.
  *
- *   window.MUF_SUPABASE        → le client (disponible après résolution)
+ * Ce fichier publie :
+ *   window.MUF_SUPABASE        → le client
  *   window.MUF_SUPABASE_READY  → Promise<SupabaseClient> à attendre avant
  *                                tout appel auth (auth.js l'attend déjà).
  *
@@ -16,31 +20,51 @@
  * (js/config.js), chargé avant ce script.
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+'use strict';
 
-const cfg = window.MUF_CONFIG || {};
+(function () {
 
-if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) {
-  console.error(
-    '[Supabase] Configuration manquante : vérifiez SUPABASE_URL / SUPABASE_ANON_KEY dans js/config.js.'
-  );
-}
+  var cfg = window.MUF_CONFIG || {};
 
-const client = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, {
-  auth: {
-    /* Persistance de session en localStorage (multi-appareils → même compte) */
-    persistSession: true,
-    autoRefreshToken: true,
-    /* Permet de récupérer le token de reset présent dans l'URL au retour du mail */
-    detectSessionInUrl: true,
-  },
-});
+  if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) {
+    console.error(
+      '[Supabase] Configuration manquante : vérifiez SUPABASE_URL / SUPABASE_ANON_KEY dans js/config.js.'
+    );
+  }
 
-window.MUF_SUPABASE = client;
+  /* Le bundle UMD vendorisé expose le global `window.supabase`. */
+  var lib = window.supabase;
+  if (!lib || typeof lib.createClient !== 'function') {
+    console.error(
+      '[Supabase] Librairie supabase-js introuvable : vérifiez que ' +
+      'js/libs/supabase.umd.js est bien chargé AVANT js/supabase-client.js.'
+    );
+    return;
+  }
 
-/* Signal de disponibilité consommé par js/auth.js */
-window.MUF_SUPABASE_READY = Promise.resolve(client);
+  var client = lib.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, {
+    auth: {
+      /* Persistance de session en localStorage (multi-appareils → même compte).
+         getSession() est alors purement LOCAL : indispensable pour ouvrir
+         l'app hors-ligne sur une session déjà établie. */
+      persistSession: true,
+      autoRefreshToken: true,
+      /* Permet de récupérer le token de reset présent dans l'URL au retour du mail */
+      detectSessionInUrl: true,
+    },
+  });
 
-/* Notifie les éventuels listeners synchrones (auth.js gère aussi le cas
-   où le client est déjà prêt au moment où il s'abonne). */
-window.dispatchEvent(new CustomEvent('muf-supabase-ready', { detail: client }));
+  window.MUF_SUPABASE = client;
+
+  /* Signal de disponibilité consommé par js/auth.js */
+  window.MUF_SUPABASE_READY = Promise.resolve(client);
+
+  /* Notifie les éventuels listeners synchrones (auth.js gère aussi le cas
+     où le client est déjà prêt au moment où il s'abonne). */
+  try {
+    window.dispatchEvent(new CustomEvent('muf-supabase-ready', { detail: client }));
+  } catch (e) {
+    /* CustomEvent indisponible : non bloquant (auth.js lit MUF_SUPABASE_READY). */
+  }
+
+})();

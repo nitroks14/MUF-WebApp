@@ -322,8 +322,12 @@
   <!-- Config globale (URL + clé publique Supabase) — doit être le premier script -->
   <script src="./js/config.js"></script>
 
-  <!-- Client Supabase partagé (module ES, supabase-js v2 via CDN) -->
-  <script type="module" src="./js/supabase-client.js"></script>
+  <!-- supabase-js v2 VENDORISÉ en local (build UMD officiel) : expose window.supabase.
+       Servi localement (et non depuis un CDN) pour permettre le démarrage hors-ligne. -->
+  <script src="./js/libs/supabase.umd.js"></script>
+
+  <!-- Client Supabase partagé (script classique : dépend du global window.supabase) -->
+  <script src="./js/supabase-client.js"></script>
 
   <!-- Module Auth (Supabase) — doit être chargé avant app.js -->
   <script src="./js/auth.js"></script>
