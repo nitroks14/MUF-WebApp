@@ -360,12 +360,25 @@
     input.addEventListener('paste', onPaste);
     document.addEventListener('pointerdown', onDocPointerDown);
 
-    /* --- Chargement / réindexation depuis ClientsDB --- */
+    /* --- Chargement / réindexation depuis ClientsDB ---
+       Important : si l'utilisateur a déjà tapé AVANT que la base ne soit prête
+       (course au démarrage à froid : IndexedDB pas encore ouverte / pas encore
+       synchronisée), le menu affiche « Aucun client » sur un index vide. Une fois
+       l'index reconstruit, on RE-RENDER le menu encore ouvert pour faire apparaître
+       les suggestions sans que l'utilisateur ait à retaper. Corrige l'absence de
+       suggestions observée quand un plugin est ouvert pendant la fenêtre froide. */
     function refresh() {
       if (detruit || !window.ClientsDB) return Promise.resolve();
       return window.ClientsDB.getAll().then(function (liste) {
         clients = liste || [];
         fuse = construireFuse(clients);
+        /* Rafraîchit le menu ouvert avec l'index fraîchement construit. */
+        if (menu.classList.contains('mac-open')) {
+          var q = input.value;
+          if (normaliser(q).length >= minChars) {
+            rendreMenu(rechercher(q));
+          }
+        }
       }).catch(function (err) {
         console.error('[ClientAutocomplete] Lecture ClientsDB impossible :', err);
       });

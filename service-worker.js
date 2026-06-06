@@ -12,8 +12,8 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache */
-const CACHE_NOM     = 'muf-webapp-v62';
-const CACHE_PLUGINS = 'muf-plugins-v62';
+const CACHE_NOM     = 'muf-webapp-v63';
+const CACHE_PLUGINS = 'muf-plugins-v63';
 
 /* Document de repli pour les navigations hors-ligne (PWA / refresh offline). */
 const FALLBACK_DOC = './index.html';
@@ -48,7 +48,10 @@ const ASSETS_STATIQUES = [
      v61 : aucun nouvel asset (auto-complétion clients branchée dans calcul-vide,
      js/client-autocomplete.js déjà précaché).
      v62 : aucun nouvel asset (carte « Client » de calcul-vide réduite à
-     nom client + machine type+n°, bloc PDF Identification condensé sur 1 ligne). */
+     nom client + machine type+n°, bloc PDF Identification condensé sur 1 ligne).
+     v63 : aucun nouvel asset (fix course au démarrage de l'auto-complétion clients
+     dans js/client-autocomplete.js — re-render du menu ouvert dès que ClientsDB est
+     prête ; corrige l'absence de suggestions dans calcul-vide ouvert à froid). */
   './js/libs/jspdf.umd.min.js',
   './js/libs/xlsx.full.min.js',
   './js/libs/exceljs.min.js',
