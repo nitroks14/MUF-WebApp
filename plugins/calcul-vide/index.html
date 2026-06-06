@@ -89,6 +89,39 @@
     color: var(--color-text-muted, #555);
   }
 
+  /* Carte Client — note d'aide + sélecteur multi-machines */
+  .cv-client-note {
+    font-size: var(--font-size-sm, 13px);
+    color: var(--color-text-muted, #555);
+    margin: 6px 0 0;
+  }
+
+  .cv-machine-choix {
+    margin-top: 6px;
+    font-size: var(--font-size-sm, 13px);
+    color: var(--color-text-muted, #555);
+  }
+
+  .cv-machine-chip {
+    display: inline-block;
+    margin: 4px 6px 0 0;
+    padding: 6px 12px;
+    min-height: 32px;
+    background: var(--color-bg-alt, #F8F9FA);
+    border: 1px solid var(--color-border, #d0d5dd);
+    border-radius: 16px;
+    font-size: var(--font-size-sm, 13px);
+    font-family: inherit;
+    color: var(--color-text, #111);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .cv-machine-chip:hover {
+    border-color: var(--color-primary, #003A70);
+    color: var(--color-primary, #003A70);
+  }
+
   .cv-result-box strong {
     color: var(--color-text, #111);
   }
@@ -408,6 +441,37 @@
   loadScriptOnce('./js/aruco-vision.js');
 })();
 </script>
+
+<!-- Section Client (identification de l'intervention) -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h2 class="card-title cv-section-title">Client</h2>
+  </div>
+  <div class="card-body">
+
+    <div class="cv-field">
+      <label for="cv-client">Nom du client</label>
+      <input id="cv-client" type="text" placeholder="Rechercher un client connu…" class="form-control">
+      <p class="cv-client-note">Optionnel — pour identifier l'intervention sur le rapport PDF.</p>
+    </div>
+
+    <div class="cv-field">
+      <label for="cv-machine">Machine (type, n° de série, année)</label>
+      <input id="cv-machine" type="text" placeholder="ex : R230 924 (2019)" class="form-control">
+    </div>
+
+    <div class="cv-field">
+      <label for="cv-contact">Contact chez le client</label>
+      <input id="cv-contact" type="text" placeholder="Nom du contact" class="form-control">
+    </div>
+
+    <div class="cv-field">
+      <label for="cv-technicien">Technicien</label>
+      <input id="cv-technicien" type="text" placeholder="Prénom Nom" class="form-control">
+    </div>
+
+  </div>
+</div>
 
 <!-- Section Outillage -->
 <div class="card mb-24">
@@ -1224,6 +1288,14 @@
      REFERENCES DOM
      ============================================================ */
 
+  /* Champs d'identification client (carte « Client ») — informatifs, sans
+     impact sur le calcul. Peuvent être absents si le HTML évolue : on garde
+     toutes les manipulations en mode défensif. */
+  var elClient               = document.getElementById('cv-client');
+  var elMachine              = document.getElementById('cv-machine');
+  var elContact              = document.getElementById('cv-contact');
+  var elTechnicien           = document.getElementById('cv-technicien');
+
   var elLaize                = document.getElementById('cv-laize');
   var elPitch                = document.getElementById('cv-pitch');
   var elDepth                = document.getElementById('cv-depth');
@@ -1268,6 +1340,10 @@
 
   function collectState() {
     return {
+      client:               elClient     ? elClient.value     : '',
+      machine:              elMachine    ? elMachine.value    : '',
+      contact:              elContact    ? elContact.value    : '',
+      technicien:           elTechnicien ? elTechnicien.value : '',
       laize:                elLaize.value,
       pitch:                elPitch.value,
       depth:                elDepth.value,
@@ -1296,6 +1372,10 @@
   }
 
   function applyState(st) {
+    if (elClient)     elClient.value     = st.client     !== undefined ? st.client     : '';
+    if (elMachine)    elMachine.value    = st.machine    !== undefined ? st.machine    : '';
+    if (elContact)    elContact.value    = st.contact    !== undefined ? st.contact    : '';
+    if (elTechnicien) elTechnicien.value = st.technicien !== undefined ? st.technicien : '';
     elLaize.value                = st.laize              !== undefined ? st.laize              : defaultState.laize;
     elPitch.value                = st.pitch              !== undefined ? st.pitch              : defaultState.pitch;
     elDepth.value                = st.depth              !== undefined ? st.depth              : defaultState.depth;
@@ -1813,6 +1893,34 @@
         doc.setFont('helvetica', 'bold');
         doc.text(titre, mG + 2, yPos);
         doc.setTextColor(51, 51, 51);
+      }
+
+      /* ----------------------------------------------------------
+         SECTION IDENTIFICATION (client / machine / contact / technicien)
+         Affichée uniquement si au moins un champ est renseigné, afin de
+         ne pas alourdir un rapport purement technique.
+         ---------------------------------------------------------- */
+      var idClient     = elClient     ? elClient.value.trim()     : '';
+      var idMachine    = elMachine    ? elMachine.value.trim()    : '';
+      var idContact    = elContact    ? elContact.value.trim()    : '';
+      var idTechnicien = elTechnicien ? elTechnicien.value.trim() : '';
+
+      if (idClient || idMachine || idContact || idTechnicien) {
+        var col2X0 = mG + larg / 2 + 2;
+        var colW20 = larg / 2 - 2;
+
+        enteteSection('Identification', y);
+        y += 6;
+
+        doc.setFillColor(245, 245, 245);
+        doc.rect(mG, y - 3, larg, 16, 'F');
+
+        ligneKV('Client :',     idClient,     y, mG,    larg / 2);
+        ligneKV('Machine :',    idMachine,    y, col2X0, colW20);
+        y += 6;
+        ligneKV('Contact :',    idContact,    y, mG,    larg / 2);
+        ligneKV('Technicien :', idTechnicien, y, col2X0, colW20);
+        y += 12;
       }
 
       /* ----------------------------------------------------------
@@ -2348,6 +2456,124 @@
   }
 
   /* ============================================================
+     CLIENT — auto-complétion + pré-remplissage
+     Les champs client/machine/contact/technicien sont purement
+     informatifs (identification de l'intervention sur le PDF). Ils
+     n'entrent PAS dans le calcul : on se contente de les sauvegarder.
+     ============================================================ */
+
+  /* Sauvegarde (sans recalcul) sur saisie manuelle des champs client. */
+  [elClient, elMachine, elContact, elTechnicien].forEach(function (el) {
+    if (el) el.addEventListener('input', scheduleSave);
+  });
+
+  /* Libellé machine injecté dans le champ : "Type N° (Année)". */
+  function valeurMachine(m) {
+    if (!m) return '';
+    var base = [m.type, m.numero].filter(Boolean).join(' ').trim();
+    if (m.annee) base += (base ? ' ' : '') + '(' + m.annee + ')';
+    return base.trim();
+  }
+
+  /* Menu de choix de machine (multi-machines) — recréé à chaque sélection
+     de client, inséré sous le champ machine. Même esprit que Demande d'OS. */
+  var domMachineChoix = null;
+  function retirerChoixMachine() {
+    if (domMachineChoix && domMachineChoix.parentNode) {
+      domMachineChoix.parentNode.removeChild(domMachineChoix);
+    }
+    domMachineChoix = null;
+  }
+
+  function proposerChoixMachine(machines) {
+    retirerChoixMachine();
+    if (!elMachine || !Array.isArray(machines) || machines.length < 2) return;
+
+    var wrap = document.createElement('div');
+    wrap.className = 'cv-machine-choix';
+    wrap.appendChild(document.createTextNode('Plusieurs machines — choisir : '));
+
+    machines.forEach(function (m) {
+      var libelle = valeurMachine(m);
+      if (!libelle) return;
+      var chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'cv-machine-chip';
+      chip.textContent = libelle;
+      chip.addEventListener('click', function () {
+        elMachine.value = libelle;
+        retirerChoixMachine();
+        scheduleSave();
+      });
+      wrap.appendChild(chip);
+    });
+
+    elMachine.parentNode.appendChild(wrap);
+    domMachineChoix = wrap;
+  }
+
+  /* Mapping client choisi → champs existants de la carte Client.
+     Calcul vide n'a PAS de champs adresse / email / code client dédiés :
+     on ne remplit donc QUE machine et contact. La machine est pré-remplie
+     avec la 1re (un menu permet d'en choisir une autre si plusieurs). */
+  function appliquerClient(client) {
+    if (!client) return;
+    retirerChoixMachine();
+
+    if (elContact && client.contact) {
+      elContact.value = client.contact;
+    }
+
+    var machines = Array.isArray(client.machines) ? client.machines : [];
+    if (elMachine && machines.length >= 1) {
+      elMachine.value = valeurMachine(machines[0]);
+      if (machines.length > 1) proposerChoixMachine(machines);
+    }
+
+    scheduleSave();
+  }
+
+  /* Pré-remplissage du technicien depuis Auth (non bloquant ; ne touche pas
+     à un champ déjà saisi). */
+  function preremplirTechnicien() {
+    if (!elTechnicien || elTechnicien.value.trim()) return;
+    if (!window.Auth || typeof window.Auth.getUserMetadata !== 'function') return;
+    var meta = window.Auth.getUserMetadata() || {};
+    var prenom = meta.prenom || meta.first_name || '';
+    var nom    = meta.nom    || meta.last_name  || '';
+    var complet = [prenom, nom].filter(Boolean).join(' ').trim();
+    if (complet) {
+      elTechnicien.value = complet;
+      scheduleSave();
+    }
+  }
+
+  /* Branchement du helper générique d'auto-complétion. Dégradation propre
+     si le helper ou le champ sont absents : le champ reste un input texte. */
+  var acController = null;
+  function brancherAutocompletion() {
+    if (!elClient) return;
+    if (!window.ClientAutocomplete || typeof window.ClientAutocomplete.attach !== 'function') return;
+    acController = window.ClientAutocomplete.attach(elClient, {
+      onSelect: appliquerClient,
+    });
+  }
+
+  /* Cleanup au démontage (app.js réexécute les scripts à chaque navigation :
+     on détache proprement le helper précédent s'il existe). */
+  if (window.__cvCleanup) {
+    try { window.__cvCleanup(); } catch (e) { /* no-op */ }
+    window.__cvCleanup = null;
+  }
+  window.__cvCleanup = function () {
+    if (acController && typeof acController.destroy === 'function') {
+      try { acController.destroy(); } catch (e) { /* no-op */ }
+    }
+    acController = null;
+    retirerChoixMachine();
+  };
+
+  /* ============================================================
      INITIALISATION
      ============================================================ */
 
@@ -2357,6 +2583,8 @@
   applyState(savedState);
   updateVisibility();
   compute();
+  preremplirTechnicien();
+  brancherAutocompletion();
 
 })();
 </script>
