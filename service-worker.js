@@ -12,8 +12,8 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache */
-const CACHE_NOM     = 'muf-webapp-v67';
-const CACHE_PLUGINS = 'muf-plugins-v67';
+const CACHE_NOM     = 'muf-webapp-v68';
+const CACHE_PLUGINS = 'muf-plugins-v68';
 
 /* Document de repli pour les navigations hors-ligne (PWA / refresh offline). */
 const FALLBACK_DOC = './index.html';
@@ -65,7 +65,12 @@ const ASSETS_STATIQUES = [
      v67 : NOUVEL asset js/client-learning.js (auto-apprentissage clients —
      proposition non bloquante d'ajout/MAJ en 1 clic, branchée dans les 4 plugins
      Demande d'OS / Calcul vide / Retour garantie / Liste de pièces). Les 4
-     plugins concernés changent mais sont déjà listés dans ASSETS_PLUGINS. */
+     plugins concernés changent mais sont déjà listés dans ASSETS_PLUGINS.
+     v68 : aucun nouvel asset (correction du bouton « Tout appliquer » du bandeau
+     d'auto-apprentissage — js/client-learning.js déjà précaché). « Tout appliquer »
+     devient atomique : fusion de tous les items en UNE écriture ClientsDB.put()
+     (au lieu de writes parallèles qui s'écrasaient), et le re-render déclenché par
+     clients-db-changed est neutralisé pendant l'application en cours. */
   './js/libs/jspdf.umd.min.js',
   './js/libs/xlsx.full.min.js',
   './js/libs/exceljs.min.js',

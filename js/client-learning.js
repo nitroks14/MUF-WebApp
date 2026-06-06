@@ -228,6 +228,12 @@
   /* Quel contrôleur « possède » actuellement le bandeau (pour ignorer/dédup). */
   var bannerOwner = null;
 
+  /* Verrou : true pendant qu'une application (individuelle ou « Tout appliquer »)
+     est en cours. Neutralise la réévaluation du bandeau déclenchée par
+     `clients-db-changed` (nos propres écritures) afin qu'un re-render
+     n'interrompe pas l'application en cours. Voir onDbChange(). */
+  var applicationEnCours = false;
+
   function fermerBanner(parIgnore) {
     if (!bannerEl) return;
     bannerEl.classList.remove('mcl-banner-show');
@@ -383,7 +389,10 @@
         label: 'Ajouter « <strong>' + escapeHtml(nomSaisi) + '</strong> » aux clients',
         detail: descriptionNouveauClient(nouveau),
         confirm: 'Client ajouté',
-        apply: function () { return window.ClientsDB.add(nouveau); },
+        /* Création complète en une seule opération add() (embarque déjà
+           machine + PN + scalaires). create=true aiguille persisterItems(). */
+        create: true,
+        payload: nouveau,
       });
 
       return { signature: sigParts.join('|'), items: items };
@@ -407,14 +416,13 @@
             : 'Renseigner ' + libelleChamp(champ)) + ' de « <strong>' + escapeHtml(client.nom) + '</strong> »',
           detail: (actuel ? escapeHtml(actuel) + ' → ' : '') + '<strong>' + escapeHtml(saisi) + '</strong>',
           confirm: 'Mis à jour',
-          apply: (function (ch, val) {
-            return function () {
-              return window.ClientsDB.get(client.id).then(function (frais) {
-                var base = frais || client;
-                var patch = Object.assign({}, base);
-                patch[ch] = val;
-                return window.ClientsDB.put(patch);
-              });
+          clientId: client.id,
+          /* Mutateur pur : applique le changement sur une copie fournie, sans I/O.
+             Permet de fusionner plusieurs items en une seule écriture. */
+          mutate: (function (ch, val) {
+            return function (base) {
+              base[ch] = val;
+              return base;
             };
           })(champ, saisi),
         });
@@ -434,19 +442,20 @@
           detail: '<strong>' + escapeHtml(libelleM) + '</strong>'
             + (machineSaisie.annee ? ' (' + escapeHtml(machineSaisie.annee) + ')' : ''),
           confirm: 'Machine ajoutée',
-          apply: (function (machine, pn) {
-            return function () {
-              return window.ClientsDB.get(client.id).then(function (frais) {
-                var base = frais || client;
-                var patch = Object.assign({}, base);
-                var arr = Array.isArray(patch.machines) ? patch.machines.slice() : [];
+          clientId: client.id,
+          mutate: (function (machine, pn) {
+            return function (base) {
+              var arr = Array.isArray(base.machines) ? base.machines.slice() : [];
+              /* Garde-fou : si une application précédente (même lot) a déjà
+                 ajouté cette machine, on n'en recrée pas une seconde. */
+              if (!arr.some(function (m) { return memeMachine(m, machine); })) {
                 var nm = { type: machine.type, numero: machine.numero };
                 if (machine.annee) nm.annee = machine.annee;
                 if (pn) nm.pns = [pn];
                 arr.push(nm);
-                patch.machines = arr;
-                return window.ClientsDB.put(patch);
-              });
+              }
+              base.machines = arr;
+              return base;
             };
           })(machineSaisie, pnSaisi),
         });
@@ -466,23 +475,20 @@
             label: 'Ajouter le PN à la machine de « <strong>' + escapeHtml(client.nom) + '</strong> »',
             detail: 'PN <strong>' + escapeHtml(pnSaisi) + '</strong> → ' + escapeHtml(libMach),
             confirm: 'PN ajouté',
-            apply: (function (machine, pn) {
-              return function () {
-                return window.ClientsDB.get(client.id).then(function (frais) {
-                  var base = frais || client;
-                  var patch = Object.assign({}, base);
-                  var arr = Array.isArray(patch.machines) ? patch.machines.map(function (m) { return Object.assign({}, m); }) : [];
-                  for (var i = 0; i < arr.length; i++) {
-                    if (memeMachine(arr[i], machine)) {
-                      var pns = Array.isArray(arr[i].pns) ? arr[i].pns.slice() : [];
-                      if (!pns.some(function (p) { return normaliser(p) === normaliser(pn); })) pns.push(pn);
-                      arr[i].pns = pns;
-                      break;
-                    }
+            clientId: client.id,
+            mutate: (function (machine, pn) {
+              return function (base) {
+                var arr = Array.isArray(base.machines) ? base.machines.map(function (m) { return Object.assign({}, m); }) : [];
+                for (var i = 0; i < arr.length; i++) {
+                  if (memeMachine(arr[i], machine)) {
+                    var pns = Array.isArray(arr[i].pns) ? arr[i].pns.slice() : [];
+                    if (!pns.some(function (p) { return normaliser(p) === normaliser(pn); })) pns.push(pn);
+                    arr[i].pns = pns;
+                    break;
                   }
-                  patch.machines = arr;
-                  return window.ClientsDB.put(patch);
-                });
+                }
+                base.machines = arr;
+                return base;
               };
             })(machineSaisie, pnSaisi),
           });
@@ -560,9 +566,7 @@
       allBtn.textContent = 'Tout appliquer';
       allBtn.addEventListener('click', function () {
         var btns = bannerListEl.querySelectorAll('.mcl-item-btn');
-        propositions.items.forEach(function (item, i) {
-          if (!item._done) appliquerItem(item, btns[i]);
-        });
+        appliquerTout(controller, propositions.items, btns, allBtn);
       });
       bannerFootEl.appendChild(allBtn);
     }
@@ -577,35 +581,115 @@
     }, 15000);
   }
 
+  /* Applique le(s) mutateur(s) d'un ou plusieurs items « client connu » sur UNE
+     copie fraîche du client, puis fait UNE SEULE écriture put(). Les items de
+     type « create » (nouveau client) sont gérés à part via add().
+     Lecture fraîche systématique avant écriture → aucune lecture stale, même en
+     chaîne. Retourne une Promise résolue après la persistance. */
+  function persisterItems(items) {
+    var createItem = null;
+    var mutItems = [];
+    items.forEach(function (it) {
+      if (it.create) createItem = it;
+      else if (typeof it.mutate === 'function') mutItems.push(it);
+    });
+
+    /* Cas « nouveau client » : on crée le client. calculerPropositions ne
+       produit qu'un seul item « create » (qui embarque déjà machine + PN +
+       scalaires), donc add() suffit et couvre « create + autres ». */
+    if (createItem) {
+      return window.ClientsDB.add(createItem.payload);
+    }
+
+    if (!mutItems.length) return Promise.resolve();
+
+    /* Tous les mutateurs portent sur le même client (même contexte de saisie). */
+    var clientId = mutItems[0].clientId;
+    return window.ClientsDB.get(clientId).then(function (frais) {
+      if (!frais) {
+        /* Le client a disparu (rare : supprimé entre-temps) → on abandonne. */
+        return Promise.reject(new Error('Client introuvable: ' + clientId));
+      }
+      /* Copie de travail unique ; chaque mutateur l'enrichit en mémoire. */
+      var base = Object.assign({}, frais);
+      mutItems.forEach(function (it) { base = it.mutate(base); });
+      return window.ClientsDB.put(base); /* écriture unique fusionnée */
+    });
+  }
+
+  /* Marque la signature courante comme appliquée et ferme le bandeau en douceur
+     si plus aucun item n'est en attente. */
+  function apresApplication() {
+    var owner = bannerOwner;
+    if (owner && owner._signatureCourante) {
+      owner._appliquees[owner._signatureCourante] = true;
+    }
+    var restants = bannerListEl
+      ? bannerListEl.querySelectorAll('.mcl-item-btn:not([disabled])')
+      : [];
+    if (restants.length === 0) {
+      if (bannerHideTimer) clearTimeout(bannerHideTimer);
+      bannerHideTimer = setTimeout(function () { fermerBanner(false); }, 1200);
+    }
+  }
+
+  /* Application d'UN item (clic individuel). Lecture fraîche + écriture unique
+     via persisterItems → cohérent même en chaîne de clics rapides. */
   function appliquerItem(item, btn) {
     if (item._done) return;
     if (!window.ClientsDB) return;
     item._done = true;
+    applicationEnCours = true;
     if (btn) { btn.disabled = true; btn.textContent = '…'; }
-    Promise.resolve()
-      .then(item.apply)
+    persisterItems([item])
       .then(function () {
         if (btn) { btn.textContent = item.confirm + ' ✓'; }
-        /* Si tous les items du bandeau sont appliqués → fermer en douceur. */
-        var owner = bannerOwner;
-        if (owner) {
-          /* Cette signature ne doit plus être reproposée pour cette session :
-             l'utilisateur a agi dessus. */
-          if (owner._signatureCourante) owner._appliquees[owner._signatureCourante] = true;
-        }
-        var restants = bannerListEl
-          ? bannerListEl.querySelectorAll('.mcl-item-btn:not([disabled])')
-          : [];
-        if (restants.length === 0) {
-          if (bannerHideTimer) clearTimeout(bannerHideTimer);
-          bannerHideTimer = setTimeout(function () { fermerBanner(false); }, 1200);
-        }
+        apresApplication();
       })
       .catch(function (err) {
         console.error('[ClientLearning] Application impossible :', err);
         item._done = false;
         if (btn) { btn.disabled = false; btn.textContent = 'Réessayer'; }
-      });
+      })
+      .then(function () { applicationEnCours = false; });
+  }
+
+  /* « Tout appliquer » : application ATOMIQUE de tous les items en attente.
+     Fusionne tous les mutateurs en une seule écriture (voir persisterItems),
+     et neutralise le re-render déclenché par clients-db-changed le temps de
+     l'opération (applicationEnCours). */
+  function appliquerTout(controller, items, btns, allBtn) {
+    if (!window.ClientsDB) return;
+    var aFaire = [];
+    items.forEach(function (it, i) {
+      if (!it._done) { it._done = true; aFaire.push({ item: it, btn: btns[i] }); }
+    });
+    if (!aFaire.length) return;
+
+    applicationEnCours = true;
+    if (allBtn) { allBtn.disabled = true; allBtn.textContent = 'Application…'; }
+    aFaire.forEach(function (e) {
+      if (e.btn) { e.btn.disabled = true; e.btn.textContent = '…'; }
+    });
+
+    persisterItems(aFaire.map(function (e) { return e.item; }))
+      .then(function () {
+        aFaire.forEach(function (e) {
+          if (e.btn) { e.btn.textContent = e.item.confirm + ' ✓'; }
+        });
+        if (allBtn) { allBtn.textContent = 'Tout appliqué ✓'; }
+        apresApplication();
+      })
+      .catch(function (err) {
+        console.error('[ClientLearning] « Tout appliquer » impossible :', err);
+        /* Rollback de l'état UI : on réautorise une nouvelle tentative. */
+        aFaire.forEach(function (e) {
+          e.item._done = false;
+          if (e.btn) { e.btn.disabled = false; e.btn.textContent = 'Réessayer'; }
+        });
+        if (allBtn) { allBtn.disabled = false; allBtn.textContent = 'Tout appliquer'; }
+      })
+      .then(function () { applicationEnCours = false; });
   }
 
   /* ----------------------------------------------------------
@@ -730,6 +814,12 @@
     /* Rafraîchir le cache si la base change (nos écritures ou un pull sync). */
     function onDbChange() {
       rechargerClients().then(function () {
+        /* Pendant une application en cours (clic individuel ou « Tout
+           appliquer »), on NE ré-évalue PAS : le re-render reconstruirait le
+           bandeau (innerHTML = '') et détacherait les boutons/items que
+           l'application est en train de traiter → application incomplète.
+           La fin de l'application ferme/rafraîchit le bandeau elle-même. */
+        if (applicationEnCours) return;
         /* Si le bandeau appartient à ce plugin, on le ré-évalue pour retirer
            les propositions devenues caduques (déjà appliquées ailleurs). */
         if (bannerOwner === controller) evaluateDifferee();
