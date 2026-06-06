@@ -285,7 +285,9 @@
       buildPdf(window.jspdf.jsPDF);
     } else {
       var script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      /* jsPDF 2.5.1 — VENDORISÉ (offline). Chemin relatif à la RACINE de l'app
+         (ce script tourne dans le contexte du document racine, cf. js/app.js). */
+      script.src = './js/libs/jspdf.umd.min.js';
       script.onload = function () {
         var jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
         if (!jsPDF) { alert('Impossible de charger jsPDF.'); return; }

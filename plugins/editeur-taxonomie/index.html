@@ -985,7 +985,9 @@ function chargerBlocklyEtInit() {
     return;
   }
   var script = document.createElement('script');
-  script.src = 'https://unpkg.com/blockly@10/blockly.min.js';
+  /* Blockly 10 — VENDORISÉ (offline). Bundle UMD all-in-one.
+     Chemin relatif à la RACINE de l'app (plugin injecté dans le document racine, cf. js/app.js). */
+  script.src = './js/libs/blockly/blockly.min.js';
   script.onload = function() { initBlockly(); };
   script.onerror = function() {
     document.getElementById('te-workspace').innerHTML = '<p style="color:red;padding:20px;">Erreur chargement Blockly. Vérifiez votre connexion internet.</p>';

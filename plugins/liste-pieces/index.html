@@ -4,10 +4,11 @@
   Architecture : IIFE strict, IDs préfixés lp-, autosave localStorage
 -->
 
-<!-- SheetJS — doit être chargé AVANT le script IIFE (utilisé pour l'import) -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<!-- ExcelJS — lecture/écriture Excel avec préservation des styles (MIT, browser-compatible) -->
-<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<!-- SheetJS xlsx 0.18.5 — VENDORISÉ (offline). Chemin relatif à la RACINE de l'app
+     (les plugins sont injectés dans le document racine, cf. js/app.js). Chargé AVANT l'IIFE. -->
+<script src="./js/libs/xlsx.full.min.js"></script>
+<!-- ExcelJS 4.4.0 — VENDORISÉ (offline). Lecture/écriture Excel avec préservation des styles. -->
+<script src="./js/libs/exceljs.min.js"></script>
 
 <style>
   /* ============================================================
