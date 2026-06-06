@@ -179,6 +179,32 @@
   @media (max-width: 767px) {
     .lp-grid-2 { grid-template-columns: 1fr; }
   }
+
+  /* Menu de choix de machine (multi-machines) — affiché après sélection
+     d'un client en auto-complétion lorsque le client possède >1 machine. */
+  .lp-machine-choix {
+    margin-top: 6px;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+  }
+  .lp-machine-chip {
+    display: inline-block;
+    margin: 4px 6px 0 0;
+    padding: 6px 12px;
+    min-height: 32px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    font-size: var(--font-size-sm);
+    font-family: inherit;
+    color: var(--color-text);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .lp-machine-chip:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
 </style>
 
 <!-- Toast de notification -->
@@ -240,8 +266,17 @@
         <label class="form-label" for="lp-clientName">
           Client <span aria-hidden="true">*</span>
         </label>
+        <!--
+          Anti-autofill (Brave/Chrome + gestionnaires de mots de passe) : on retire
+          autocomplete="organization" (qui favorisait l'autofill navigateur) au profit
+          des mêmes gardes que les autres plugins (Demande d'OS, Calcul vide, Retour
+          garantie). Le helper ClientAutocomplete renforce encore ces attributs.
+        -->
         <input id="lp-clientName" class="form-control" type="text"
-               placeholder="Nom de la société" autocomplete="organization">
+               placeholder="Nom de la société"
+               autocomplete="off" autocorrect="off" autocapitalize="off"
+               spellcheck="false"
+               data-lpignore="true" data-1p-ignore data-form-type="other">
       </div>
 
       <!-- Code client -->
@@ -571,15 +606,32 @@
   }
 
   /* ----------------------------------------------------------
-     Pré-remplissage technicien depuis Parametrage
+     Pré-remplissage technicien
+     Source primaire : window.Parametrage (déjà en place).
+     Repli : window.Auth.getUserMetadata() (prenom / nom) comme dans les autres
+     plugins, uniquement si les champs sont encore vides. Non bloquant.
      ---------------------------------------------------------- */
   function prefillTechnicien() {
-    if (!window.Parametrage) return;
-    var nom    = window.Parametrage.get("nom");
-    var prenom = window.Parametrage.get("prenom");
-    var lastEl = document.getElementById("lp-techLastName");
+    var lastEl  = document.getElementById("lp-techLastName");
     var firstEl = document.getElementById("lp-techFirstName");
-    if (nom && !lastEl.value)    lastEl.value  = nom;
+    if (!lastEl || !firstEl) return;
+
+    var nom    = "";
+    var prenom = "";
+
+    if (window.Parametrage) {
+      nom    = window.Parametrage.get("nom")    || "";
+      prenom = window.Parametrage.get("prenom") || "";
+    }
+
+    /* Repli Auth si Parametrage n'a rien fourni. */
+    if ((!nom || !prenom) && window.Auth && typeof window.Auth.getUserMetadata === "function") {
+      var meta = window.Auth.getUserMetadata() || {};
+      if (!nom)    nom    = meta.nom    || meta.last_name  || "";
+      if (!prenom) prenom = meta.prenom || meta.first_name || "";
+    }
+
+    if (nom && !lastEl.value)     lastEl.value  = nom;
     if (prenom && !firstEl.value) firstEl.value = prenom;
   }
 
@@ -1098,6 +1150,140 @@
   });
 
   /* ----------------------------------------------------------
+     Auto-complétion clients (helper générique window.ClientAutocomplete)
+
+     Le plugin Liste de pièces est le formulaire client le PLUS COMPLET de
+     l'app : il expose nom, code client, contact, email, adresse ET la machine
+     (type + n° + année). À la sélection d'une suggestion, on pré-remplit donc
+     le mapping COMPLET (uniquement si la donnée client existe). Déclenchement
+     UNIQUEMENT à la sélection (onSelect) — jamais d'écrasement pendant la frappe.
+     On ne touche QUE les champs client / machine ; les pièces, le type de
+     demande, la date d'intervention et le descriptif court restent intacts.
+     ---------------------------------------------------------- */
+
+  /* Valeurs machine injectées dans les champs dédiés (type / n° / année). */
+  function valeurMachineType(m)  { return m ? String(m.type   || "").trim() : ""; }
+  function valeurMachineNum(m)   { return m ? String(m.numero || "").trim() : ""; }
+  function valeurMachineAnnee(m) { return m ? String(m.annee  || "").trim() : ""; }
+
+  /* Libellé affiché sur les chips de choix de machine. */
+  function libelleMachine(m) {
+    if (!m) return "";
+    var base = [m.type, m.numero].filter(Boolean).join(" ");
+    if (m.annee) base += (base ? " " : "") + "(" + m.annee + ")";
+    return base.trim();
+  }
+
+  /* Applique une machine donnée aux 3 champs machine. */
+  function appliquerMachine(m) {
+    var typeEl   = document.getElementById("lp-machineType");
+    var numEl    = document.getElementById("lp-machineNumber");
+    var anneeEl  = document.getElementById("lp-machineYear");
+    if (typeEl)  { typeEl.value  = valeurMachineType(m);  typeEl.classList.remove("lp-invalid"); }
+    if (numEl)   { numEl.value   = valeurMachineNum(m);   numEl.classList.remove("lp-invalid"); }
+    if (anneeEl) { anneeEl.value = valeurMachineAnnee(m); }
+  }
+
+  /* Menu de choix de machine (multi-machines) — recréé à chaque sélection de
+     client, inséré sous le champ Année. Même esprit que Retour garantie. */
+  var machineChoixEl = null;
+  function retirerChoixMachine() {
+    if (machineChoixEl && machineChoixEl.parentNode) {
+      machineChoixEl.parentNode.removeChild(machineChoixEl);
+    }
+    machineChoixEl = null;
+  }
+
+  function proposerChoixMachine(machines) {
+    retirerChoixMachine();
+    if (!Array.isArray(machines) || machines.length < 2) return;
+
+    var anneeEl = document.getElementById("lp-machineYear");
+    if (!anneeEl) return;
+
+    var wrap = document.createElement("div");
+    wrap.className = "lp-machine-choix";
+    wrap.appendChild(document.createTextNode("Plusieurs machines — choisir : "));
+
+    machines.forEach(function (m) {
+      var libelle = libelleMachine(m);
+      if (!libelle) return;
+      var chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "lp-machine-chip";
+      chip.textContent = libelle;
+      chip.addEventListener("click", function () {
+        appliquerMachine(m);
+        retirerChoixMachine();
+        scheduleAutosave();
+      });
+      wrap.appendChild(chip);
+    });
+
+    /* Inséré sous le champ Année (form-group parent). */
+    anneeEl.parentNode.appendChild(wrap);
+    machineChoixEl = wrap;
+  }
+
+  /* Mapping COMPLET d'un client choisi → champs existants du formulaire.
+     Chaque champ n'est rempli que si la donnée correspondante existe ; le nom
+     est déjà posé dans lp-clientName par le helper lui-même. */
+  function appliquerClient(client) {
+    if (!client) return;
+    retirerChoixMachine();
+
+    var nameEl    = document.getElementById("lp-clientName");
+    var numberEl  = document.getElementById("lp-clientNumber");
+    var contactEl = document.getElementById("lp-clientContact");
+    var emailEl   = document.getElementById("lp-clientEmail");
+    var addressEl = document.getElementById("lp-clientAddress");
+
+    if (nameEl) nameEl.classList.remove("lp-invalid");
+    if (client.code_client && numberEl)  numberEl.value  = client.code_client;
+    if (client.contact     && contactEl) { contactEl.value = client.contact; contactEl.classList.remove("lp-invalid"); }
+    if (client.email       && emailEl)   { emailEl.value   = client.email;   emailEl.classList.remove("lp-invalid"); }
+    if (client.adresse     && addressEl) addressEl.value = client.adresse;
+
+    /* Machines : pré-remplit la 1re ; propose un choix de chips si plusieurs. */
+    var machines = Array.isArray(client.machines) ? client.machines : [];
+    if (machines.length >= 1) {
+      appliquerMachine(machines[0]);
+      if (machines.length > 1) proposerChoixMachine(machines);
+    }
+
+    scheduleAutosave();
+  }
+
+  /* Branchement du helper. Dégradation propre si absent : le champ reste un
+     simple <input> texte (saisie manuelle possible, le reste du plugin marche). */
+  var acController = null;
+  function brancherAutocompletion() {
+    var nameEl = document.getElementById("lp-clientName");
+    if (!nameEl) return;
+    if (!window.ClientAutocomplete || typeof window.ClientAutocomplete.attach !== "function") return;
+    acController = window.ClientAutocomplete.attach(nameEl, {
+      onSelect: appliquerClient,
+    });
+  }
+
+  /* Cleanup au démontage (app.js réexécute les scripts à chaque navigation :
+     on détache proprement le helper précédent s'il existe). */
+  if (window.__lpCleanup) {
+    try { window.__lpCleanup(); } catch (e) { /* no-op */ }
+    window.__lpCleanup = null;
+  }
+  window.__lpCleanup = function () {
+    if (acController && typeof acController.destroy === "function") {
+      try { acController.destroy(); } catch (e) { /* no-op */ }
+    }
+    acController = null;
+    retirerChoixMachine();
+  };
+
+  /* Réinitialisation : retirer aussi le menu de choix machine éventuel. */
+  document.getElementById("lp-btnClear").addEventListener("click", retirerChoixMachine);
+
+  /* ----------------------------------------------------------
      Initialisation au chargement
      ---------------------------------------------------------- */
   (function init() {
@@ -1113,12 +1299,15 @@
       addPartRow(null);
     }
 
-    /* 2. Pré-remplir technicien depuis Parametrage (écrase si vide) */
+    /* 2. Pré-remplir technicien (Parametrage puis repli Auth, si vide) */
     prefillTechnicien();
 
     /* 3. Mettre à jour le compteur */
     updateShortDescCounter();
     updatePartsCount();
+
+    /* 4. Brancher l'auto-complétion clients sur le champ « Client ». */
+    brancherAutocompletion();
   })();
 
 })();

@@ -12,8 +12,8 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache */
-const CACHE_NOM     = 'muf-webapp-v65';
-const CACHE_PLUGINS = 'muf-plugins-v65';
+const CACHE_NOM     = 'muf-webapp-v66';
+const CACHE_PLUGINS = 'muf-plugins-v66';
 
 /* Document de repli pour les navigations hors-ligne (PWA / refresh offline). */
 const FALLBACK_DOC = './index.html';
@@ -56,7 +56,11 @@ const ASSETS_STATIQUES = [
      retour-garantie — js/client-autocomplete.js déjà précaché ; seul
      plugins/retour-garantie/index.html change, déjà listé dans ASSETS_PLUGINS).
      v65 : aucun nouvel asset (correction du placeholder du n° de garantie d'origine
-     dans plugins/retour-garantie/index.html — déjà listé dans ASSETS_PLUGINS). */
+     dans plugins/retour-garantie/index.html — déjà listé dans ASSETS_PLUGINS).
+     v66 : aucun nouvel asset (auto-complétion clients branchée dans le plugin
+     Liste de pièces — mapping complet nom/code/contact/email/adresse + machine
+     type/n°/année + multi-machines ; js/client-autocomplete.js déjà précaché,
+     seul plugins/liste-pieces/index.html change, déjà listé dans ASSETS_PLUGINS). */
   './js/libs/jspdf.umd.min.js',
   './js/libs/xlsx.full.min.js',
   './js/libs/exceljs.min.js',
