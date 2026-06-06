@@ -12,8 +12,8 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache */
-const CACHE_NOM     = 'muf-webapp-v61';
-const CACHE_PLUGINS = 'muf-plugins-v61';
+const CACHE_NOM     = 'muf-webapp-v62';
+const CACHE_PLUGINS = 'muf-plugins-v62';
 
 /* Document de repli pour les navigations hors-ligne (PWA / refresh offline). */
 const FALLBACK_DOC = './index.html';
@@ -46,7 +46,9 @@ const ASSETS_STATIQUES = [
      jsPDF (calcul-vide / retour-garantie / aruco-marker), xlsx + ExcelJS (liste-pieces),
      Blockly (editeur-taxonomie). Précachées ici car chargées en lazy depuis la racine.
      v61 : aucun nouvel asset (auto-complétion clients branchée dans calcul-vide,
-     js/client-autocomplete.js déjà précaché). */
+     js/client-autocomplete.js déjà précaché).
+     v62 : aucun nouvel asset (carte « Client » de calcul-vide réduite à
+     nom client + machine type+n°, bloc PDF Identification condensé sur 1 ligne). */
   './js/libs/jspdf.umd.min.js',
   './js/libs/xlsx.full.min.js',
   './js/libs/exceljs.min.js',

@@ -89,11 +89,36 @@
     color: var(--color-text-muted, #555);
   }
 
-  /* Carte Client — note d'aide + sélecteur multi-machines */
-  .cv-client-note {
-    font-size: var(--font-size-sm, 13px);
-    color: var(--color-text-muted, #555);
-    margin: 6px 0 0;
+  /* Carte Client — version compacte / sobre (en tête de formulaire) */
+  .cv-client-card {
+    background: var(--color-bg-alt, #F8F9FA);
+    border: 1px solid var(--color-border, #d0d5dd);
+    border-radius: var(--radius-sm, 6px);
+    padding: 10px 12px;
+    margin-bottom: 16px;
+  }
+
+  .cv-client-card-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted, #888);
+    margin: 0 0 8px 0;
+  }
+
+  /* Champ resserré pour la carte compacte */
+  .cv-field-compact {
+    margin-bottom: 8px;
+  }
+
+  .cv-field-compact:last-child {
+    margin-bottom: 0;
+  }
+
+  .cv-field-compact label {
+    font-size: 12px;
+    margin-bottom: 3px;
   }
 
   .cv-machine-choix {
@@ -442,34 +467,18 @@
 })();
 </script>
 
-<!-- Section Client (identification de l'intervention) -->
-<div class="card mb-24">
-  <div class="card-header">
-    <h2 class="card-title cv-section-title">Client</h2>
+<!-- Section Client (identification de l'intervention) — carte compacte -->
+<div class="cv-client-card">
+  <p class="cv-client-card-title">Client (optionnel — identification du rapport PDF)</p>
+
+  <div class="cv-field cv-field-compact">
+    <label for="cv-client">Nom du client</label>
+    <input id="cv-client" type="text" placeholder="Rechercher un client connu…" class="form-control">
   </div>
-  <div class="card-body">
 
-    <div class="cv-field">
-      <label for="cv-client">Nom du client</label>
-      <input id="cv-client" type="text" placeholder="Rechercher un client connu…" class="form-control">
-      <p class="cv-client-note">Optionnel — pour identifier l'intervention sur le rapport PDF.</p>
-    </div>
-
-    <div class="cv-field">
-      <label for="cv-machine">Machine (type, n° de série, année)</label>
-      <input id="cv-machine" type="text" placeholder="ex : R230 924 (2019)" class="form-control">
-    </div>
-
-    <div class="cv-field">
-      <label for="cv-contact">Contact chez le client</label>
-      <input id="cv-contact" type="text" placeholder="Nom du contact" class="form-control">
-    </div>
-
-    <div class="cv-field">
-      <label for="cv-technicien">Technicien</label>
-      <input id="cv-technicien" type="text" placeholder="Prénom Nom" class="form-control">
-    </div>
-
+  <div class="cv-field cv-field-compact">
+    <label for="cv-machine">Machine (type + n°)</label>
+    <input id="cv-machine" type="text" placeholder="ex : R230 924" class="form-control">
   </div>
 </div>
 
@@ -1293,8 +1302,6 @@
      toutes les manipulations en mode défensif. */
   var elClient               = document.getElementById('cv-client');
   var elMachine              = document.getElementById('cv-machine');
-  var elContact              = document.getElementById('cv-contact');
-  var elTechnicien           = document.getElementById('cv-technicien');
 
   var elLaize                = document.getElementById('cv-laize');
   var elPitch                = document.getElementById('cv-pitch');
@@ -1342,8 +1349,6 @@
     return {
       client:               elClient     ? elClient.value     : '',
       machine:              elMachine    ? elMachine.value    : '',
-      contact:              elContact    ? elContact.value    : '',
-      technicien:           elTechnicien ? elTechnicien.value : '',
       laize:                elLaize.value,
       pitch:                elPitch.value,
       depth:                elDepth.value,
@@ -1374,8 +1379,6 @@
   function applyState(st) {
     if (elClient)     elClient.value     = st.client     !== undefined ? st.client     : '';
     if (elMachine)    elMachine.value    = st.machine    !== undefined ? st.machine    : '';
-    if (elContact)    elContact.value    = st.contact    !== undefined ? st.contact    : '';
-    if (elTechnicien) elTechnicien.value = st.technicien !== undefined ? st.technicien : '';
     elLaize.value                = st.laize              !== undefined ? st.laize              : defaultState.laize;
     elPitch.value                = st.pitch              !== undefined ? st.pitch              : defaultState.pitch;
     elDepth.value                = st.depth              !== undefined ? st.depth              : defaultState.depth;
@@ -1896,31 +1899,22 @@
       }
 
       /* ----------------------------------------------------------
-         SECTION IDENTIFICATION (client / machine / contact / technicien)
-         Affichée uniquement si au moins un champ est renseigné, afin de
-         ne pas alourdir un rapport purement technique.
+         IDENTIFICATION (client + machine type+n°) — une seule ligne,
+         tout en haut du rapport. Affichée uniquement si au moins un
+         des deux champs est renseigné, pour ne pas alourdir un rapport
+         purement technique.
          ---------------------------------------------------------- */
-      var idClient     = elClient     ? elClient.value.trim()     : '';
-      var idMachine    = elMachine    ? elMachine.value.trim()    : '';
-      var idContact    = elContact    ? elContact.value.trim()    : '';
-      var idTechnicien = elTechnicien ? elTechnicien.value.trim() : '';
+      var idClient  = elClient  ? elClient.value.trim()  : '';
+      var idMachine = elMachine ? elMachine.value.trim() : '';
 
-      if (idClient || idMachine || idContact || idTechnicien) {
-        var col2X0 = mG + larg / 2 + 2;
-        var colW20 = larg / 2 - 2;
-
-        enteteSection('Identification', y);
-        y += 6;
-
-        doc.setFillColor(245, 245, 245);
-        doc.rect(mG, y - 3, larg, 16, 'F');
-
-        ligneKV('Client :',     idClient,     y, mG,    larg / 2);
-        ligneKV('Machine :',    idMachine,    y, col2X0, colW20);
-        y += 6;
-        ligneKV('Contact :',    idContact,    y, mG,    larg / 2);
-        ligneKV('Technicien :', idTechnicien, y, col2X0, colW20);
-        y += 12;
+      if (idClient || idMachine) {
+        var idTexte = [idClient, idMachine].filter(Boolean).join(' — ');
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Identification :', mG + 2, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(idTexte, mG + 32, y);
+        y += 8;
       }
 
       /* ----------------------------------------------------------
@@ -2456,23 +2450,21 @@
   }
 
   /* ============================================================
-     CLIENT — auto-complétion + pré-remplissage
-     Les champs client/machine/contact/technicien sont purement
-     informatifs (identification de l'intervention sur le PDF). Ils
-     n'entrent PAS dans le calcul : on se contente de les sauvegarder.
+     CLIENT — auto-complétion
+     Les champs client/machine sont purement informatifs (identification
+     de l'intervention sur le PDF). Ils n'entrent PAS dans le calcul :
+     on se contente de les sauvegarder.
      ============================================================ */
 
   /* Sauvegarde (sans recalcul) sur saisie manuelle des champs client. */
-  [elClient, elMachine, elContact, elTechnicien].forEach(function (el) {
+  [elClient, elMachine].forEach(function (el) {
     if (el) el.addEventListener('input', scheduleSave);
   });
 
-  /* Libellé machine injecté dans le champ : "Type N° (Année)". */
+  /* Libellé machine injecté dans le champ : "Type N°" (sans l'année). */
   function valeurMachine(m) {
     if (!m) return '';
-    var base = [m.type, m.numero].filter(Boolean).join(' ').trim();
-    if (m.annee) base += (base ? ' ' : '') + '(' + m.annee + ')';
-    return base.trim();
+    return [m.type, m.numero].filter(Boolean).join(' ').trim();
   }
 
   /* Menu de choix de machine (multi-machines) — recréé à chaque sélection
@@ -2512,17 +2504,13 @@
     domMachineChoix = wrap;
   }
 
-  /* Mapping client choisi → champs existants de la carte Client.
-     Calcul vide n'a PAS de champs adresse / email / code client dédiés :
-     on ne remplit donc QUE machine et contact. La machine est pré-remplie
-     avec la 1re (un menu permet d'en choisir une autre si plusieurs). */
+  /* Mapping client choisi → champ machine de la carte Client.
+     Calcul vide ne conserve que nom client + machine : on pré-remplit
+     donc uniquement la machine avec la 1re (un menu permet d'en choisir
+     une autre si plusieurs). */
   function appliquerClient(client) {
     if (!client) return;
     retirerChoixMachine();
-
-    if (elContact && client.contact) {
-      elContact.value = client.contact;
-    }
 
     var machines = Array.isArray(client.machines) ? client.machines : [];
     if (elMachine && machines.length >= 1) {
@@ -2531,21 +2519,6 @@
     }
 
     scheduleSave();
-  }
-
-  /* Pré-remplissage du technicien depuis Auth (non bloquant ; ne touche pas
-     à un champ déjà saisi). */
-  function preremplirTechnicien() {
-    if (!elTechnicien || elTechnicien.value.trim()) return;
-    if (!window.Auth || typeof window.Auth.getUserMetadata !== 'function') return;
-    var meta = window.Auth.getUserMetadata() || {};
-    var prenom = meta.prenom || meta.first_name || '';
-    var nom    = meta.nom    || meta.last_name  || '';
-    var complet = [prenom, nom].filter(Boolean).join(' ').trim();
-    if (complet) {
-      elTechnicien.value = complet;
-      scheduleSave();
-    }
   }
 
   /* Branchement du helper générique d'auto-complétion. Dégradation propre
@@ -2583,7 +2556,6 @@
   applyState(savedState);
   updateVisibility();
   compute();
-  preremplirTechnicien();
   brancherAutocompletion();
 
 })();
