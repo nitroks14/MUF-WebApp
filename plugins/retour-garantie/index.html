@@ -105,6 +105,31 @@
     color: var(--color-white);
   }
 
+  /* Menu de choix de machine (multi-machines) — sélection auto-complétion client */
+  .brg-machine-choix {
+    margin-top: 6px;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+  }
+  .brg-machine-chip {
+    display: inline-block;
+    margin: 4px 6px 0 0;
+    padding: 6px 12px;
+    min-height: 32px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    font-size: var(--font-size-sm);
+    font-family: inherit;
+    color: var(--color-text);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .brg-machine-chip:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
   .form-control.brg-invalid { border-color: #E53E3E !important; box-shadow: 0 0 0 3px rgba(229,62,62,0.15); }
   .brg-table input.brg-invalid { background: rgba(229,62,62,0.08) !important; border-radius: var(--radius); }
 
@@ -1226,10 +1251,135 @@
   domBtnReset.addEventListener('click', reinitialiser);
 
   /* ----------------------------------------------------------
+     Auto-complétion clients (helper générique window.ClientAutocomplete)
+
+     Le formulaire Retour garantie n'expose PAS de champ adresse / email
+     / code client / n° de série propre AU CLIENT : le champ « À » est le
+     destinataire support Multivac (jamais l'email du client) et le « N° série »
+     des tableaux concerne les pièces, pas la machine. Le mapping réellement
+     applicable est donc : nom client + machine (type + n°). Le technicien est
+     déjà pré-rempli via preremplir() (Parametrage) ; on complète avec Auth en
+     repli si besoin. Déclenchement UNIQUEMENT à la sélection d'une suggestion.
+     ---------------------------------------------------------- */
+
+  /* Valeur injectée dans le champ machine (type + n°, sans l'année). */
+  function valeurMachineType(m) { return m ? (m.type || '').trim() : ''; }
+  function valeurMachineNum(m)  { return m ? String(m.numero || '').trim() : ''; }
+
+  /* Technicien en repli depuis Auth si non rempli par Parametrage. */
+  function preremplirTechnicienAuth() {
+    if (!domTech || domTech.value.trim()) return;
+    if (!window.Auth || typeof window.Auth.getUserMetadata !== 'function') return;
+    var meta = window.Auth.getUserMetadata() || {};
+    var prenom = meta.prenom || meta.first_name || '';
+    var nom    = meta.nom    || meta.last_name  || '';
+    var complet = [prenom, nom].filter(Boolean).join(' ').trim();
+    if (complet) { domTech.value = complet; }
+  }
+
+  /* Menu de choix de machine (multi-machines) — recréé à chaque sélection
+     de client, inséré sous le champ N° machine. Même esprit que Calcul vide. */
+  var domMachineChoix = null;
+  function retirerChoixMachine() {
+    if (domMachineChoix && domMachineChoix.parentNode) {
+      domMachineChoix.parentNode.removeChild(domMachineChoix);
+    }
+    domMachineChoix = null;
+  }
+
+  function libelleMachine(m) {
+    if (!m) { return ''; }
+    var base = [m.type, m.numero].filter(Boolean).join(' ');
+    if (m.annee) { base += (base ? ' ' : '') + '(' + m.annee + ')'; }
+    return base.trim();
+  }
+
+  function proposerChoixMachine(machines) {
+    retirerChoixMachine();
+    if (!Array.isArray(machines) || machines.length < 2) { return; }
+
+    var wrap = document.createElement('div');
+    wrap.className = 'brg-machine-choix';
+    wrap.appendChild(document.createTextNode('Plusieurs machines — choisir : '));
+
+    machines.forEach(function (m) {
+      var libelle = libelleMachine(m);
+      if (!libelle) { return; }
+      var chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'brg-machine-chip';
+      chip.textContent = libelle;
+      chip.addEventListener('click', function () {
+        domTypeMachine.value = valeurMachineType(m);
+        domNumMachine.value  = valeurMachineNum(m);
+        domTypeMachine.classList.remove('brg-invalid');
+        domNumMachine.classList.remove('brg-invalid');
+        retirerChoixMachine();
+        demanderSauvegarde();
+      });
+      wrap.appendChild(chip);
+    });
+
+    /* Inséré sous le champ N° machine. */
+    domNumMachine.parentNode.appendChild(wrap);
+    domMachineChoix = wrap;
+  }
+
+  /* Mapping d'un client choisi → champs existants du formulaire. */
+  function appliquerClient(client) {
+    if (!client) { return; }
+    retirerChoixMachine();
+
+    var machines = Array.isArray(client.machines) ? client.machines : [];
+    if (machines.length >= 1) {
+      domTypeMachine.value = valeurMachineType(machines[0]);
+      domNumMachine.value  = valeurMachineNum(machines[0]);
+      domTypeMachine.classList.remove('brg-invalid');
+      domNumMachine.classList.remove('brg-invalid');
+      if (machines.length > 1) { proposerChoixMachine(machines); }
+    }
+
+    /* Le nom est déjà posé par le helper dans le champ ; on retire l'erreur. */
+    domClient.classList.remove('brg-invalid');
+
+    demanderSauvegarde();
+  }
+
+  /* Branchement du helper. Dégradation propre si absent : le champ reste
+     un simple <input> texte. */
+  var acController = null;
+  function brancherAutocompletion() {
+    if (!domClient) { return; }
+    if (!window.ClientAutocomplete || typeof window.ClientAutocomplete.attach !== 'function') { return; }
+    acController = window.ClientAutocomplete.attach(domClient, {
+      onSelect: appliquerClient,
+    });
+  }
+
+  /* Cleanup au démontage (app.js réexécute les scripts à chaque navigation :
+     on détache proprement le helper précédent s'il existe). */
+  if (window.__brgCleanup) {
+    try { window.__brgCleanup(); } catch (e) { /* no-op */ }
+    window.__brgCleanup = null;
+  }
+  window.__brgCleanup = function () {
+    if (acController && typeof acController.destroy === 'function') {
+      try { acController.destroy(); } catch (e) { /* no-op */ }
+    }
+    acController = null;
+    retirerChoixMachine();
+  };
+
+  /* Réinitialisation : retirer aussi le menu de choix machine éventuel. */
+  domBtnReset.addEventListener('click', retirerChoixMachine);
+
+  /* ----------------------------------------------------------
      Initialisation
      ---------------------------------------------------------- */
   preremplir();
   restaurerBrouillon(); /* écrase les valeurs par défaut si un brouillon existe */
+  preremplirTechnicienAuth();
+  brancherAutocompletion();
 
 })();
 </script>
