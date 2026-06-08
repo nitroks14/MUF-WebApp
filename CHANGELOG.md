@@ -11,6 +11,19 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v78
+
+- **Plugin Retour garantie — objet du mail désormais transmis correctement.**
+  Sur desktop (PC Windows), l'envoi passe systématiquement par le repli `.eml`
+  (Web Share réservé à iOS/iPadOS, seule plateforme transmettant l'objet à
+  Outlook) ; l'objet est en outre encodé en **RFC 2047** pour gérer les accents
+  et le tiret cadratin « — ».
+- **Plugin Retour garantie — suppression de la signature du corps.** La ligne
+  « Cordialement, [technicien] » est retirée afin de laisser la signature
+  automatique d'Outlook s'appliquer.
+
+---
+
 ## v77
 
 - **Plugin Liste de pièces — libellé du champ date.** « Date intervention »

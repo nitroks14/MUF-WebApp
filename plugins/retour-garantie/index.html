@@ -989,11 +989,19 @@
      destinataire (À) et le CC, l'API Web Share ne transportant pas de « To ».
      ---------------------------------------------------------- */
 
-  /* Helper Web Share → repli .eml. Tente le partage du fichier ; en cas
-     d'annulation utilisateur (AbortError) ne fait RIEN ; sinon, ou si Web Share
-     est indisponible, exécute le repli .eml fourni. */
+  /* Helper Web Share → repli .eml.
+     Web Share n'est conservé que sur iOS/iPadOS, seule plateforme où l'objet
+     (title) est correctement transmis à Mail/Outlook. Sur tout le reste (PC
+     Windows, desktop), la cible de partage Outlook ignore « title » et déduit
+     l'objet de la 1re ligne du corps → on force le repli .eml, qui pose
+     explicitement To + Cc + Subject. */
   function partagerOuEml(file, sujet, corps, fallbackEml) {
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    /* Détection iOS/iPadOS robuste : un iPad récent se présente comme un Mac
+       tactile (platform « MacIntel » + maxTouchPoints > 1). */
+    var estIOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    if (estIOS && navigator.canShare && navigator.canShare({ files: [file] })) {
       navigator.share({ files: [file], title: sujet, text: corps })
         .catch(function (e) {
           /* Annulation par l'utilisateur → ne pas déclencher le repli. */
@@ -1002,9 +1010,19 @@
           fallbackEml();
         });
     } else {
-      /* Web Share fichier indisponible → repli .eml sans erreur visible. */
+      /* Desktop / PC Windows (ou Web Share fichier indisponible) → repli .eml. */
       fallbackEml();
     }
+  }
+
+  /* Encodage d'en-tête RFC 2047 (UTF-8 → base64 → =?UTF-8?B?...?=).
+     N'encode que si le texte contient des caractères non-ASCII (accents, tiret
+     cadratin —). Indispensable pour que l'objet du mail s'affiche correctement
+     dans Outlook quand il contient « é », « è » ou « — ». */
+  function encoderEnteteRFC2047(texte) {
+    if (/^[\x00-\x7F]*$/.test(texte)) { return texte; }
+    var utf8 = unescape(encodeURIComponent(texte));
+    return '=?UTF-8?B?' + btoa(utf8) + '?=';
   }
 
   /* Repli .eml — mécanisme historique conservé à l'identique : construit un
@@ -1031,7 +1049,7 @@
       var eml  = 'From: \r\n';
       eml += 'To: ' + to + '\r\n';
       if (cc) { eml += 'Cc: ' + cc + '\r\n'; }
-      eml += 'Subject: ' + sujet + '\r\n';
+      eml += 'Subject: ' + encoderEnteteRFC2047(sujet) + '\r\n';
       eml += 'Date: ' + dateGMT + '\r\n';
       eml += 'MIME-Version: 1.0\r\n';
       eml += 'Content-Type: multipart/mixed; boundary="' + boundary + '"\r\n';
@@ -1100,7 +1118,6 @@
           var numGarantie = domNumGarantie ? domNumGarantie.value.trim() : '';
           var to          = domEmailTo.value.trim();
           var cc      = domEmailCc.value.trim().replace(/;/g, ',');
-          var tech    = domTech.value.trim() || '';
           var dateVal = domDate.value
             ? new Date(domDate.value + 'T12:00:00').toLocaleDateString('fr-FR')
             : new Date().toLocaleDateString('fr-FR');
@@ -1114,8 +1131,7 @@
             (pn ? '  N° Projet : ' + pn + '\r\n' : '') +
             (numGarantie ? '  N° Garantie : ' + numGarantie + '\r\n' : '') +
             '  Date    : ' + dateVal + '\r\n\r\n' +
-            'Merci de bien vouloir traiter ce retour.\r\n\r\n' +
-            'Cordialement,\r\n' + tech;
+            'Merci de bien vouloir traiter ce retour.';
 
           var nomFichier = 'Bon_retour_garantie_' + client.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
           var baseNomEml = 'Bon_retour_' + client.replace(/[^a-zA-Z0-9]/g, '_');
