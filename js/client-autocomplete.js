@@ -191,20 +191,26 @@
 
     injecterStyles();
 
-    /* --- Gardes anti-autofill (mêmes que le plugin Clients) ---
-       Le navigateur ignore souvent autocomplete="off" et injecte l'email de
-       connexion dans les champs qu'il croit être des identifiants. On neutralise
-       par un faisceau d'attributs ; le name n'est PAS touché (propre au plugin).
-       On NE met PAS le champ en readonly ici : sur Demande d'OS le champ doit
-       rester immédiatement saisissable (pas de barre de recherche dédiée). Les
-       attributs ci-dessous suffisent à bloquer l'injection d'identifiants. */
-    input.setAttribute('autocomplete', 'off');
-    input.setAttribute('autocorrect', 'off');
-    input.setAttribute('autocapitalize', 'off');
-    input.setAttribute('spellcheck', 'false');
-    input.setAttribute('data-lpignore', 'true');
-    input.setAttribute('data-1p-ignore', '');
-    input.setAttribute('data-form-type', 'other');
+    /* --- Gardes anti-autofill ---
+       Le navigateur (Chrome / Safari iOS) IGNORE autocomplete="off" pour son
+       autofill « profil » et propose l'email/adresse perso de l'utilisateur
+       dans ce champ « nom client ». On délègue donc à window.AntiAutofill (la
+       référence projet, js/anti-autofill.js) qui pose un TOKEN LEURRE dans
+       autocomplete — seule technique réellement efficace. Repli sur l'ancien
+       set autocomplete="off" si le helper n'est pas chargé.
+       On NE met PAS le champ en readonly ici : sur Demande d'OS il doit rester
+       immédiatement saisissable (pas de barre de recherche dédiée). */
+    if (window.AntiAutofill && typeof window.AntiAutofill.protect === 'function') {
+      window.AntiAutofill.protect(input);
+    } else {
+      input.setAttribute('autocomplete', 'off');
+      input.setAttribute('autocorrect', 'off');
+      input.setAttribute('autocapitalize', 'off');
+      input.setAttribute('spellcheck', 'false');
+      input.setAttribute('data-lpignore', 'true');
+      input.setAttribute('data-1p-ignore', '');
+      input.setAttribute('data-form-type', 'other');
+    }
 
     /* --- Wrapper de positionnement autour de l'input --- */
     var wrap = document.createElement('div');

@@ -18,9 +18,9 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache.
-   Version courante : v82. Historique des versions → voir CHANGELOG.md. */
-const CACHE_NOM     = 'muf-webapp-v82';
-const CACHE_PLUGINS = 'muf-plugins-v82';
+   Version courante : v83. Historique des versions → voir CHANGELOG.md. */
+const CACHE_NOM     = 'muf-webapp-v83';
+const CACHE_PLUGINS = 'muf-plugins-v83';
 
 /* Document de repli pour les navigations hors-ligne (PWA / refresh offline). */
 const FALLBACK_DOC = './index.html';
@@ -42,6 +42,7 @@ const ASSETS_STATIQUES = [
   './js/sync-manager.js',
   './js/app.js',
   './js/parametrage.js',
+  './js/anti-autofill.js',
   './js/client-autocomplete.js',
   './js/client-learning.js',
   './js/aruco-marker.js',

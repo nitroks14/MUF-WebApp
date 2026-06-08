@@ -11,6 +11,60 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v83
+
+- **Anti-autofill navigateur RÉELLEMENT robuste, factorisé (corrige le fix v82).**
+  Le fix v82 (`autocomplete="off"`) était **insuffisant** : Chrome (desktop +
+  Android) et Safari iOS **ignorent `autocomplete="off"`** pour leur autofill
+  « profil » (email perso, adresses postales enregistrées, nom). Symptômes
+  confirmés : email perso proposé sur le champ « À » et « Nom du binôme »,
+  **autofill natif des profils d'adresse** sur le champ « Adresse », et autofill
+  même sur des champs **`type="number"`** (calage-embiellages).
+- **Technique retenue — token leurre dans `autocomplete`.** Chrome ne propose de
+  valeurs que pour des champs dont `autocomplete` a une valeur **sémantique**
+  reconnue (`email`, `name`, `street-address`, `off`…). En posant à la place un
+  **token leurre aléatoire non reconnu** (ex. `nope-7f3a1c`), le navigateur ne
+  sait plus à quel type de profil rattacher le champ et n'a donc **rien à
+  proposer**. C'est ce jeton inconnu — et non `off` — qui coupe réellement
+  l'autofill (réf. Chromium issue 40093420). Pour les champs les plus tenaces
+  (email/nom/adresse), le `name` est **lui aussi** neutralisé par un leurre
+  (l'original conservé dans `data-original-name`), car Chrome se rabat sur les
+  heuristiques de `name`/`id`. S'ajoutent `autocorrect`/`autocapitalize`/
+  `spellcheck="false"` + `data-lpignore`/`data-1p-ignore`/`data-form-type="other"`
+  (gestionnaires de mots de passe).
+- **Nouveau helper partagé `js/anti-autofill.js` (`window.AntiAutofill`)** —
+  RÉFÉRENCE PROJET. `.apply(root)` / `.observe(root)` / `.protect(field)`.
+  Applique le set complet sur tous les `input` texte/email/search/tel/url/
+  number/password/date + `textarea` + `select`. **Exclut** radio/checkbox/file/
+  hidden (pas d'autofill ; le `name` des radios pilote leurs groupes). Opt-out
+  par `data-autofill-keep`. Idempotent.
+- **`js/app.js`** : `chargerPlugin()` appelle `AntiAutofill.observe(appContent)`
+  **avant** de ré-exécuter les scripts du plugin (le token est posé au montage),
+  et un `MutationObserver` équipe ensuite les champs **ajoutés dynamiquement**
+  (lignes de tableau liste-pieces / retour-garantie, blocs conditionnels révélés).
+  Scopé sur `#app-content` : les formulaires d'auth du shell ne sont jamais touchés.
+- **`js/client-autocomplete.js`** : la garde anti-autofill délègue désormais à
+  `window.AntiAutofill.protect()` (token leurre) au lieu de réécrire
+  `autocomplete="off"` — qui écrasait la protection sur les champs « nom client »
+  (`#dos-client`, `#brg-client`, `#cv-client`, `#lp-clientName`), parmi les plus
+  exposés. Repli sur l'ancien set si le helper est absent. L'auto-complétion
+  clients (liste déroulante VOULUE) continue de fonctionner à l'identique.
+- **Couverture vérifiée (Chrome headless, DOM rendu)** : demande-os 13/13,
+  retour-garantie 17/17, clients 6/6, calcul-vide 23/23 (champs numériques inclus),
+  liste-pieces 18/18 (lignes de tableau dynamiques incluses), calage-embiellages
+  6/6 (numériques), rapport-intervention 1/1, parametrage 1/1,
+  editeur-taxonomie 6/6. ClientAutocomplete : menu + suggestions OK. Zéro erreur
+  console. **Limite** : Chrome headless n'ayant pas les profils d'adresse/email
+  de l'utilisateur, la validation finale de la disparition de l'autofill natif se
+  fait côté terrain.
+- **Hors-scope, intentionnellement non modifié** : formulaires d'auth du shell
+  (`index.html`) — `autocomplete` sémantiques conservés (autofill voulu) ;
+  feature « Emails fréquents » de demande-os (puces cliquables) — intacte.
+- Bump de cache requis : ajout de `js/anti-autofill.js` au précache et
+  modification de `js/app.js` + `js/client-autocomplete.js` (assets précachés).
+
+---
+
 ## v82
 
 - **Uniformisation de l'anti-autofill navigateur (données perso du technicien).**

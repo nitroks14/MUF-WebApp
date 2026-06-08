@@ -288,6 +288,17 @@ async function chargerPlugin(nom) {
     /* Injection du HTML dans la zone principale */
     appContent.innerHTML = html;
 
+    /* Anti-autofill navigateur : on équipe les champs du plugin AVANT de
+       (ré)exécuter ses scripts, afin que le token leurre soit déjà en place au
+       montage (Chrome décide de l'autofill très tôt). L'observer maintient la
+       protection sur les champs ajoutés dynamiquement ensuite (lignes de
+       tableau, blocs conditionnels révélés…). Voir js/anti-autofill.js.
+       Scopé sur #app-content : les formulaires d'auth du shell (#auth-overlay)
+       conservent leurs autocomplete sémantiques. */
+    if (window.AntiAutofill) {
+      window.AntiAutofill.observe(appContent);
+    }
+
     /* Réexécution des scripts inline du plugin */
     appContent.querySelectorAll('script').forEach(scriptOriginal => {
       const scriptNouveau = document.createElement('script');

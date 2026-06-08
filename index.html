@@ -331,6 +331,12 @@
        - et par js/client-autocomplete.js (auto-complétion clients dans les plugins) -->
   <script src="./js/libs/fuse.min.js"></script>
 
+  <!-- Anti-autofill navigateur (window.AntiAutofill) — RÉFÉRENCE PROJET :
+       bloque l'autofill natif Chrome/Safari (email/nom/adresse, même sur les
+       champs numériques) via un token leurre dans autocomplete. Appliqué par
+       app.js à chaque plugin chargé. Chargé avant app.js. -->
+  <script src="./js/anti-autofill.js"></script>
+
   <!-- Auto-complétion clients réutilisable (window.ClientAutocomplete) :
        dépend de ClientsDB (db.js) + Fuse.js. Chargé avant app.js afin
        d'être disponible quand un plugin l'invoque. -->
