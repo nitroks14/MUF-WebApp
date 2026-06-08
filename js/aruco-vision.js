@@ -177,35 +177,6 @@
      ================================================================ */
 
   /**
-   * Détecte les contours de régions sombres potentiellement carrées (candidats ArUco).
-   * Approche : scan de rangées → zones noires consécutives → clustering → filtrage.
-   */
-  function findCandidateRects(binary, width, height) {
-    /* Scan ligne par ligne pour trouver des runs noirs */
-    var candidates = [];
-    var step = Math.max(1, Math.floor(Math.min(width, height) / 80));
-
-    for (var y = 0; y < height; y += step) {
-      var inBlack = false;
-      var runStart = 0;
-      for (var x = 0; x < width; x++) {
-        var isBlack = binary[y * width + x] === 0;
-        if (isBlack && !inBlack) { inBlack = true; runStart = x; }
-        if (!isBlack && inBlack) {
-          inBlack = false;
-          var runLen = x - runStart;
-          /* Un candidat doit avoir une longueur raisonnable (5..50% de la largeur) */
-          if (runLen > width * 0.03 && runLen < width * 0.55) {
-            candidates.push({ x: runStart, y: y, w: runLen });
-          }
-        }
-      }
-    }
-
-    return candidates;
-  }
-
-  /**
    * Décode la grille 7×7 d'un candidat pour vérifier si c'est un marqueur ArUco.
    * @param {Uint8Array} gray — image grise
    * @param {number} width
