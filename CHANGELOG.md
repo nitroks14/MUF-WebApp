@@ -11,6 +11,34 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v82
+
+- **Uniformisation de l'anti-autofill navigateur (données perso du technicien).**
+  Symptôme rapporté : certains plugins laissaient le navigateur proposer
+  l'email / le prénom / le nom de l'utilisateur dans des champs de formulaire
+  (autofill de la fiche perso), de façon **incohérente** d'un plugin à l'autre.
+  La convention du projet (`autocomplete="off"`) était déjà appliquée partout
+  **sauf** sur 5 champs, désormais alignés.
+- **`plugins/retour-garantie/index.html`** : ajout de `autocomplete="off"` sur
+  `#brg-technicien` (champ « Prénom Nom » — cas le plus exposé à l'injection du
+  nom de l'utilisateur), ainsi que sur les textarea `#brg-defaut` et `#brg-constat`.
+- **`plugins/calcul-vide/index.html`** : ajout de `autocomplete="off"` sur
+  `#cv-client` et `#cv-machine`. `#cv-client` est piloté par
+  `window.ClientAutocomplete`, qui repositionne déjà l'attribut au runtime ;
+  le poser dans le HTML statique évite toute fuite avant l'attach et rend la
+  règle cohérente au montage.
+- **Hors-scope, intentionnellement non modifié** : les formulaires
+  d'authentification du shell (`index.html` : inscription / connexion /
+  réinitialisation) conservent leurs `autocomplete` sémantiques
+  (`email`, `given-name`, `family-name`, `current-password`, `new-password`) —
+  l'autofill y est **voulu**. L'auto-complétion *clients* de l'app
+  (`window.ClientAutocomplete` / `window.ClientLearning`) n'est pas affectée :
+  elle est gérée en JS, pas par l'autofill navigateur.
+- Bump de cache requis car des assets précachés changent
+  (`plugins/retour-garantie/index.html`, `plugins/calcul-vide/index.html`).
+
+---
+
 ## v81
 
 - **Nettoyage de dette technique (audit conservateur, sans régression).** Aucun
