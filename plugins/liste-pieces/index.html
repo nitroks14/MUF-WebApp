@@ -205,6 +205,35 @@
     border-color: var(--color-primary);
     color: var(--color-primary);
   }
+
+  /* Chips emails fréquents (destinataire de l'envoi par mail) */
+  .lp-emails-frequents {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .lp-email-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background-color var(--transition), border-color var(--transition);
+    min-height: 36px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .lp-email-chip:hover,
+  .lp-email-chip.lp-chip-actif {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+  }
 </style>
 
 <!-- Toast de notification -->
@@ -231,7 +260,17 @@
             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0
                0l-4-4m4 4V4"/>
         </svg>
-        Exporter Excel
+        Enregistrer sous
+      </button>
+      <button class="btn btn-primary" id="lp-btnMail" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+             style="vertical-align:middle;margin-right:6px;" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0
+               002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+        Envoyer par mail (avec PJ)
       </button>
       <label class="btn btn-outline" style="cursor:pointer;">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
@@ -241,7 +280,7 @@
             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0
                0L8 8m4-4v12"/>
         </svg>
-        Importer Excel
+        Ouvrir fichier
         <input type="file" id="lp-inputImport" accept=".xlsx,.xls" style="display:none;">
       </label>
       <button class="btn btn-outline" id="lp-btnClear" type="button">
@@ -283,7 +322,10 @@
       <div class="form-group mb-16">
         <label class="form-label" for="lp-clientNumber">Code client</label>
         <input id="lp-clientNumber" class="form-control" type="text"
-               placeholder="ex : FR-001234">
+               placeholder="ex : 100012345"
+               autocomplete="off" autocorrect="off" autocapitalize="off"
+               spellcheck="false"
+               data-lpignore="true" data-1p-ignore data-form-type="other">
       </div>
     </div>
 
@@ -294,7 +336,10 @@
       </label>
       <div style="display:flex;gap:8px;align-items:center;">
         <input id="lp-clientContact" class="form-control" type="text"
-               placeholder="Nom du contact" autocomplete="name"
+               placeholder="Nom du contact"
+               autocomplete="off" autocorrect="off" autocapitalize="off"
+               spellcheck="false"
+               data-lpignore="true" data-1p-ignore data-form-type="other"
                style="flex:1;">
         <button class="btn btn-outline btn-sm" id="lp-btnPickContact" type="button"
                 title="Sélectionner dans les contacts"
@@ -316,14 +361,20 @@
         Mail <span aria-hidden="true">*</span>
       </label>
       <input id="lp-clientEmail" class="form-control" type="email"
-             placeholder="contact@societe.fr" autocomplete="email">
+             placeholder="contact@societe.fr"
+             autocomplete="off" autocorrect="off" autocapitalize="off"
+             spellcheck="false"
+             data-lpignore="true" data-1p-ignore data-form-type="other">
     </div>
 
     <!-- Adresse -->
     <div class="form-group mb-16">
       <label class="form-label" for="lp-clientAddress">Adresse</label>
       <input id="lp-clientAddress" class="form-control" type="text"
-             placeholder="Adresse de livraison / site" autocomplete="street-address">
+             placeholder="Adresse de livraison / site"
+             autocomplete="off" autocorrect="off" autocapitalize="off"
+             spellcheck="false"
+             data-lpignore="true" data-1p-ignore data-form-type="other">
     </div>
 
     <!-- Checkboxes type demande -->
@@ -364,7 +415,10 @@
           Type machine <span aria-hidden="true">*</span>
         </label>
         <input id="lp-machineType" class="form-control" type="text"
-               placeholder="ex : R535">
+               placeholder="ex : R535"
+               autocomplete="off" autocorrect="off" autocapitalize="off"
+               spellcheck="false"
+               data-lpignore="true" data-1p-ignore data-form-type="other">
       </div>
 
       <!-- Numéro machine -->
@@ -373,14 +427,20 @@
           Numéro machine <span aria-hidden="true">*</span>
         </label>
         <input id="lp-machineNumber" class="form-control" type="text"
-               placeholder="Numéro de série">
+               placeholder="Numéro de série"
+               autocomplete="off" autocorrect="off" autocapitalize="off"
+               spellcheck="false"
+               data-lpignore="true" data-1p-ignore data-form-type="other">
       </div>
 
       <!-- Année -->
       <div class="form-group mb-16">
         <label class="form-label" for="lp-machineYear">Année</label>
         <input id="lp-machineYear" class="form-control" type="text"
-               placeholder="ex : 2019" inputmode="numeric" maxlength="4">
+               placeholder="ex : 2019" inputmode="numeric" maxlength="4"
+               autocomplete="off" autocorrect="off" autocapitalize="off"
+               spellcheck="false"
+               data-lpignore="true" data-1p-ignore data-form-type="other">
       </div>
 
       <!-- Date intervention -->
@@ -388,21 +448,27 @@
         <label class="form-label" for="lp-machineDate">
           Date intervention <span aria-hidden="true">*</span>
         </label>
-        <input id="lp-machineDate" class="form-control" type="date">
+        <input id="lp-machineDate" class="form-control" type="date" autocomplete="off">
       </div>
 
       <!-- Nom technicien -->
       <div class="form-group mb-16">
         <label class="form-label" for="lp-techLastName">Nom technicien</label>
         <input id="lp-techLastName" class="form-control" type="text"
-               placeholder="Nom" autocomplete="family-name">
+               placeholder="Nom"
+               autocomplete="off" autocorrect="off" autocapitalize="off"
+               spellcheck="false"
+               data-lpignore="true" data-1p-ignore data-form-type="other">
       </div>
 
       <!-- Prénom technicien -->
       <div class="form-group mb-16">
         <label class="form-label" for="lp-techFirstName">Prénom technicien</label>
         <input id="lp-techFirstName" class="form-control" type="text"
-               placeholder="Prénom" autocomplete="given-name">
+               placeholder="Prénom"
+               autocomplete="off" autocorrect="off" autocapitalize="off"
+               spellcheck="false"
+               data-lpignore="true" data-1p-ignore data-form-type="other">
       </div>
     </div>
 
@@ -413,7 +479,10 @@
       </label>
       <input id="lp-shortDesc" class="form-control" type="text"
              placeholder="Description de l'intervention (max 120 caractères)"
-             maxlength="120">
+             maxlength="120"
+             autocomplete="off" autocorrect="off" autocapitalize="off"
+             spellcheck="false"
+             data-lpignore="true" data-1p-ignore data-form-type="other">
       <p class="lp-char-count" id="lp-shortDescCount">0 / 120</p>
     </div>
 
@@ -458,6 +527,43 @@
     </div>
     <p class="text-muted mt-8" id="lp-partsHint" style="font-size:var(--font-size-sm);">
       Au moins une ligne est requise pour l'export.
+    </p>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION 4 — DESTINATAIRE (envoi par mail)
+     ============================================================ -->
+<div class="card mb-24">
+  <div class="card-header">
+    <h3 class="card-title">Destinataire (envoi par mail)</h3>
+  </div>
+  <div class="card-body">
+    <div class="form-group mb-16">
+      <label class="form-label" for="lp-mailTo">À</label>
+      <input id="lp-mailTo" class="form-control" type="email"
+             placeholder="Sélectionner un contact ci-dessous ou saisir une adresse"
+             autocomplete="off" autocorrect="off" autocapitalize="off"
+             spellcheck="false"
+             data-lpignore="true" data-1p-ignore data-form-type="other">
+    </div>
+
+    <!-- Emails fréquents depuis le paramétrage (même base que les autres plugins) -->
+    <div id="lp-emails-frequents-wrap" style="display:none;">
+      <p class="form-label">Emails fréquents (cliquer pour renseigner le destinataire) :</p>
+      <div class="lp-emails-frequents" id="lp-emails-frequents-liste">
+        <!-- Alimenté dynamiquement depuis Parametrage.get('emails_frequents') -->
+      </div>
+    </div>
+
+    <p class="text-muted mt-8" style="font-size:var(--font-size-sm);">
+      « Envoyer par mail » ouvre, sur mobile/tablette, la feuille de partage du système avec le
+      fichier Excel déjà joint : choisissez Outlook / Mail (le destinataire n'est alors pas
+      pré-rempli, à sélectionner dans votre messagerie). Si le partage de fichier n'est pas
+      disponible (PC, navigateur ancien), un fichier <strong>.eml</strong> est téléchargé à la
+      place (à ouvrir dans Outlook) avec le fichier Excel en PJ <em>et le destinataire renseigné</em>.
+      L'objet reprend le nom du fichier Excel.
+      <br>Configurez vos emails fréquents dans le module <strong>Paramétrage</strong>.
     </p>
   </div>
 </div>
@@ -743,12 +849,18 @@
      ---------------------------------------------------------- */
   function createRowEl(data) {
     var tr = document.createElement("tr");
+    /* Anti-autofill : Chrome/Brave + gestionnaires de mots de passe injectaient
+       l'email de l'utilisateur dans ces cellules (notamment « Repère »). On
+       neutralise l'autocomplétion sur chaque champ du tableau. */
+    var antiAutofill =
+      " autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\"" +
+      " spellcheck=\"false\" data-lpignore=\"true\" data-1p-ignore data-form-type=\"other\"";
     tr.innerHTML =
-      "<td class=\"lp-col-desig\"><input type=\"text\" class=\"lp-inp-desig\" placeholder=\"Désignation\" aria-label=\"Désignation\"></td>" +
-      "<td class=\"lp-col-ref\"><input type=\"text\" class=\"lp-inp-ref\" placeholder=\"Référence\" aria-label=\"Référence\"></td>" +
-      "<td class=\"lp-col-qty\"><input type=\"number\" class=\"lp-inp-qty\" placeholder=\"1\" min=\"0\" step=\"1\" inputmode=\"numeric\" aria-label=\"Quantité\" style=\"max-width:60px;\"></td>" +
-      "<td class=\"lp-col-plan\"><input type=\"text\" class=\"lp-inp-plan\" placeholder=\"N° Plan\" aria-label=\"N° Plan\"></td>" +
-      "<td class=\"lp-col-repere\"><input type=\"text\" class=\"lp-inp-repere\" placeholder=\"Repère\" aria-label=\"Repère\"></td>" +
+      "<td class=\"lp-col-desig\"><input type=\"text\" class=\"lp-inp-desig\" placeholder=\"Désignation\" aria-label=\"Désignation\"" + antiAutofill + "></td>" +
+      "<td class=\"lp-col-ref\"><input type=\"text\" class=\"lp-inp-ref\" placeholder=\"Référence\" aria-label=\"Référence\"" + antiAutofill + "></td>" +
+      "<td class=\"lp-col-qty\"><input type=\"number\" class=\"lp-inp-qty\" placeholder=\"1\" min=\"0\" step=\"1\" inputmode=\"numeric\" aria-label=\"Quantité\"" + antiAutofill + " style=\"max-width:60px;\"></td>" +
+      "<td class=\"lp-col-plan\"><input type=\"text\" class=\"lp-inp-plan\" placeholder=\"N° Plan\" aria-label=\"N° Plan\"" + antiAutofill + "></td>" +
+      "<td class=\"lp-col-repere\"><input type=\"text\" class=\"lp-inp-repere\" placeholder=\"Repère\" aria-label=\"Repère\"" + antiAutofill + "></td>" +
       "<td class=\"lp-col-del\">" +
         "<button type=\"button\" class=\"lp-btn-del\" title=\"Supprimer la ligne\" aria-label=\"Supprimer la ligne\">" +
           "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\">" +
@@ -903,21 +1015,11 @@
      Préserve fusions, polices, bordures, couleurs, hauteurs de lignes.
      On charge le template, on écrit les valeurs, on re-sérialise.
      ---------------------------------------------------------- */
-  function exportToExcel() {
-    var errors = validateForm();
-    if (errors.length > 0) {
-      showToast(errors[0], true);
-      var first = document.querySelector(".lp-invalid");
-      if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
-
-    var data = collectFormData();
-    var btnExport = document.getElementById("lp-btnExport");
-    btnExport.disabled = true;
-    btnExport.textContent = "Export en cours…";
-
-    chargerTemplate()
+  /* Construit le classeur XLSX (template préservé) et renvoie une Promise
+     résolue avec le buffer ArrayBuffer. Réutilisé par l'export « Enregistrer
+     sous » ET par l'envoi par mail (pièce jointe). */
+  function buildXlsxBuffer(data) {
+    return chargerTemplate()
       .then(function (buf) {
         var wb = new ExcelJS.Workbook();
         return wb.xlsx.load(buf.slice(0)).then(function () { return wb; });
@@ -969,7 +1071,33 @@
         }
 
         return wb.xlsx.writeBuffer();
-      })
+      });
+  }
+
+  /* Restaure le libellé/icône du bouton « Enregistrer sous ». */
+  function restoreExportBtn(btnExport) {
+    btnExport.disabled = false;
+    btnExport.innerHTML =
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" stroke-width=\"2\" style=\"vertical-align:middle;margin-right:6px;\" aria-hidden=\"true\">" +
+        "<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4\"/>" +
+      "</svg>Enregistrer sous";
+  }
+
+  function exportToExcel() {
+    var errors = validateForm();
+    if (errors.length > 0) {
+      showToast(errors[0], true);
+      var first = document.querySelector(".lp-invalid");
+      if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
+    var data = collectFormData();
+    var btnExport = document.getElementById("lp-btnExport");
+    btnExport.disabled = true;
+    btnExport.textContent = "Enregistrement…";
+
+    buildXlsxBuffer(data)
       .then(function (buffer) {
         var filename = buildExportFilename(data);
         var blob = new Blob([buffer], {
@@ -984,22 +1112,225 @@
         document.body.removeChild(a);
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
 
-        showToast("Export réussi : " + filename);
+        showToast("Fichier enregistré : " + filename);
       })
       .catch(function (err) {
         console.error("[LP] Erreur export ExcelJS :", err);
         showToast("Erreur export. Vérifiez le fichier template.", true);
       })
       .finally(function () {
-        btnExport.disabled = false;
-        btnExport.innerHTML =
-          "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" stroke-width=\"2\" style=\"vertical-align:middle;margin-right:6px;\" aria-hidden=\"true\">" +
-            "<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4\"/>" +
-          "</svg>Exporter Excel";
+        restoreExportBtn(btnExport);
       });
   }
 
   document.getElementById("lp-btnExport").addEventListener("click", exportToExcel);
+
+  /* ----------------------------------------------------------
+     Envoi par mail avec PJ XLSX.
+
+     Stratégie : on tente d'abord l'API Web Share (navigator.share avec un
+     fichier) qui, sur mobile/tablette en HTTPS, ouvre la feuille de partage du
+     système avec le classeur Excel déjà joint. Si Web Share n'est pas
+     disponible (PC Windows, Firefox desktop, navigateurs anciens) ou échoue
+     (hors annulation utilisateur), on bascule sur le mécanisme .eml EXISTANT,
+     conservé tel quel dans envoyerEmlFallback() — c'est la seule voie qui
+     pré-remplit le destinataire (À), l'API Web Share ne transportant pas de
+     « To ».
+       • Destinataire (À) : champ lp-mailTo, alimenté par les chips
+         « Emails fréquents » (Parametrage.get('emails_frequents')) ou saisi
+         manuellement. Utilisé uniquement par le repli .eml.
+       • Objet du mail    : identique au nom du fichier Excel (buildExportFilename).
+       • Pièce jointe     : le fichier Excel généré par le plugin.
+     ---------------------------------------------------------- */
+  function bufferToBase64(buffer) {
+    var uint8 = new Uint8Array(buffer);
+    var binary = "";
+    /* Conversion par blocs (compatible Safari iOS) */
+    var chunkSize = 8192;
+    for (var offset = 0; offset < uint8.length; offset += chunkSize) {
+      var chunk = uint8.subarray(offset, offset + chunkSize);
+      binary += String.fromCharCode.apply(null, chunk);
+    }
+    return btoa(binary);
+  }
+
+  /* Helper Web Share → repli .eml. Tente le partage du fichier ; en cas
+     d'annulation utilisateur (AbortError) ne fait RIEN ; sinon, ou si Web Share
+     est indisponible, exécute le repli .eml fourni. */
+  function partagerOuEml(file, sujet, corps, fallbackEml) {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: sujet, text: corps })
+        .catch(function (e) {
+          /* Annulation par l'utilisateur → ne pas déclencher le repli. */
+          if (e && e.name === "AbortError") return;
+          /* Autre erreur (cible refusée, partage de fichier non géré…) → repli .eml. */
+          fallbackEml();
+        });
+    } else {
+      /* Web Share fichier indisponible → repli .eml sans erreur visible. */
+      fallbackEml();
+    }
+  }
+
+  /* Repli .eml — mécanisme historique conservé à l'identique : construit un
+     fichier .eml multipart/mixed (X-Unsent) avec le classeur Excel en PJ et le
+     télécharge. Pré-remplit le destinataire (À) et l'objet. */
+  function envoyerEmlFallback(buffer, to, sujet, corps, filename) {
+    var b64 = bufferToBase64(buffer);
+
+    var boundary = "MUF_LP_" + Date.now();
+    var dateGMT  = new Date().toUTCString();
+
+    var eml  = "From: \r\n";
+    eml += "To: " + to + "\r\n";
+    eml += "Subject: " + sujet + "\r\n";
+    eml += "Date: " + dateGMT + "\r\n";
+    eml += "MIME-Version: 1.0\r\n";
+    eml += "Content-Type: multipart/mixed; boundary=\"" + boundary + "\"\r\n";
+    eml += "X-Unsent: 1\r\n";
+    eml += "\r\n";
+
+    /* Partie 1 : corps texte */
+    eml += "--" + boundary + "\r\n";
+    eml += "Content-Type: text/plain; charset=utf-8\r\n";
+    eml += "Content-Transfer-Encoding: 8bit\r\n";
+    eml += "\r\n";
+    eml += corps + "\r\n\r\n";
+
+    /* Partie 2 : pièce jointe XLSX */
+    eml += "--" + boundary + "\r\n";
+    eml += "Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; name=\"" + filename + "\"\r\n";
+    eml += "Content-Disposition: attachment; filename=\"" + filename + "\"\r\n";
+    eml += "Content-Transfer-Encoding: base64\r\n";
+    eml += "\r\n";
+    eml += b64.match(/.{1,76}/g).join("\r\n");
+    eml += "\r\n";
+    eml += "--" + boundary + "--\r\n";
+
+    var blob = new Blob([eml], { type: "application/octet-stream" });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement("a");
+    a.href     = url;
+    a.download = sujet + ".eml";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 1000);
+
+    showToast("Brouillon Outlook (.eml) généré.");
+  }
+
+  function sendByMail() {
+    var errors = validateForm();
+    if (errors.length > 0) {
+      showToast(errors[0], true);
+      var first = document.querySelector(".lp-invalid");
+      if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
+    var mailToEl = document.getElementById("lp-mailTo");
+    var to = mailToEl ? mailToEl.value.trim() : "";
+
+    var data     = collectFormData();
+    var filename = buildExportFilename(data);
+    /* Objet du mail = nom du fichier Excel (sans l'extension .xlsx). */
+    var sujet    = filename.replace(/\.xlsx$/i, "");
+
+    var btnMail = document.getElementById("lp-btnMail");
+    btnMail.disabled = true;
+    var btnMailHTML = btnMail.innerHTML;
+    btnMail.textContent = "Préparation…";
+
+    buildXlsxBuffer(data)
+      .then(function (buffer) {
+        var corps =
+          "Bonjour,\r\n\r\n" +
+          "Veuillez trouver ci-joint la liste de pièces pour :\r\n" +
+          "  Client  : " + data.client.name + "\r\n" +
+          "  Machine : " + (data.machine.type + " " + data.machine.number).trim() + "\r\n" +
+          "  Date    : " + formatDate_DDMMYYYY(data.machine.date || todayISO()) + "\r\n\r\n" +
+          "Cordialement,\r\n" +
+          [data.tech.firstName, data.tech.lastName].filter(Boolean).join(" ");
+
+        /* Repli .eml encapsulé : pré-remplit destinataire (À) et objet. */
+        var fallbackEml = function () {
+          envoyerEmlFallback(buffer, to, sujet, corps, filename);
+        };
+
+        /* Construire le File XLSX pour Web Share, puis tenter le partage. */
+        var xlsxFile = new File([buffer], filename, {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+        partagerOuEml(xlsxFile, sujet, corps, fallbackEml);
+      })
+      .catch(function (err) {
+        console.error("[LP] Erreur préparation du mail :", err);
+        showToast("Erreur lors de la préparation du mail.", true);
+      })
+      .finally(function () {
+        btnMail.disabled = false;
+        btnMail.innerHTML = btnMailHTML;
+      });
+  }
+
+  document.getElementById("lp-btnMail").addEventListener("click", sendByMail);
+
+  /* ----------------------------------------------------------
+     Chips « Emails fréquents » pour le destinataire de l'envoi par mail.
+     Même base que les autres plugins : Parametrage.get('emails_frequents')
+     (tableau de { label, adresse } ou de simples chaînes).
+     ---------------------------------------------------------- */
+  function prefillEmailsFrequents() {
+    var wrap  = document.getElementById("lp-emails-frequents-wrap");
+    var liste = document.getElementById("lp-emails-frequents-liste");
+    var toEl  = document.getElementById("lp-mailTo");
+    if (!wrap || !liste || !toEl) return;
+
+    var emailsFreq = window.Parametrage ? window.Parametrage.get("emails_frequents") : null;
+    if (!Array.isArray(emailsFreq) || emailsFreq.length === 0) return;
+
+    wrap.style.display = "";
+    liste.innerHTML = "";
+
+    emailsFreq.forEach(function (entree) {
+      var label   = typeof entree === "string" ? entree : (entree.label   || entree.adresse || "");
+      var adresse = typeof entree === "string" ? entree : (entree.adresse || entree.label   || "");
+      if (!adresse) return;
+
+      var chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "lp-email-chip";
+      chip.textContent = label;
+      chip.title = adresse;
+      chip.setAttribute("aria-label", "Sélectionner le destinataire : " + adresse);
+
+      chip.addEventListener("click", function () {
+        var dejaActif = chip.classList.contains("lp-chip-actif");
+        liste.querySelectorAll(".lp-email-chip").forEach(function (c) {
+          c.classList.remove("lp-chip-actif");
+        });
+        if (!dejaActif) {
+          chip.classList.add("lp-chip-actif");
+          toEl.value = adresse;
+        } else {
+          toEl.value = "";
+        }
+      });
+
+      liste.appendChild(chip);
+    });
+
+    /* Saisie manuelle dans le champ → désélectionne les chips. */
+    toEl.addEventListener("input", function () {
+      liste.querySelectorAll(".lp-email-chip").forEach(function (c) {
+        c.classList.remove("lp-chip-actif");
+      });
+    });
+  }
 
   /* ----------------------------------------------------------
      Import Excel
@@ -1354,6 +1685,9 @@
 
     /* 2. Pré-remplir technicien (Parametrage puis repli Auth, si vide) */
     prefillTechnicien();
+
+    /* 2bis. Chips emails fréquents (destinataire de l'envoi par mail) */
+    prefillEmailsFrequents();
 
     /* 3. Mettre à jour le compteur */
     updateShortDescCounter();

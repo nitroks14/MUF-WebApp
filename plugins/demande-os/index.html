@@ -129,6 +129,84 @@
     border-color: var(--color-primary);
     color: var(--color-white);
   }
+
+  /* ---- Calendrier maison (sélection multi-dates) ---- */
+  .dos-cal {
+    margin-top: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 12px;
+    background: var(--color-white, #fff);
+    max-width: 320px;
+  }
+  .dos-cal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .dos-cal-title {
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    color: var(--color-text);
+    text-transform: capitalize;
+  }
+  .dos-cal-nav {
+    background: none;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    color: var(--color-text);
+    font-size: 16px;
+    line-height: 1;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .dos-cal-nav:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .dos-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+  .dos-cal-dow {
+    text-align: center;
+    font-size: 11px;
+    color: var(--color-text-muted);
+    font-weight: 600;
+    padding: 4px 0;
+  }
+  .dos-cal-day {
+    aspect-ratio: 1 / 1;
+    min-height: 34px;
+    border: none;
+    background: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .dos-cal-day:hover { background: var(--color-bg); }
+  .dos-cal-day.dos-cal-empty { cursor: default; }
+  .dos-cal-day.dos-cal-empty:hover { background: none; }
+  .dos-cal-day.dos-cal-selected {
+    background: var(--color-primary);
+    color: var(--color-white, #fff);
+    font-weight: 600;
+  }
+  .dos-cal-day.dos-cal-today {
+    box-shadow: inset 0 0 0 1px var(--color-primary);
+  }
+  .dos-cal-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
 </style>
 
 <!-- ============================================================
@@ -173,7 +251,11 @@
     <div class="form-group">
       <label class="form-label" for="dos-machine">Type et N° de la machine <span aria-hidden="true">*</span></label>
       <input class="form-control" id="dos-machine" type="text"
-             placeholder="Ex. R230 924" autocomplete="off" required>
+             placeholder="Ex. R230 924"
+             autocomplete="off" autocorrect="off" autocapitalize="off"
+             spellcheck="false"
+             data-lpignore="true" data-1p-ignore data-form-type="other"
+             required>
     </div>
   </div>
 
@@ -199,7 +281,10 @@
     <div class="form-group dos-hidden" id="dos-motif-autre-bloc">
       <label class="form-label" for="dos-motif-prec">Préciser le motif</label>
       <input class="form-control" id="dos-motif-prec" type="text"
-             placeholder="Décrire le motif exact">
+             placeholder="Décrire le motif exact"
+             autocomplete="off" autocorrect="off" autocapitalize="off"
+             spellcheck="false"
+             data-lpignore="true" data-1p-ignore data-form-type="other">
     </div>
   </div>
 
@@ -211,7 +296,10 @@
         <small class="text-muted">(obligatoire pour FAT / Pré-installation / Installation / Retravailler)</small>
       </label>
       <input class="form-control" id="dos-pnsd" type="text"
-             placeholder="Ex. PN123456 ou SD7890">
+             placeholder="Ex. PN123456 ou SD7890"
+             autocomplete="off" autocorrect="off" autocapitalize="off"
+             spellcheck="false"
+             data-lpignore="true" data-1p-ignore data-form-type="other">
     </div>
   </div>
 
@@ -248,12 +336,18 @@
         <div class="form-group">
           <label class="form-label" for="dos-tech1">Nom du technicien 1</label>
           <input class="form-control" id="dos-tech1" type="text"
-                 placeholder="Prénom Nom">
+                 placeholder="Prénom Nom"
+                 autocomplete="off" autocorrect="off" autocapitalize="off"
+                 spellcheck="false"
+                 data-lpignore="true" data-1p-ignore data-form-type="other">
         </div>
         <div class="form-group">
           <label class="form-label" for="dos-tech2">Nom du technicien 2</label>
           <input class="form-control" id="dos-tech2" type="text"
-                 placeholder="Prénom Nom">
+                 placeholder="Prénom Nom"
+                 autocomplete="off" autocorrect="off" autocapitalize="off"
+                 spellcheck="false"
+                 data-lpignore="true" data-1p-ignore data-form-type="other">
         </div>
       </div>
       <p class="dos-note">
@@ -284,13 +378,37 @@
   <div class="dos-section dos-grid">
     <div class="form-group">
       <label class="form-label" for="dos-dates">Date(s) de l'intervention <span aria-hidden="true">*</span></label>
-      <input class="form-control" id="dos-dates" type="text"
-             placeholder="Ex. 16/09/2025 ou 16/09 et 17/09/2025">
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input class="form-control" id="dos-dates" type="text"
+               placeholder="Ex. 16/09/2025 ou 16/09 et 17/09/2025"
+               autocomplete="off" autocorrect="off" autocapitalize="off"
+               spellcheck="false"
+               data-lpignore="true" data-1p-ignore data-form-type="other"
+               style="flex:1;">
+        <button class="btn btn-outline btn-sm" id="dos-cal-toggle" type="button"
+                title="Choisir les dates au calendrier"
+                aria-expanded="false" style="white-space:nowrap; padding:8px 12px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+               viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+        </button>
+      </div>
+      <!-- Calendrier maison (vanilla, sans dépendance) — sélection multiple :
+           plages continues ET jours isolés. Synchronise le champ texte. -->
+      <div class="dos-cal dos-hidden" id="dos-cal" role="dialog" aria-label="Sélection des dates"></div>
+      <p class="dos-note" id="dos-cal-hint" style="display:none;">
+        Cliquez un jour pour l'ajouter/retirer. Le champ texte reste modifiable à la main.
+      </p>
     </div>
     <div class="form-group">
       <label class="form-label" for="dos-contact">Contact chez le client <span aria-hidden="true">*</span></label>
       <input class="form-control" id="dos-contact" type="text"
-             placeholder="Prénom Nom">
+             placeholder="Prénom Nom"
+             autocomplete="off" autocorrect="off" autocapitalize="off"
+             spellcheck="false"
+             data-lpignore="true" data-1p-ignore data-form-type="other">
     </div>
   </div>
 
@@ -299,6 +417,9 @@
     <label class="form-label" for="dos-objectif">Objectif de l'intervention <span aria-hidden="true">*</span></label>
     <textarea class="form-control" id="dos-objectif"
               placeholder="Décrire l'objectif de l'intervention…"
+              autocomplete="off" autocorrect="off" autocapitalize="off"
+              spellcheck="false"
+              data-lpignore="true" data-1p-ignore data-form-type="other"
               rows="3"></textarea>
   </div>
 
@@ -310,16 +431,22 @@
 
     <!-- Email principal (À :) — depuis Parametrage -->
     <div class="form-group">
-      <label class="form-label" for="dos-email-to">À (email de maintenance) <span aria-hidden="true">*</span></label>
+      <label class="form-label" for="dos-email-to">À (back-office service) <span aria-hidden="true">*</span></label>
       <input class="form-control" id="dos-email-to" type="email"
-             placeholder="email-maintenance@votre-domaine.fr">
+             placeholder="email-maintenance@votre-domaine.fr"
+             autocomplete="off" autocorrect="off" autocapitalize="off"
+             spellcheck="false"
+             data-lpignore="true" data-1p-ignore data-form-type="other">
     </div>
 
     <!-- CC — depuis Parametrage ou emails_frequents -->
     <div class="form-group">
       <label class="form-label" for="dos-email-cc">CC (optionnel)</label>
       <input class="form-control" id="dos-email-cc" type="email"
-             placeholder="adresse-en-copie@votre-domaine.fr">
+             placeholder="adresse-en-copie@votre-domaine.fr"
+             autocomplete="off" autocorrect="off" autocapitalize="off"
+             spellcheck="false"
+             data-lpignore="true" data-1p-ignore data-form-type="other">
     </div>
 
     <!-- Emails fréquents depuis le paramétrage -->
@@ -882,6 +1009,205 @@
   domBtnReset.addEventListener('click', function () {
     retirerChoixMachine();
     preremplirTechnicien();
+  });
+
+  /* ----------------------------------------------------------
+     Calendrier maison (sélection multi-dates) — vanilla, sans dépendance.
+     - Sélection de plages continues ET de jours isolés non consécutifs.
+     - Le calendrier alimente le champ texte « dos-dates » au format court
+       (ex. « 16/09 et 17/09/2025 », plages « 16/09 au 18/09/2025 »).
+     - La saisie manuelle reste possible : le champ texte est toujours éditable ;
+       le calendrier ne fait qu'écrire dedans à chaque sélection.
+     ---------------------------------------------------------- */
+  var domCalToggle = el('dos-cal-toggle');
+  var domCal       = el('dos-cal');
+  var domCalHint   = el('dos-cal-hint');
+
+  /* Ensemble des dates sélectionnées (clés ISO « YYYY-MM-DD »). */
+  var calSelection = {};
+  /* Mois actuellement affiché (1er du mois). */
+  var calView = (function () { var d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })();
+
+  var CAL_MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+                  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  var CAL_DOW  = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+
+  function isoDe(annee, mois, jour) {
+    return annee + '-' + String(mois + 1).padStart(2, '0') + '-' + String(jour).padStart(2, '0');
+  }
+
+  function isoAujourdhui() {
+    var d = new Date();
+    return isoDe(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  /* Construit la chaîne compacte à partir des dates sélectionnées triées.
+     Regroupe les jours consécutifs en plages « JJ/MM au JJ/MM/AAAA » et les
+     jours isolés en « JJ/MM ». L'année n'est répétée qu'une fois par segment,
+     en fin de segment, comme dans le placeholder existant. */
+  function formaterSelection() {
+    var clefs = Object.keys(calSelection).sort();
+    if (clefs.length === 0) return '';
+
+    /* Transforme chaque clé ISO en objet date utilitaire. */
+    var jours = clefs.map(function (iso) {
+      var p = iso.split('-');
+      return { iso: iso, a: +p[0], m: +p[1], j: +p[2], ts: Date.UTC(+p[0], +p[1] - 1, +p[2]) };
+    });
+
+    /* Regroupe en segments de jours consécutifs (différence de 1 jour). */
+    var segments = [];
+    var courant = [jours[0]];
+    for (var i = 1; i < jours.length; i++) {
+      var diff = (jours[i].ts - jours[i - 1].ts) / 86400000;
+      if (diff === 1) {
+        courant.push(jours[i]);
+      } else {
+        segments.push(courant);
+        courant = [jours[i]];
+      }
+    }
+    segments.push(courant);
+
+    function jjmm(d)   { return String(d.j).padStart(2, '0') + '/' + String(d.m).padStart(2, '0'); }
+    function jjmmaa(d) { return jjmm(d) + '/' + d.a; }
+
+    var parts = segments.map(function (seg) {
+      if (seg.length === 1) {
+        return jjmmaa(seg[0]);
+      }
+      /* Plage continue : « début au fin/AAAA ». */
+      return jjmm(seg[0]) + ' au ' + jjmmaa(seg[seg.length - 1]);
+    });
+
+    return parts.join(' et ');
+  }
+
+  function majChampDepuisCalendrier() {
+    if (domDates) {
+      domDates.value = formaterSelection();
+    }
+  }
+
+  function rendreCalendrier() {
+    if (!domCal) return;
+    domCal.innerHTML = '';
+
+    var annee = calView.getFullYear();
+    var mois  = calView.getMonth();
+
+    /* En-tête : navigation + titre mois. */
+    var head = document.createElement('div');
+    head.className = 'dos-cal-head';
+
+    var prev = document.createElement('button');
+    prev.type = 'button';
+    prev.className = 'dos-cal-nav';
+    prev.setAttribute('aria-label', 'Mois précédent');
+    prev.textContent = '‹';
+    prev.addEventListener('click', function () {
+      calView = new Date(annee, mois - 1, 1);
+      rendreCalendrier();
+    });
+
+    var titre = document.createElement('div');
+    titre.className = 'dos-cal-title';
+    titre.textContent = CAL_MOIS[mois] + ' ' + annee;
+
+    var next = document.createElement('button');
+    next.type = 'button';
+    next.className = 'dos-cal-nav';
+    next.setAttribute('aria-label', 'Mois suivant');
+    next.textContent = '›';
+    next.addEventListener('click', function () {
+      calView = new Date(annee, mois + 1, 1);
+      rendreCalendrier();
+    });
+
+    head.appendChild(prev);
+    head.appendChild(titre);
+    head.appendChild(next);
+    domCal.appendChild(head);
+
+    /* Grille. */
+    var grid = document.createElement('div');
+    grid.className = 'dos-cal-grid';
+
+    CAL_DOW.forEach(function (lbl) {
+      var d = document.createElement('div');
+      d.className = 'dos-cal-dow';
+      d.textContent = lbl;
+      grid.appendChild(d);
+    });
+
+    /* Décalage : getDay() renvoie 0=dimanche → on veut lundi en 1re colonne. */
+    var premierJour = new Date(annee, mois, 1).getDay();
+    var offset = (premierJour === 0) ? 6 : premierJour - 1;
+    var nbJours = new Date(annee, mois + 1, 0).getDate();
+    var iso0 = isoAujourdhui();
+
+    for (var v = 0; v < offset; v++) {
+      var vide = document.createElement('div');
+      vide.className = 'dos-cal-day dos-cal-empty';
+      grid.appendChild(vide);
+    }
+
+    for (var jour = 1; jour <= nbJours; jour++) {
+      var iso = isoDe(annee, mois, jour);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'dos-cal-day';
+      if (calSelection[iso]) btn.classList.add('dos-cal-selected');
+      if (iso === iso0)      btn.classList.add('dos-cal-today');
+      btn.textContent = jour;
+      btn.setAttribute('data-iso', iso);
+      btn.addEventListener('click', function () {
+        var k = this.getAttribute('data-iso');
+        if (calSelection[k]) { delete calSelection[k]; }
+        else                 { calSelection[k] = true; }
+        majChampDepuisCalendrier();
+        rendreCalendrier();
+        domDates.classList.remove('dos-invalid');
+      });
+      grid.appendChild(btn);
+    }
+
+    domCal.appendChild(grid);
+
+    /* Action : effacer la sélection du calendrier. */
+    var actions = document.createElement('div');
+    actions.className = 'dos-cal-actions';
+    var clear = document.createElement('button');
+    clear.type = 'button';
+    clear.className = 'btn btn-outline btn-sm';
+    clear.textContent = 'Effacer';
+    clear.addEventListener('click', function () {
+      calSelection = {};
+      majChampDepuisCalendrier();
+      rendreCalendrier();
+    });
+    actions.appendChild(clear);
+    domCal.appendChild(actions);
+  }
+
+  function basculerCalendrier(forcerOuvert) {
+    if (!domCal) return;
+    var ouvert = !domCal.classList.contains('dos-hidden');
+    var doitOuvrir = (typeof forcerOuvert === 'boolean') ? forcerOuvert : !ouvert;
+    domCal.classList.toggle('dos-hidden', !doitOuvrir);
+    if (domCalHint) domCalHint.style.display = doitOuvrir ? '' : 'none';
+    if (domCalToggle) domCalToggle.setAttribute('aria-expanded', doitOuvrir ? 'true' : 'false');
+    if (doitOuvrir) rendreCalendrier();
+  }
+
+  if (domCalToggle) {
+    domCalToggle.addEventListener('click', function () { basculerCalendrier(); });
+  }
+
+  /* Reset : vider aussi la sélection du calendrier et le refermer. */
+  domBtnReset.addEventListener('click', function () {
+    calSelection = {};
+    basculerCalendrier(false);
   });
 
   /* ----------------------------------------------------------
