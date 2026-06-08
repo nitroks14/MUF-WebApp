@@ -205,6 +205,7 @@
   .dos-cal-actions {
     display: flex;
     justify-content: flex-end;
+    gap: 8px;
     margin-top: 8px;
   }
 </style>
@@ -1002,6 +1003,14 @@
       try { clController.destroy(); } catch (e) { /* no-op */ }
     }
     clController = null;
+    /* Détache les listeners document du calendrier (clic-dehors + Échap) pour
+       éviter leur accumulation si le plugin est remonté par le chargeur d'app. */
+    if (typeof onDocClickFermerCal === 'function') {
+      try { document.removeEventListener('click', onDocClickFermerCal, true); } catch (e) { /* no-op */ }
+    }
+    if (typeof onDocKeydownFermerCal === 'function') {
+      try { document.removeEventListener('keydown', onDocKeydownFermerCal); } catch (e) { /* no-op */ }
+    }
   };
 
   /* Réinitialisation : en plus du reset de base (déjà branché plus haut), on
@@ -1187,6 +1196,19 @@
       rendreCalendrier();
     });
     actions.appendChild(clear);
+
+    /* Confirmer : referme le calendrier en CONSERVANT la sélection.
+       Réutilise basculerCalendrier(false) — ne touche ni à calSelection ni
+       au champ texte, ne déclenche aucune validation ni soumission. */
+    var confirmer = document.createElement('button');
+    confirmer.type = 'button';
+    confirmer.className = 'btn btn-primary btn-sm';
+    confirmer.textContent = 'Confirmer';
+    confirmer.addEventListener('click', function () {
+      basculerCalendrier(false);
+    });
+    actions.appendChild(confirmer);
+
     domCal.appendChild(actions);
   }
 
@@ -1203,6 +1225,45 @@
   if (domCalToggle) {
     domCalToggle.addEventListener('click', function () { basculerCalendrier(); });
   }
+
+  /* ----------------------------------------------------------
+     Fermetures additionnelles du calendrier (sélection conservée) :
+       1) clic en dehors du calendrier,
+       2) touche Échap.
+     Réutilisent basculerCalendrier(false) : ne touchent ni à calSelection,
+     ni au champ texte « dos-dates », et ne déclenchent aucune validation.
+
+     Anti-accumulation : ces handlers sont nommés, attachés UNE seule fois ici
+     (hors de rendreCalendrier, qui re-crée le DOM à chaque interaction) et
+     retirés par window.__dosCleanup au remontage du plugin par le chargeur.
+     ---------------------------------------------------------- */
+  function calOuvert() {
+    return !!domCal && !domCal.classList.contains('dos-hidden');
+  }
+
+  function onDocClickFermerCal(e) {
+    /* Ne rien faire si le calendrier est déjà fermé. */
+    if (!calOuvert()) return;
+    var cible = e.target;
+    /* Ignorer les clics DANS le calendrier (jours, navigation, boutons) ET sur
+       le bouton icône d'ouverture — sinon : ré-ouverture/fermeture en boucle du
+       toggle, ou fermeture intempestive sur un clic interne. */
+    if (domCal && domCal.contains(cible)) return;
+    if (domCalToggle && domCalToggle.contains(cible)) return;
+    basculerCalendrier(false);
+  }
+
+  function onDocKeydownFermerCal(e) {
+    if (e.key !== 'Escape') return;
+    if (!calOuvert()) return;
+    basculerCalendrier(false);
+  }
+
+  /* Clic en phase de capture : on observe le clic avant que le re-rendu du
+     calendrier ne remplace le noeud cliqué, ce qui rendrait contains() faux
+     à tort (le bouton jour vient d'être détaché du DOM par rendreCalendrier). */
+  document.addEventListener('click', onDocClickFermerCal, true);
+  document.addEventListener('keydown', onDocKeydownFermerCal);
 
   /* Reset : vider aussi la sélection du calendrier et le refermer. */
   domBtnReset.addEventListener('click', function () {
