@@ -11,6 +11,26 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v75
+
+- **Nettoyage de dette technique** sur la navigation repliable (suite des commits
+  `47566d7` + `f4651f8`). **Aucun changement de comportement** (refactor / cosmétique).
+- **Wording des commentaires** : la grille des onglets du drawer était décrite à
+  tort comme « flex-wrap » alors qu'elle s'appuie sur **CSS Grid**
+  (`grid-template-columns: repeat(auto-fit, minmax(150px, 1fr))`). Corrigé dans
+  `index.html` et `css/main.css`.
+- **`css/main.css`** : `auto-fill` → **`auto-fit`** sur la grille du drawer
+  (`.nav-drawer-grid`) et la grille d'accueil (`.plugin-grid`), pour éviter les
+  colonnes fantômes si le nombre de modules diminue. Comportement identique avec
+  le nombre d'onglets actuel.
+- **Suppression de la valeur magique 300ms** : la durée d'animation du drawer est
+  désormais portée par la CSS custom property **`--drawer-anim`** (`:root`, utilisée
+  par la transition `max-height`) et par la constante JS **`DRAWER_ANIM_MS`**
+  (`js/app.js`), documentées comme devant rester synchronisées. Le `setTimeout` en
+  dur est remplacé par cette constante.
+- Bump de cache requis car `index.html`, `css/main.css` et `js/app.js` (précachés)
+  changent.
+
 ## v74
 
 - **Correctif PWA standalone iOS — chevauchement du header avec la barre d'état**
@@ -48,7 +68,7 @@ Les versions sont listées de la plus récente à la plus ancienne.
   avec l'état, `aria-controls` vers le drawer, `aria-current="page"` sur l'onglet
   actif, fermeture à la touche Échap + voile cliquable.
 - **Alignement multi-lignes** : les 8 onglets sont disposés dans une **grille
-  responsive** (`auto-fill, minmax(150px, 1fr)`) avec libellés autorisés à passer
+  responsive (CSS Grid)** (`auto-fit, minmax(150px, 1fr)`) avec libellés autorisés à passer
   à la ligne (`overflow-wrap`) — fini les libellés tronqués/illisibles sur iPhone
   (~390px). Prise en compte des encoches (`env(safe-area-inset-*)`).
 - **Repère du plugin actif toujours visible**, même barre repliée : le nom du

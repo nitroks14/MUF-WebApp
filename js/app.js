@@ -137,6 +137,11 @@ const navToggle  = document.getElementById('nav-toggle');
 const navDrawer  = document.getElementById('nav-drawer');
 const navOverlay = document.getElementById('nav-overlay');
 
+/* Durée d'animation de fermeture du drawer, en millisecondes.
+   DOIT rester égale à la CSS custom property --drawer-anim (css/main.css) :
+   le drawer n'est masqué (hidden) qu'une fois la transition CSS terminée. */
+const DRAWER_ANIM_MS = 300;
+
 /* ============================================================
    Construction de la navigation (drawer repliable unique)
    Appelée une seule fois au démarrage.
@@ -215,7 +220,7 @@ function fermerDrawer() {
       navDrawer.hidden = true;
       if (navOverlay) navOverlay.hidden = true;
     }
-  }, 300);
+  }, DRAWER_ANIM_MS);
 }
 
 function basculerDrawer() {

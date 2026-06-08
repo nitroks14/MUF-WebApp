@@ -39,6 +39,11 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.12);
   --transition: 0.2s ease;
+
+  /* Durée d'animation d'ouverture/fermeture du drawer de navigation.
+     DOIT rester synchronisée avec la constante JS DRAWER_ANIM_MS (js/app.js),
+     qui pilote le masquage du drawer une fois l'animation terminée. */
+  --drawer-anim: 0.3s;
 }
 
 /* ------------------------------------------------------------
@@ -212,7 +217,7 @@ img {
 /* ============================================================
    DRAWER DE NAVIGATION — se déplie depuis le haut.
    Replié par défaut (max-height 0). Animé à l'ouverture.
-   Grille responsive (flex-wrap) pour garder les 8 onglets lisibles.
+   Grille responsive (CSS Grid) pour garder les 8 onglets lisibles.
    ============================================================ */
 .nav-drawer {
   position: sticky;
@@ -227,7 +232,7 @@ img {
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   max-height: 0;
   opacity: 0;
-  transition: max-height 0.3s ease, opacity 0.25s ease;
+  transition: max-height var(--drawer-anim) ease, opacity 0.25s ease;
 }
 
 /* Le hidden HTML est retiré par JS dès l'init ; on garde une sécurité. */
@@ -246,7 +251,7 @@ img {
   display: grid;
   /* Grille fluide : autant de colonnes que la largeur le permet,
      minimum ~150px → 1 colonne sur iPhone étroit, plusieurs sur PC. */
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 8px;
   padding: 12px;
   padding-left: max(12px, env(safe-area-inset-left));
@@ -452,7 +457,7 @@ img {
 /* ---- Plugin grid (écran d'accueil) ---- */
 .plugin-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
   margin-top: 8px;
 }
