@@ -11,6 +11,27 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v74
+
+- **Correctif PWA standalone iOS — chevauchement du header avec la barre d'état**
+  (iPhone et iPad). En mode PWA installée (« Sur l'écran d'accueil »), avec
+  `apple-mobile-web-app-status-bar-style: black-translucent` + `viewport-fit=cover`,
+  la web-view occupe tout l'écran sous la barre d'état iOS. Le contenu de
+  `.app-header` (logo Multivac, badge FR, chevron, titre) se superposait à
+  l'heure / au % batterie / au wifi.
+- **`.app-header`** (`css/main.css`) : ajout de `padding-top: max(6px,
+  env(safe-area-inset-top))` (+ `padding-bottom: 6px` explicite) pour décaler le
+  contenu sous la barre d'état tout en laissant le fond bleu `#003A70` remonter
+  derrière (effet app natif). `min-height` conservé pour la hauteur de la zone
+  interactive.
+- **`.nav-drawer`** (`css/main.css`) : `top` passé de `var(--header-height)` à
+  `calc(var(--header-height) + env(safe-area-inset-top))` pour que le drawer
+  s'ouvre juste sous le header réel (safe-area incluse) et non sous la barre
+  d'état.
+- **Sans régression** : sur desktop / Android, `env(safe-area-inset-top)` vaut 0
+  → `max(6px, …)` et le `calc(...)` redonnent exactement l'ancien comportement.
+- Bump de cache requis car `css/main.css` (précaché) change.
+
 ## v73
 
 - **Navigation repliable (collapsible) sur tous les appareils** (PC, iPad, iPhone).

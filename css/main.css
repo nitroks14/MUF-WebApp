@@ -116,7 +116,17 @@ img {
   gap: 12px;
   min-height: var(--header-height);
   padding: 6px 16px;
-  /* Respect des encoches iPhone (safe-area) */
+  /* Respect des encoches iPhone (safe-area) sur les 4 côtés.
+     En PWA standalone (status bar translucide + viewport-fit=cover), la
+     web-view passe SOUS la barre d'état iOS : sans padding-top safe-area, le
+     contenu du header (logo, badge, titre) chevauche l'heure/la batterie.
+     padding-top = max(6px, inset-top) décale le contenu sous la barre d'état
+     tout en laissant le fond bleu #003A70 remonter derrière (effet natif).
+     Sur desktop/Android, env(safe-area-inset-top) = 0 → max() garde 6px : aucun
+     changement. Le min-height reste la hauteur de la zone interactive (hors
+     safe-area). */
+  padding-top: max(6px, env(safe-area-inset-top));
+  padding-bottom: 6px;
   padding-left: max(16px, env(safe-area-inset-left));
   padding-right: max(16px, env(safe-area-inset-right));
   background-color: var(--color-primary);
@@ -206,7 +216,11 @@ img {
    ============================================================ */
 .nav-drawer {
   position: sticky;
-  top: var(--header-height);
+  /* Le header occupe désormais aussi la safe-area haute (encoche / barre d'état
+     iOS en PWA). Le drawer doit donc se coller JUSTE sous le header réel, en
+     ajoutant la hauteur de cette safe-area. Sur desktop/Android l'inset = 0 →
+     top = var(--header-height) : comportement inchangé. */
+  top: calc(var(--header-height) + env(safe-area-inset-top));
   z-index: 55;
   overflow: hidden;
   background-color: var(--color-primary-dark);
