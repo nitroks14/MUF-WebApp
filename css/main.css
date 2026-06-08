@@ -34,8 +34,6 @@
   --input-padding: 10px 14px;     /* Padding standard inputs/selects/textarea */
   --btn-padding:   10px 20px;     /* Padding standard boutons */
 
-  --sidebar-width:     240px;
-  --bottom-nav-height: 60px;
   --header-height:     56px;
 
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -82,7 +80,8 @@ img {
 }
 
 /* ------------------------------------------------------------
-   Layout principal — Desktop (sidebar) et Mobile (bottom nav)
+   Layout principal — header unifié + navigation repliable
+   (comportement identique PC / iPad / iPhone)
    ------------------------------------------------------------ */
 
 /* Wrapper global */
@@ -91,37 +90,81 @@ img {
   min-height: 100vh;
 }
 
-/* ---- SIDEBAR (desktop ≥ 768px) ---- */
-.sidebar {
-  width: var(--sidebar-width);
-  min-height: 100vh;
-  background-color: var(--color-primary);
-  color: var(--color-white);
+/* ============================================================
+   HEADER UNIFIÉ + NAVIGATION REPLIABLE (PC / iPad / iPhone)
+   Le logo Multivac (haut-gauche) déplie/replie le drawer qui
+   descend depuis le haut, sous le header. Comportement identique
+   sur tous les appareils.
+   ============================================================ */
+
+/* ---- CONTENU PRINCIPAL ---- */
+.main-content {
+  flex: 1;
+  min-width: 0; /* Autorise le flex-item à rétrécir sous la largeur min-content de son contenu (corrige le débordement horizontal) */
   display: flex;
   flex-direction: column;
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 100;
-  box-shadow: var(--shadow-md);
+  min-height: 100vh;
 }
 
-.sidebar-logo {
+/* ---- EN-TÊTE UNIFIÉ (charte Multivac : #003A70 / texte blanc) ---- */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 60;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 20px 20px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  gap: 12px;
+  min-height: var(--header-height);
+  padding: 6px 16px;
+  /* Respect des encoches iPhone (safe-area) */
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  box-shadow: var(--shadow-sm);
 }
 
-.sidebar-logo-text {
-  font-size: var(--font-size-xl);
+/* ---- Logo = bouton toggle de la navigation ---- */
+.app-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  /* Zone de tap suffisante (accessibilité) */
+  min-height: var(--input-height);
+  padding: 4px 8px;
+  margin-left: -8px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius);
+  color: var(--color-white);
+  cursor: pointer;
+  font-family: var(--font-family);
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--transition);
+}
+
+.app-logo:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.app-logo:focus-visible {
+  outline: 2px solid var(--color-white);
+  outline-offset: 2px;
+}
+
+.app-logo-mark {
+  flex-shrink: 0;
+  display: block;
+}
+
+.app-logo-text {
+  font-size: var(--font-size-lg);
   font-weight: 700;
   letter-spacing: 0.5px;
   color: var(--color-white);
 }
 
-.sidebar-logo-badge {
+.app-logo-badge {
   background-color: rgba(255, 255, 255, 0.2);
   color: var(--color-white);
   font-size: var(--font-size-xs);
@@ -131,89 +174,138 @@ img {
   letter-spacing: 0.5px;
 }
 
-.sidebar-nav {
+/* Chevron : signale la fonction repliable + reflète l'état (animé) */
+.app-logo-chevron {
+  flex-shrink: 0;
+  margin-left: 2px;
+  transition: transform 0.28s ease;
+}
+
+/* Drawer ouvert → chevron pointe vers le haut */
+.app-logo[aria-expanded="true"] .app-logo-chevron {
+  transform: rotate(180deg);
+}
+
+/* ---- Titre (nom du plugin actif) — reste visible barre repliée ---- */
+.app-header-title {
   flex: 1;
-  padding: 12px 0;
+  min-width: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-white);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================================
+   DRAWER DE NAVIGATION — se déplie depuis le haut.
+   Replié par défaut (max-height 0). Animé à l'ouverture.
+   Grille responsive (flex-wrap) pour garder les 8 onglets lisibles.
+   ============================================================ */
+.nav-drawer {
+  position: sticky;
+  top: var(--header-height);
+  z-index: 55;
+  overflow: hidden;
+  background-color: var(--color-primary-dark);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.25s ease;
+}
+
+/* Le hidden HTML est retiré par JS dès l'init ; on garde une sécurité. */
+.nav-drawer[hidden] {
+  display: none;
+}
+
+.nav-drawer.open {
+  /* Grande valeur pour autoriser le déploiement multi-lignes */
+  max-height: 70vh;
+  opacity: 1;
   overflow-y: auto;
 }
 
-.sidebar-nav-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
-  padding: 12px 20px 6px;
+.nav-drawer-grid {
+  display: grid;
+  /* Grille fluide : autant de colonnes que la largeur le permet,
+     minimum ~150px → 1 colonne sur iPhone étroit, plusieurs sur PC. */
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  padding: 12px;
+  padding-left: max(12px, env(safe-area-inset-left));
+  padding-right: max(12px, env(safe-area-inset-right));
 }
 
-.sidebar-nav a {
+.nav-drawer-grid a {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 20px;
-  color: rgba(255, 255, 255, 0.85);
+  gap: 10px;
+  padding: 12px 14px;
+  min-height: var(--input-height); /* Touch-friendly */
+  border-radius: var(--radius);
+  color: rgba(255, 255, 255, 0.9);
   font-size: var(--font-size-sm);
   font-weight: 500;
+  line-height: 1.25;
+  text-decoration: none;
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid transparent;
   transition: background-color var(--transition), color var(--transition);
-  border-left: 3px solid transparent;
-  min-height: var(--input-height); /* Touch-friendly */
-  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.sidebar-nav a:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+.nav-drawer-grid a:hover {
+  background-color: rgba(255, 255, 255, 0.14);
   color: var(--color-white);
   text-decoration: none;
 }
 
-.sidebar-nav a.active {
-  background-color: rgba(255, 255, 255, 0.15);
+.nav-drawer-grid a.active {
+  background-color: rgba(255, 255, 255, 0.2);
   color: var(--color-white);
-  border-left-color: var(--color-white);
+  border-color: rgba(255, 255, 255, 0.45);
   font-weight: 600;
 }
 
-.sidebar-nav a .nav-icon {
-  width: 20px;
-  height: 20px;
+.nav-drawer-grid a .nav-icon {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
-.sidebar-footer {
-  padding: 16px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
-  font-size: var(--font-size-sm);
-  color: rgba(255, 255, 255, 0.5);
+.nav-drawer-grid a .nav-icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
 }
 
-/* ---- CONTENU PRINCIPAL ---- */
-.main-content {
-  flex: 1;
-  min-width: 0; /* Autorise le flex-item à rétrécir sous la largeur min-content de son contenu (corrige le débordement horizontal) */
-  margin-left: var(--sidebar-width);
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
+.nav-drawer-grid a .nav-label {
+  /* Libellé sur plusieurs lignes si besoin — jamais tronqué/illisible */
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
-.main-header {
-  height: var(--header-height);
-  background-color: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  display: flex;
-  align-items: center;
-  padding: 0 24px;
-  position: sticky;
-  top: 0;
+/* Voile cliquable : referme le drawer en touchant ailleurs */
+.nav-overlay {
+  position: fixed;
+  inset: 0;
   z-index: 50;
-  box-shadow: var(--shadow-sm);
+  background: rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transition: opacity 0.25s ease;
 }
 
-.main-header-title {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--color-primary);
+.nav-overlay[hidden] {
+  display: none;
+}
+
+.nav-overlay.open {
+  opacity: 1;
 }
 
 #app-content {
@@ -222,108 +314,29 @@ img {
   padding: 24px;
 }
 
-/* ---- BOTTOM NAV (mobile < 768px) ---- */
-.bottom-nav {
-  display: none; /* Masqué sur desktop */
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: var(--bottom-nav-height);
-  background-color: var(--color-surface);
-  border-top: 1px solid var(--color-border);
-  z-index: 100;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.bottom-nav-inner {
-  display: flex;
-  height: 100%;
-}
-
-.bottom-nav a {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  color: var(--color-text-muted);
-  font-size: 0.65rem;
-  font-weight: 500;
-  text-decoration: none;
-  transition: color var(--transition);
-  min-height: var(--input-height); /* Touch-friendly */
-  -webkit-tap-highlight-color: transparent;
-}
-
-.bottom-nav a:hover,
-.bottom-nav a.active {
-  color: var(--color-primary);
-  text-decoration: none;
-}
-
-.bottom-nav a .nav-icon {
-  width: 22px;
-  height: 22px;
-}
-
-/* En-tête mobile */
-.mobile-header {
-  display: none;
-  height: var(--header-height);
-  background-color: var(--color-primary);
-  color: var(--color-white);
-  align-items: center;
-  padding: 0 16px;
-  position: sticky;
-  top: 0;
-  z-index: 50;
-}
-
-.mobile-header-logo {
-  font-size: var(--font-size-lg);
-  font-weight: 700;
-  color: var(--color-white);
-}
-
-.mobile-header-badge {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: var(--color-white);
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: var(--radius);
-  margin-left: 8px;
-}
-
 /* ============================================================
-   Responsive — Mobile < 768px
+   Responsive — petits écrans (iPhone, < 768px)
    ============================================================ */
 @media (max-width: 767px) {
-  .sidebar {
-    display: none;
+  .app-logo-text {
+    font-size: var(--font-size-base);
   }
 
-  .main-content {
-    margin-left: 0;
-    padding-bottom: var(--bottom-nav-height);
-  }
-
-  .main-header {
-    display: none;
-  }
-
-  .mobile-header {
-    display: flex;
-  }
-
-  .bottom-nav {
-    display: block;
+  .app-header-title {
+    font-size: var(--font-size-base);
   }
 
   #app-content {
     padding: 16px;
+  }
+}
+
+/* Réduit l'animation pour les utilisateurs sensibles */
+@media (prefers-reduced-motion: reduce) {
+  .nav-drawer,
+  .nav-overlay,
+  .app-logo-chevron {
+    transition: none;
   }
 }
 

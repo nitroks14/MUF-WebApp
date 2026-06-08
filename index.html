@@ -222,63 +222,44 @@
   <div class="app-wrapper">
 
     <!-- ====================================================
-         SIDEBAR — navigation desktop (≥ 768px)
-         ==================================================== -->
-    <nav class="sidebar" aria-label="Navigation principale">
-
-      <!-- Logo Multivac -->
-      <div class="sidebar-logo">
-        <!-- Icône "M" stylisée en SVG — pas d'image externe -->
-        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"
-             aria-hidden="true" focusable="false">
-          <rect width="32" height="32" rx="6" fill="rgba(255,255,255,0.15)"/>
-          <text x="16" y="23" font-family="Inter,Roboto,sans-serif" font-size="18"
-                font-weight="700" text-anchor="middle" fill="white">M</text>
-        </svg>
-        <span class="sidebar-logo-text">Multivac</span>
-        <span class="sidebar-logo-badge">FR</span>
-      </div>
-
-      <!-- Liens de navigation — alimentés dynamiquement par app.js -->
-      <div class="sidebar-nav" id="sidebar-nav" role="list"
-           aria-label="Modules de l'application">
-        <!-- Les liens plugins sont insérés ici par JavaScript -->
-      </div>
-
-      <!-- Pied de sidebar -->
-      <div class="sidebar-footer">
-        <span>MUF-WebApp v1.0</span>
-        <button id="taxo-gear-btn" title="Éditeur taxonomie" aria-label="Ouvrir l'éditeur de taxonomie">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
-             viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0
-               002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0
-               001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0
-               00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0
-               00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0
-               00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0
-               00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0
-               001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07
-               2.572-1.065z"/>
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-        </svg>
-      </button>
-      </div>
-    </nav>
-
-    <!-- ====================================================
-         CONTENU PRINCIPAL
+         CONTENU PRINCIPAL — header unifié repliable (PC/iPad/iPhone)
          ==================================================== -->
     <div class="main-content">
 
-      <!-- En-tête mobile (visible uniquement < 768px) -->
-      <header class="mobile-header" role="banner">
-        <span class="mobile-header-logo">Multivac</span>
-        <span class="mobile-header-badge">FR</span>
-        <button id="taxo-gear-btn-mobile" title="Éditeur taxonomie" aria-label="Ouvrir l'éditeur de taxonomie">
-          <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" fill="none"
+      <!-- ================================================
+           EN-TÊTE UNIFIÉ — identique sur tous les appareils.
+           Le logo Multivac (haut-gauche) sert de bouton pour
+           déplier / replier la barre de navigation (drawer ci-dessous).
+           ================================================ -->
+      <header class="app-header" role="banner">
+
+        <!-- Logo Multivac = bouton toggle de la navigation -->
+        <button type="button" id="nav-toggle" class="app-logo"
+                aria-expanded="false" aria-controls="nav-drawer"
+                aria-label="Afficher ou masquer la navigation">
+          <!-- Icône "M" stylisée en SVG — pas d'image externe -->
+          <svg class="app-logo-mark" xmlns="http://www.w3.org/2000/svg" width="32" height="32"
+               viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+            <rect width="32" height="32" rx="6" fill="rgba(255,255,255,0.18)"/>
+            <text x="16" y="23" font-family="Inter,Roboto,sans-serif" font-size="18"
+                  font-weight="700" text-anchor="middle" fill="white">M</text>
+          </svg>
+          <span class="app-logo-text">Multivac</span>
+          <span class="app-logo-badge">FR</span>
+          <!-- Chevron signalant la fonction repliable + l'état (animé) -->
+          <svg class="app-logo-chevron" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+               viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+
+        <!-- Nom du plugin actif — reste visible même barre repliée -->
+        <h1 class="app-header-title" id="header-title">Accueil</h1>
+
+        <!-- Bouton éditeur taxonomie — visible uniquement sur le plugin RI -->
+        <button id="taxo-gear-btn" title="Éditeur taxonomie" aria-label="Ouvrir l'éditeur de taxonomie">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
                viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
             <path stroke-linecap="round" stroke-linejoin="round"
               d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0
@@ -296,10 +277,20 @@
         </button>
       </header>
 
-      <!-- En-tête desktop (visible uniquement ≥ 768px) -->
-      <header class="main-header" role="banner">
-        <h1 class="main-header-title" id="header-title">Accueil</h1>
-      </header>
+      <!-- ================================================
+           DRAWER DE NAVIGATION — se déplie depuis le haut.
+           Replié par défaut. Grille responsive (flex-wrap)
+           pour garder les 8 onglets lisibles, y compris iPhone.
+           ================================================ -->
+      <nav id="nav-drawer" class="nav-drawer" aria-label="Navigation principale" hidden>
+        <div class="nav-drawer-grid" id="drawer-nav" role="list"
+             aria-label="Modules de l'application">
+          <!-- Les liens plugins sont insérés ici par JavaScript -->
+        </div>
+      </nav>
+
+      <!-- Voile cliquable : referme le drawer en cliquant à côté -->
+      <div id="nav-overlay" class="nav-overlay" hidden></div>
 
       <!-- Zone d'injection des plugins -->
       <main id="app-content" role="main" aria-live="polite" aria-atomic="true">
@@ -309,15 +300,6 @@
     </div><!-- /.main-content -->
 
   </div><!-- /.app-wrapper -->
-
-  <!-- ========================================================
-       BOTTOM NAV — navigation mobile (< 768px)
-       ======================================================== -->
-  <nav class="bottom-nav" aria-label="Navigation mobile">
-    <div class="bottom-nav-inner" id="bottom-nav" role="list">
-      <!-- Les liens plugins sont insérés ici par JavaScript -->
-    </div>
-  </nav>
 
   <!-- Config globale (URL + clé publique Supabase) — doit être le premier script -->
   <script src="./js/config.js"></script>
@@ -659,60 +641,27 @@
        ÉDITEUR TAXONOMIE — modal de verrouillage
        ======================================================== -->
   <style id="taxo-lock-style">
-    /* Icône engrenage éditeur taxonomie — visible uniquement quand RI actif */
+    /* Icône engrenage éditeur taxonomie — dans le header unifié,
+       visible uniquement quand le plugin Rapport d'intervention est actif. */
     #taxo-gear-btn {
       display: none;
-      margin-top: 10px;
-      width: 100%;
-      padding: 8px 12px;
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      padding: 0;
       background: #f59e0b;
       border: none;
       border-radius: var(--radius);
       cursor: pointer;
       align-items: center;
       justify-content: center;
-      gap: 8px;
       color: #1a1a1a;
-      font-size: var(--font-size-xs);
-      font-weight: 700;
-      font-family: Inter, Roboto, sans-serif;
-      letter-spacing: 0.3px;
       transition: background 0.2s;
-    }
-    #taxo-gear-btn::after {
-      content: 'Éditeur taxonomie';
     }
     #taxo-gear-btn:hover { background: #d97706; }
     #taxo-gear-btn:active { background: #b45309; }
     #taxo-gear-btn.visible {
-      display: flex;
-    }
-
-    /* Version mobile — dans le header */
-    #taxo-gear-btn-mobile {
-      display: none;
-      padding: 6px 12px;
-      background: #f59e0b;
-      border: none;
-      border-radius: var(--radius);
-      cursor: pointer;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      color: #1a1a1a;
-      font-size: var(--font-size-xs);
-      font-weight: 700;
-      font-family: Inter, Roboto, sans-serif;
-      transition: background 0.2s;
-      flex-shrink: 0;
-    }
-    #taxo-gear-btn-mobile.visible {
-      display: flex;
-    }
-    #taxo-gear-btn-mobile:hover,
-    #taxo-gear-btn-mobile:active {
-      background: #d97706;
-      color: #1a1a1a;
+      display: inline-flex;
     }
 
     #taxo-lock-overlay {
@@ -848,11 +797,7 @@
     };
 
     var gearBtn = document.getElementById('taxo-gear-btn');
-    var gearBtnMobile = document.getElementById('taxo-gear-btn-mobile');
     if (gearBtn) gearBtn.addEventListener('click', function() {
-      if (typeof window.__ouvrirVerrouTaxo === 'function') window.__ouvrirVerrouTaxo();
-    });
-    if (gearBtnMobile) gearBtnMobile.addEventListener('click', function() {
       if (typeof window.__ouvrirVerrouTaxo === 'function') window.__ouvrirVerrouTaxo();
     });
   })();

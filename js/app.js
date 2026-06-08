@@ -129,37 +129,35 @@ const PLUGINS = [
    Références DOM
    ============================================================ */
 const appContent   = document.getElementById('app-content');
-const sidebarNav   = document.getElementById('sidebar-nav');
-const bottomNav    = document.getElementById('bottom-nav');
+const drawerNav    = document.getElementById('drawer-nav');
 const headerTitle  = document.getElementById('header-title');
 
+/* Éléments du drawer repliable (header unifié PC/iPad/iPhone) */
+const navToggle  = document.getElementById('nav-toggle');
+const navDrawer  = document.getElementById('nav-drawer');
+const navOverlay = document.getElementById('nav-overlay');
+
 /* ============================================================
-   Construction de la navigation (sidebar + bottom nav)
-   Appelée une seule fois au démarrage
+   Construction de la navigation (drawer repliable unique)
+   Appelée une seule fois au démarrage.
+   Le libellé est enveloppé dans .nav-label pour autoriser le
+   retour à la ligne (lisibilité iPhone) sans tronquer le texte.
    ============================================================ */
 function construireNavigation() {
+  if (!drawerNav) return;
+
   PLUGINS.forEach(plugin => {
     const hash = `#plugin-${plugin.id}`;
 
-    /* ---- Lien sidebar ---- */
-    const lienSidebar = document.createElement('a');
-    lienSidebar.href = hash;
-    lienSidebar.dataset.plugin = plugin.id;
-    lienSidebar.innerHTML = `
+    const lien = document.createElement('a');
+    lien.href = hash;
+    lien.dataset.plugin = plugin.id;
+    lien.setAttribute('role', 'listitem');
+    lien.innerHTML = `
       <span class="nav-icon" aria-hidden="true">${plugin.icone}</span>
-      ${plugin.nom}
+      <span class="nav-label">${plugin.nom}</span>
     `;
-    sidebarNav.appendChild(lienSidebar);
-
-    /* ---- Lien bottom nav ---- */
-    const lienBottom = document.createElement('a');
-    lienBottom.href = hash;
-    lienBottom.dataset.plugin = plugin.id;
-    lienBottom.innerHTML = `
-      <span class="nav-icon" aria-hidden="true">${plugin.icone}</span>
-      <span>${plugin.nom}</span>
-    `;
-    bottomNav.appendChild(lienBottom);
+    drawerNav.appendChild(lien);
   });
 }
 
@@ -167,23 +165,93 @@ function construireNavigation() {
    Mise à jour de l'état actif dans la navigation
    ============================================================ */
 function mettreAJourNavActive(pluginId) {
-  /* Sidebar */
-  sidebarNav.querySelectorAll('a').forEach(lien => {
-    lien.classList.toggle('active', lien.dataset.plugin === pluginId);
-  });
-
-  /* Bottom nav */
-  bottomNav.querySelectorAll('a').forEach(lien => {
-    lien.classList.toggle('active', lien.dataset.plugin === pluginId);
-  });
-
-  /* Titre de l'en-tête */
-  if (pluginId) {
-    const plugin = PLUGINS.find(p => p.id === pluginId);
-    headerTitle.textContent = plugin ? plugin.nom : 'MUF-WebApp';
-  } else {
-    headerTitle.textContent = 'Accueil';
+  if (drawerNav) {
+    drawerNav.querySelectorAll('a').forEach(lien => {
+      const actif = lien.dataset.plugin === pluginId;
+      lien.classList.toggle('active', actif);
+      if (actif) {
+        lien.setAttribute('aria-current', 'page');
+      } else {
+        lien.removeAttribute('aria-current');
+      }
+    });
   }
+
+  /* Titre de l'en-tête — reste visible même barre repliée */
+  if (headerTitle) {
+    if (pluginId) {
+      const plugin = PLUGINS.find(p => p.id === pluginId);
+      headerTitle.textContent = plugin ? plugin.nom : 'MUF-WebApp';
+    } else {
+      headerTitle.textContent = 'Accueil';
+    }
+  }
+}
+
+/* ============================================================
+   Drawer repliable — logo = bouton toggle (PC / iPad / iPhone)
+   Un appui sur le logo déplie la barre depuis le haut, un nouvel
+   appui la replie. État reflété par aria-expanded + chevron animé.
+   ============================================================ */
+function ouvrirDrawer() {
+  if (!navDrawer || !navToggle) return;
+  navDrawer.hidden = false;
+  if (navOverlay) navOverlay.hidden = false;
+  /* Force un reflow pour que la transition CSS s'applique depuis hidden */
+  void navDrawer.offsetHeight;
+  navDrawer.classList.add('open');
+  if (navOverlay) navOverlay.classList.add('open');
+  navToggle.setAttribute('aria-expanded', 'true');
+}
+
+function fermerDrawer() {
+  if (!navDrawer || !navToggle) return;
+  navDrawer.classList.remove('open');
+  if (navOverlay) navOverlay.classList.remove('open');
+  navToggle.setAttribute('aria-expanded', 'false');
+  /* Masque réellement après l'animation (et libère le voile). */
+  window.setTimeout(() => {
+    if (navToggle.getAttribute('aria-expanded') === 'false') {
+      navDrawer.hidden = true;
+      if (navOverlay) navOverlay.hidden = true;
+    }
+  }, 300);
+}
+
+function basculerDrawer() {
+  if (!navToggle) return;
+  const ouvert = navToggle.getAttribute('aria-expanded') === 'true';
+  if (ouvert) {
+    fermerDrawer();
+  } else {
+    ouvrirDrawer();
+  }
+}
+
+function initialiserDrawer() {
+  if (!navToggle || !navDrawer) return;
+
+  /* Appui sur le logo → toggle */
+  navToggle.addEventListener('click', basculerDrawer);
+
+  /* Clic sur un lien → on referme le drawer (le routing fait le reste) */
+  if (drawerNav) {
+    drawerNav.addEventListener('click', evt => {
+      if (evt.target.closest('a')) fermerDrawer();
+    });
+  }
+
+  /* Clic sur le voile → referme */
+  if (navOverlay) navOverlay.addEventListener('click', fermerDrawer);
+
+  /* Touche Échap → referme */
+  document.addEventListener('keydown', evt => {
+    if (evt.key === 'Escape' &&
+        navToggle.getAttribute('aria-expanded') === 'true') {
+      fermerDrawer();
+      navToggle.focus();
+    }
+  });
 }
 
 /* ============================================================
@@ -298,9 +366,7 @@ function mettreAJourBoutonTaxo() {
   var hash = window.location.hash;
   var estRI = (hash === '#plugin-rapport-intervention');
   var btn = document.getElementById('taxo-gear-btn');
-  var btnM = document.getElementById('taxo-gear-btn-mobile');
-  if (btn)  btn.classList.toggle('visible', estRI);
-  if (btnM) btnM.classList.toggle('visible', estRI);
+  if (btn) btn.classList.toggle('visible', estRI);
 }
 
 /* ============================================================
@@ -362,6 +428,7 @@ function enregistrerServiceWorker() {
    ============================================================ */
 function init() {
   construireNavigation();
+  initialiserDrawer();
   mettreAJourBoutonTaxo();
 
   /* Écoute des changements de hash (navigation) */

@@ -11,6 +11,31 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v73
+
+- **Navigation repliable (collapsible) sur tous les appareils** (PC, iPad, iPhone).
+  Refonte du shell de navigation (`index.html`, `css/main.css`, `js/app.js`) :
+- L'ancienne **sidebar desktop** + **bottom-nav mobile** sont remplacées par un
+  **header unifié** (charte Multivac `#003A70`, texte blanc) et un **drawer de
+  navigation repliable** qui se déplie **depuis le haut**, sous le header.
+  Comportement **identique** sur tous les écrans.
+- **Le logo Multivac (haut-gauche) est le déclencheur** : un appui déplie la
+  barre, un nouvel appui la replie (`<button id="nav-toggle">`). Un **chevron**
+  blanc accolé au logo signale la fonction et **reflète l'état** (rotation 180°
+  animée à la transition).
+- **Accessibilité** : zone de tap ≥ 44px sur le logo, `aria-expanded` synchronisé
+  avec l'état, `aria-controls` vers le drawer, `aria-current="page"` sur l'onglet
+  actif, fermeture à la touche Échap + voile cliquable.
+- **Alignement multi-lignes** : les 8 onglets sont disposés dans une **grille
+  responsive** (`auto-fill, minmax(150px, 1fr)`) avec libellés autorisés à passer
+  à la ligne (`overflow-wrap`) — fini les libellés tronqués/illisibles sur iPhone
+  (~390px). Prise en compte des encoches (`env(safe-area-inset-*)`).
+- **Repère du plugin actif toujours visible**, même barre repliée : le nom du
+  module courant reste affiché dans le header (`#header-title`).
+- Respect de `prefers-reduced-motion` (animations désactivées si demandé).
+- Bump de cache requis car `index.html`, `css/main.css` et `js/app.js` (précachés)
+  changent.
+
 ## v72
 
 - **UX auto-apprentissage** (`js/client-learning.js`), 2 corrections sur le cas
