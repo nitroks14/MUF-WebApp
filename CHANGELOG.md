@@ -11,6 +11,17 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v79
+
+- **Plugin Liste de pièces — objet du mail désormais transmis correctement**
+  (repli `.eml` sur desktop + encodage **RFC 2047** de l'objet), cohérent avec
+  le correctif Retour garantie v78. Sur desktop (PC Windows), l'envoi passe
+  systématiquement par le repli `.eml` (Web Share réservé à iOS/iPadOS, seule
+  plateforme transmettant l'objet à Outlook) ; l'objet est encodé en RFC 2047
+  pour gérer les accents et le tiret cadratin « — ».
+
+---
+
 ## v78
 
 - **Plugin Retour garantie — objet du mail désormais transmis correctement.**
