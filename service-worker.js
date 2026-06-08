@@ -1,9 +1,15 @@
 /**
  * MUF-WebApp — Service Worker
  * Stratégie :
- *   - Cache-first pour les assets statiques (CSS, JS, HTML principal, manifest, libs)
- *   - Network-first pour les plugins (afin de toujours avoir la version fraîche),
- *     avec repli cache hors-ligne.
+ *   - Network-first pour le SHELL APPLICATIF (index.html, CSS, scripts js/*.js)
+ *     avec repli cache hors-ligne. Indispensable : le HTML, le CSS et le JS du
+ *     shell forment un TOUT cohérent et doivent toujours être servis dans la
+ *     MÊME version. Les servir en cache-first désynchronisait le HTML (servi
+ *     network-first en navigation) d'un CSS/JS périmé après mise à jour, d'où
+ *     un header non stylé + un accueil vide (régression corrigée en v76).
+ *   - Cache-first pour les LIBS VENDORISÉES immuables (js/libs/**) : elles ne
+ *     changent pas entre déploiements → chargement instantané et offline garanti.
+ *   - Network-first pour les plugins (toujours la version fraîche), repli cache.
  *   - Navigation fallback : toute requête de navigation (ouverture de l'app,
  *     PWA installée) qui échoue hors-ligne renvoie index.html depuis le cache.
  *     C'est ce qui permet à l'app de S'OUVRIR sans réseau.
@@ -12,9 +18,9 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache.
-   Version courante : v75. Historique des versions → voir CHANGELOG.md. */
-const CACHE_NOM     = 'muf-webapp-v75';
-const CACHE_PLUGINS = 'muf-plugins-v75';
+   Version courante : v76. Historique des versions → voir CHANGELOG.md. */
+const CACHE_NOM     = 'muf-webapp-v76';
+const CACHE_PLUGINS = 'muf-plugins-v76';
 
 /* Document de repli pour les navigations hors-ligne (PWA / refresh offline). */
 const FALLBACK_DOC = './index.html';
@@ -152,8 +158,22 @@ self.addEventListener('fetch', evenement => {
     return;
   }
 
-  /* ---- Assets statiques : stratégie Cache-first ---- */
-  evenement.respondWith(strategieCacheFirst(requete, CACHE_NOM));
+  /* ---- Libs vendorisées immuables : stratégie Cache-first ----
+     Les bundles dans js/libs/** (supabase, jspdf, xlsx, exceljs, blockly,
+     fuse, qrcode, jsQR, lz-string…) ne changent pas entre deux déploiements
+     du shell : on les sert depuis le cache pour un démarrage instantané et
+     un offline garanti. */
+  if (url.pathname.includes('/js/libs/')) {
+    evenement.respondWith(strategieCacheFirst(requete, CACHE_NOM));
+    return;
+  }
+
+  /* ---- Shell applicatif (CSS + scripts js/*.js) : stratégie Network-first ----
+     index.html (navigate), css/*.css et js/*.js forment un ensemble cohérent.
+     On privilégie donc le réseau pour rester synchronisé avec le HTML servi
+     en network-first, avec repli cache hors-ligne. Évite la désynchronisation
+     « nouveau HTML + ancien CSS/JS » qui cassait l'affichage au lancement. */
+  evenement.respondWith(strategieNetworkFirst(requete, CACHE_NOM));
 });
 
 /* ============================================================
@@ -227,10 +247,16 @@ async function strategieNetworkFirst(requete, nomCache) {
 
   try {
     const reponseReseau = await fetch(requete);
-    if (reponseReseau.ok) {
+    if (reponseReseau && reponseReseau.ok) {
+      /* Réponse fraîche valide → on met le cache à jour et on la sert. */
       cache.put(requete, reponseReseau.clone());
+      return reponseReseau;
     }
-    return reponseReseau;
+    /* Réponse réseau non valide (404, 5xx, page d'erreur de l'hébergeur…) :
+       on préfère une version en cache si elle existe plutôt que de propager
+       une réponse cassée (qui désynchroniserait le shell). */
+    const cacheRepli = await cache.match(requete);
+    return cacheRepli || reponseReseau;
   } catch (erreur) {
     console.warn('[SW] Network-first : réseau indisponible, tentative cache :', requete.url);
     const cacheRep = await cache.match(requete);
@@ -239,7 +265,7 @@ async function strategieNetworkFirst(requete, nomCache) {
       return cacheRep;
     }
 
-    return new Response('Plugin non disponible hors ligne.', {
+    return new Response('Ressource non disponible hors ligne.', {
       status: 503,
       statusText: 'Service Unavailable',
     });

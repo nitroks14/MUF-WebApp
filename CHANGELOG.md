@@ -11,6 +11,34 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v76
+
+- **Correctif de régression — affichage cassé au lancement (page Accueil).**
+  Après la refonte de la navigation (commits `47566d7` / `f4651f8`), certains
+  utilisateurs voyaient au démarrage le bloc « Multivac FR » (logo + chevron)
+  flotter, non stylé, en haut à gauche, par-dessus le titre « Accueil », avec une
+  page d'accueil **vide** (aucune tuile).
+- **Cause racine** : désynchronisation de cache du Service Worker. `index.html`
+  était servi en **network-first** (toujours frais) tandis que `css/main.css` et
+  `js/app.js` étaient servis en **cache-first**. Après une mise à jour, le nouvel
+  `index.html` (markup `.app-header` / `.app-logo` / `.plugin-grid`) pouvait être
+  rendu avec un **ancien** `css/main.css` (qui ne stylait que l'ancien `.sidebar`)
+  et un ancien `js/app.js` → header non stylé + accueil non rendu. Le précache
+  résilient masquait par ailleurs les échecs de mise en cache, aggravant le cas.
+- **Correctif (à la racine)** dans `service-worker.js` :
+  - Le **shell applicatif** (`index.html`, `css/*.css`, scripts `js/*.js`) passe
+    en **network-first** avec repli cache hors-ligne : HTML, CSS et JS du shell
+    restent toujours servis dans la **même version cohérente**.
+  - Les **libs vendorisées** (`js/libs/**`, immuables entre déploiements) restent
+    en **cache-first** : démarrage instantané et offline garantis.
+  - `strategieNetworkFirst` se replie désormais sur le cache aussi quand la
+    réponse réseau n'est **pas valide** (404 / 5xx / page d'erreur de l'hébergeur),
+    et plus seulement en cas d'échec réseau.
+- Aucune modification de `index.html`, `css/main.css` ni `js/app.js` : le code du
+  shell était déjà correct ; seule la stratégie de cache était en cause.
+- Bump de cache requis pour invalider l'ancien cache et déployer la nouvelle
+  stratégie.
+
 ## v75
 
 - **Nettoyage de dette technique** sur la navigation repliable (suite des commits
