@@ -11,6 +11,15 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v80
+
+- **Plugin Demande d'OS — champ « Nom du technicien 2 » n'est plus obligatoire**
+  en cas d'OS splitté (technicien 1 reste requis) ; corps du mail adapté quand
+  un seul technicien est renseigné (« Technicien : X » au lieu de « Techniciens :
+  X et  » avec un « et » orphelin).
+
+---
+
 ## v79
 
 - **Plugin Liste de pièces — objet du mail désormais transmis correctement**

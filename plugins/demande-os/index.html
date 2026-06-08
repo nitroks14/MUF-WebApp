@@ -661,7 +661,6 @@
       const splitChecked = document.querySelector('input[name="dos-split"]:checked');
       if (splitChecked && splitChecked.value === 'Oui') {
         verifier(domTech1, 'Nom du technicien 1 (OS splitté)');
-        verifier(domTech2, 'Nom du technicien 2 (OS splitté)');
       }
     }
 
@@ -713,7 +712,7 @@
     if (code === 'contrat') {
       corps += '\nOS splitté : ' + split + '  |  OS de calibration : ' + calib;
       if (split === 'Oui') {
-        corps += '\nTechniciens : ' + tech1 + ' et ' + tech2;
+        corps += '\nTechnicien' + (tech2 ? 's : ' + tech1 + ' et ' + tech2 : ' : ' + tech1);
       }
       corps += '\n(merci de préciser formellement si l\'OS est splitté)';
     }
