@@ -715,10 +715,17 @@
       .trim();
   }
 
+  /* Échappement HTML par regex (pas de DOM créé à chaque appel), aligné sur
+     js/client-autocomplete.js et js/client-learning.js. Les 5 caractères
+     sensibles sont échappés ; « & » EN PREMIER pour ne pas ré-échapper les
+     entités qu'on vient d'introduire. */
   function escapeHtml(str) {
-    var d = document.createElement('div');
-    d.textContent = (str == null ? '' : String(str));
-    return d.innerHTML;
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function triParNom(a, b) {
