@@ -42,7 +42,7 @@
 
   const CONFIG_DEFAUT = {
     /* nom / prenom supprimés — désormais gérés par window.Auth (onboarding) */
-    emails_frequents:  [],   /* tableau de { label, adresse } */
+    emails_frequents:  [],   /* tableau de { label, adresse, prenom? } (prenom optionnel, v77) */
     email_maintenance: '',   /* adresse du service maintenance Multivac */
     contacts_support:  [],   /* contacts support technique */
     date_format:      'DD/MM/YYYY',

@@ -15,7 +15,7 @@
  *     contact:     string | null
  *     email:       string | null
  *     code_client: string | null
- *     machines:    Array<{ type, numero, annee? }>   (défaut [])
+ *     machines:    Array<{ type, numero, annee?, pns?: string[] }>   (défaut [])
  *     created_at:  string ISO  | null
  *     updated_at:  string ISO  | null
  *     deleted:     boolean      (soft-delete — défaut false)

@@ -1,7 +1,7 @@
 /**
  * aruco-marker.js — MUF-WebApp
  *
- * Génération de marqueurs ArUco DICT_5X5_100 (50 marqueurs encodés ici).
+ * Génération de marqueurs ArUco DICT_5X5_100 (100 marqueurs encodés ici, ID 0-99).
  * Export canvas + PDF via jsPDF (chargé en lazy).
  *
  * Usage :
