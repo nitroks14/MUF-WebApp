@@ -11,6 +11,32 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v81
+
+- **Nettoyage de dette technique (audit conservateur, sans régression).** Aucun
+  changement de comportement fonctionnel ; cohérence, code mort et commentaires.
+- **`js/aruco-vision.js`** : suppression de la fonction **`findCandidateRects`**,
+  définie mais jamais appelée (code mort — `detectMarkers` fait son propre scan de
+  candidats en interne).
+- **`js/aruco-marker.js`** : correction du commentaire d'en-tête erroné
+  (« 50 marqueurs » → **100 marqueurs, ID 0-99**), conforme au dictionnaire
+  `DICT_5X5_100` réellement encodé et à la doc de `generate(id)`.
+- **`plugins/clients/index.html`** : `escapeHtml` réécrit en version **regex**
+  (5 caractères : `&` en premier, puis `<`, `>`, `"`, `'`), **aligné** sur
+  `js/client-autocomplete.js` et `js/client-learning.js` (déjà migrés en v69).
+  Supprime la création d'un élément DOM à chaque appel et échappe désormais aussi
+  les guillemets (sur-ensemble : aucune régression sur les usages en contenu).
+- **`js/db.js`** : commentaire du modèle client mis à jour — `machines` porte aussi
+  un tableau optionnel `pns` (`Array<{ type, numero, annee?, pns?: string[] }>`),
+  reflétant l'ajout de PN par l'auto-apprentissage.
+- **`js/parametrage.js`** : commentaire `emails_frequents` mis à jour
+  (`{ label, adresse, prenom? }`, le `prenom` optionnel ayant été ajouté en v77).
+- Bump de cache requis car des assets précachés changent (`plugins/clients/index.html`,
+  `js/aruco-vision.js`, `js/aruco-marker.js`, `js/db.js`, `js/parametrage.js`).
+  `CHANGELOG.md` n'est pas un asset runtime, donc pas précaché.
+
+---
+
 ## v80
 
 - **Plugin Demande d'OS — champ « Nom du technicien 2 » n'est plus obligatoire**
