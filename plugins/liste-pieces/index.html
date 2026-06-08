@@ -426,7 +426,7 @@
       <!-- Date intervention -->
       <div class="form-group mb-16">
         <label class="form-label" for="lp-machineDate">
-          Date intervention <span aria-hidden="true">*</span>
+          Date prévue de l'intervention <span aria-hidden="true">*</span>
         </label>
         <input id="lp-machineDate" class="form-control" type="date" autocomplete="off">
       </div>
@@ -651,6 +651,11 @@
   var shortDescCount = document.getElementById("lp-shortDescCount");
   var machineDate   = document.getElementById("lp-machineDate");
   var toast         = document.getElementById("lp-toast");
+
+  /* Prénom du destinataire sélectionné via un chip « email fréquent ».
+     Vide si saisie manuelle d'une adresse (prénom inconnu). Injecté dans le
+     corps du mail (« Bonjour Nicolas, »). */
+  var destinatairePrenom = "";
 
   /* ----------------------------------------------------------
      Toast
@@ -1006,7 +1011,7 @@
     require("lp-machineType",   "Le type de machine");
     require("lp-machineNumber", "Le numéro de machine");
     require("lp-shortDesc",     "Le descriptif court");
-    require("lp-machineDate",   "La date d'intervention");
+    require("lp-machineDate",   "La date prévue de l'intervention");
 
     /* Email basique */
     var emailEl = document.getElementById("lp-clientEmail");
@@ -1315,14 +1320,13 @@
 
     buildXlsxBuffer(data)
       .then(function (buffer) {
+        /* Corps volontairement minimal : pas de signature ici, Outlook ajoute
+           automatiquement la sienne. « destinatairePrenom » est vide en cas de
+           saisie manuelle → fallback propre « Bonjour, ». */
         var corps =
-          "Bonjour,\r\n\r\n" +
-          "Veuillez trouver ci-joint la liste de pièces pour :\r\n" +
-          "  Client  : " + data.client.name + "\r\n" +
-          "  Machine : " + (data.machine.type + " " + data.machine.number).trim() + "\r\n" +
-          "  Date    : " + formatDate_DDMMYYYY(data.machine.date || todayISO()) + "\r\n\r\n" +
-          "Cordialement,\r\n" +
-          [data.tech.firstName, data.tech.lastName].filter(Boolean).join(" ");
+          "Bonjour" + (destinatairePrenom ? " " + destinatairePrenom : "") + ",\r\n\r\n" +
+          "Tu trouveras ci-joint la liste de pièces pour l'intervention " + data.shortDesc +
+          " prévue le " + formatDate_DDMMYYYY(data.machine.date || todayISO()) + ".";
 
         /* Repli .eml encapsulé : pré-remplit destinataire (À) et objet. */
         var fallbackEml = function () {
@@ -1350,7 +1354,7 @@
   /* ----------------------------------------------------------
      Chips « Emails fréquents » pour le destinataire de l'envoi par mail.
      Même base que les autres plugins : Parametrage.get('emails_frequents')
-     (tableau de { label, adresse } ou de simples chaînes).
+     (tableau de { label, adresse, prenom } ou de simples chaînes).
      ---------------------------------------------------------- */
   function prefillEmailsFrequents() {
     var wrap  = document.getElementById("lp-emails-frequents-wrap");
@@ -1367,6 +1371,7 @@
     emailsFreq.forEach(function (entree) {
       var label   = typeof entree === "string" ? entree : (entree.label   || entree.adresse || "");
       var adresse = typeof entree === "string" ? entree : (entree.adresse || entree.label   || "");
+      var prenom  = typeof entree === "string" ? ""     : (entree.prenom  || "");
       if (!adresse) return;
 
       var chip = document.createElement("button");
@@ -1384,19 +1389,23 @@
         if (!dejaActif) {
           chip.classList.add("lp-chip-actif");
           toEl.value = adresse;
+          destinatairePrenom = prenom || "";
         } else {
           toEl.value = "";
+          destinatairePrenom = "";
         }
       });
 
       liste.appendChild(chip);
     });
 
-    /* Saisie manuelle dans le champ → désélectionne les chips. */
+    /* Saisie manuelle dans le champ → désélectionne les chips et oublie le
+       prénom (aucun prénom connu pour une adresse tapée à la main). */
     toEl.addEventListener("input", function () {
       liste.querySelectorAll(".lp-email-chip").forEach(function (c) {
         c.classList.remove("lp-chip-actif");
       });
+      destinatairePrenom = "";
     });
   }
 

@@ -126,7 +126,7 @@
   /* Ligne d'un email fréquent */
   .email-row {
     display: grid;
-    grid-template-columns: 1fr 1.5fr auto;
+    grid-template-columns: 1fr 1.5fr 1fr auto;
     gap: 10px;
     align-items: center;
     margin-bottom: 10px;
@@ -135,10 +135,10 @@
   @media (max-width: 767px) {
     .email-row {
       grid-template-columns: 1fr auto;
-      grid-template-rows: auto auto;
+      grid-template-rows: auto auto auto;
     }
 
-    .email-row .form-control:first-child {
+    .email-row .form-control:nth-child(1) {
       grid-column: 1;
       grid-row: 1;
     }
@@ -148,9 +148,14 @@
       grid-row: 2;
     }
 
+    .email-row .form-control:nth-child(3) {
+      grid-column: 1;
+      grid-row: 3;
+    }
+
     .email-row .btn-supprimer-email {
       grid-column: 2;
-      grid-row: 1 / span 2;
+      grid-row: 1 / span 3;
       align-self: center;
     }
   }
@@ -352,6 +357,17 @@
         autoSave();
       });
 
+      var inputPrenom = document.createElement('input');
+      inputPrenom.type = 'text';
+      inputPrenom.className = 'form-control';
+      inputPrenom.value = entry.prenom || '';
+      inputPrenom.placeholder = 'Nicolas';
+      inputPrenom.setAttribute('aria-label', 'Prénom du destinataire ' + (index + 1));
+      inputPrenom.addEventListener('input', function () {
+        emailsEnCours[index].prenom = this.value;
+        autoSave();
+      });
+
       var btnSuppr = document.createElement('button');
       btnSuppr.type = 'button';
       btnSuppr.className = 'btn-supprimer-email';
@@ -365,13 +381,14 @@
 
       ligne.appendChild(inputLabel);
       ligne.appendChild(inputAdresse);
+      ligne.appendChild(inputPrenom);
       ligne.appendChild(btnSuppr);
       emailsListe.appendChild(ligne);
     });
   }
 
   btnAjouterEmail.addEventListener('click', function () {
-    emailsEnCours.push({ label: '', adresse: '' });
+    emailsEnCours.push({ label: '', adresse: '', prenom: '' });
     rendreListe();
     var dernierInputs = emailsListe.querySelectorAll('.email-row:last-child input');
     if (dernierInputs.length > 0) dernierInputs[0].focus();
@@ -457,7 +474,7 @@
 
     emailsEnCours = Array.isArray(config.emails_frequents)
       ? config.emails_frequents.map(function (e) {
-          return { label: e.label || '', adresse: e.adresse || '' };
+          return { label: e.label || '', adresse: e.adresse || '', prenom: e.prenom || '' };
         })
       : [];
     rendreListe();

@@ -11,6 +11,27 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v77
+
+- **Plugin Liste de pièces — libellé du champ date.** « Date intervention »
+  devient **« Date prévue de l'intervention »** (label du formulaire et message
+  de validation associé).
+- **Plugin Liste de pièces — nouveau corps de l'e-mail d'envoi.** Corps simplifié,
+  tutoiement, sans signature manuelle (la signature automatique d'Outlook prend le
+  relais) : « Bonjour [Prénom], / Tu trouveras ci-joint la liste de pièces pour
+  l'intervention [descriptif court] prévue le [JJ.MM.AAAA]. ». Le **prénom du
+  destinataire** est injecté lorsqu'un email fréquent est sélectionné via un chip
+  (fallback « Bonjour, » si saisie manuelle ou prénom inconnu). Vaut pour Web Share
+  et pour le repli `.eml`.
+- **Page Paramétrage — champ « Prénom » sur les emails fréquents.** Chaque email
+  fréquent porte désormais un prénom optionnel `{ label, adresse, prenom }`, saisi
+  via un input dédié. Compatibilité ascendante assurée : les entrées existantes
+  sans `prenom` restent valides (même clé de stockage, même persistance Supabase).
+- Bump de cache requis pour invalider l'ancien cache (modification des plugins
+  `liste-pieces` et `parametrage`).
+
+---
+
 ## v76
 
 - **Correctif de régression — affichage cassé au lancement (page Accueil).**

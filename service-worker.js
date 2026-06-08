@@ -18,9 +18,9 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache.
-   Version courante : v76. Historique des versions → voir CHANGELOG.md. */
-const CACHE_NOM     = 'muf-webapp-v76';
-const CACHE_PLUGINS = 'muf-plugins-v76';
+   Version courante : v77. Historique des versions → voir CHANGELOG.md. */
+const CACHE_NOM     = 'muf-webapp-v77';
+const CACHE_PLUGINS = 'muf-plugins-v77';
 
 /* Document de repli pour les navigations hors-ligne (PWA / refresh offline). */
 const FALLBACK_DOC = './index.html';
