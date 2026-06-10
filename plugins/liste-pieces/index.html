@@ -1255,8 +1255,29 @@
      dans Outlook quand il contient « é », « è » ou « — ». */
   function encoderEnteteRFC2047(texte) {
     if (/^[\x00-\x7F]*$/.test(texte)) { return texte; }
-    var utf8 = unescape(encodeURIComponent(texte));
-    return "=?UTF-8?B?" + btoa(utf8) + "?=";
+    /* Octets UTF-8 via TextEncoder (remplace unescape() déprécié). */
+    var bytes = new TextEncoder().encode(texte);
+    /* RFC 2047 : un encoded-word ne doit pas dépasser 75 caractères. On
+       découpe en chunks de 45 octets (≈ 60 chars en base64, marge sous 75
+       une fois ajoutés "=?UTF-8?B?" et "?="), puis on plie (folding) les
+       encoded-words avec "\r\n " conformément à la RFC. */
+    var mots = [];
+    var i = 0;
+    while (i < bytes.length) {
+      var fin = Math.min(i + 45, bytes.length);
+      /* Ne pas couper au milieu d'un caractère UTF-8 multi-octets : reculer
+         la borne tant qu'on tombe sur un octet de continuation (10xxxxxx). */
+      while (fin > i && fin < bytes.length && (bytes[fin] & 0xC0) === 0x80) {
+        fin--;
+      }
+      var binaire = '';
+      for (var j = i; j < fin; j++) {
+        binaire += String.fromCharCode(bytes[j]);
+      }
+      mots.push("=?UTF-8?B?" + btoa(binaire) + "?=");
+      i = fin;
+    }
+    return mots.join("\r\n ");
   }
 
   /* Repli .eml — mécanisme historique conservé à l'identique : construit un
