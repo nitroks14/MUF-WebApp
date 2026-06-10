@@ -1203,7 +1203,17 @@
       /* Édition : on récupère l'enregistrement existant pour conserver
          les champs non éditables (created_at, etc.) puis put(). */
       op = window.ClientsDB.get(editingId).then(function (existant) {
-        var fusion = Object.assign({}, existant || {}, donnees, { id: editingId });
+        /* H4 : un pull SyncManager a pu appliquer un soft-delete distant pendant
+           que la modale était ouverte → get() renvoie null. On ne ressuscite PAS
+           le client (sinon il serait re-poussé _dirty vers Supabase, annulant la
+           suppression faite sur un autre appareil) : on annule la sauvegarde. */
+        if (!existant) {
+          dom.formSave.disabled = false;
+          fermerFormulaire();
+          alert('Client introuvable ou supprime depuis un autre appareil.');
+          return null;
+        }
+        var fusion = Object.assign({}, existant, donnees, { id: editingId });
         return window.ClientsDB.put(fusion);
       });
     } else {
