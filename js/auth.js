@@ -201,9 +201,17 @@
      */
     register: async function (prenom, nom, email, mdp) {
       try {
+        var emailNorm = (email || '').trim().toLowerCase();
+        /* Défense en profondeur : seules les adresses @multivac.fr sont
+           autorisées. La vraie barrière est côté Supabase (Allowed email
+           domains) ; cette garde évite simplement un appel réseau inutile
+           et donne un message clair côté client. */
+        if (!emailNorm.endsWith('@multivac.fr')) {
+          return { ok: false, error: 'Seules les adresses @multivac.fr sont autorisées.' };
+        }
         var supabase = await obtenirClientPret();
         var resultat = await supabase.auth.signUp({
-          email: (email || '').trim().toLowerCase(),
+          email: emailNorm,
           password: mdp,
           options: {
             data: {
