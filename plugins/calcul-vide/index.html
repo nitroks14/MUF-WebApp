@@ -1105,8 +1105,8 @@
    *   V = areaMm2Override × depth (sans soustraction du cadre — l'aire ArUco
    *   mesure déjà la surface visible de l'outillage, pas un rectangle fictif).
    *   Avec cales : on retranche le volume des cales calculé sur la même aire.
-   *     caleVol = areaMm2Override × (fillerThickness / depth) × fillerThickness
-   *     (approche conservative : les cales occupent la même proportion de surface)
+   *     caleVol = areaMm2Override × caleT   (aire mm² × épaisseur mm = mm³)
+   *     (les cales occupent toute l'aire ArUco mesurée, sur l'épaisseur de cale)
    */
   function calculateToolingVolume(laize, pitch, depth, hasFillers, fillerThickness, areaMm2Override) {
     if (areaMm2Override > 0) {
@@ -1115,9 +1115,13 @@
       if (!hasFillers || fillerThickness <= 0) {
         return cavityAruco / 1e9; /* m³ */
       }
-      /* Volume cales proportionnel à l'aire ArUco */
+      /* Volume des cales sur l'aire ArUco mesurée.
+         H8 : aire (mm²) × épaisseur de cale (mm) = volume (mm³), cohérent avec
+         le chemin non-ArUco (caleW × caleL × caleT). L'ancienne formule
+         areaMm2Override × (caleT2/depth) × caleT2 introduisait un facteur
+         caleT2/depth parasite qui sous-estimait fortement le volume de cale. */
       var caleT2 = Math.min(fillerThickness, depth);
-      var caleVol2 = areaMm2Override * (caleT2 / depth) * caleT2;
+      var caleVol2 = areaMm2Override * caleT2; /* mm² × mm = mm³ */
       return Math.max(cavityAruco - caleVol2, 0) / 1e9;
     }
 
