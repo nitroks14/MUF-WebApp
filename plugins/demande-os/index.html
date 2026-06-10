@@ -755,14 +755,23 @@
     const lienTemp = document.createElement('a');
     lienTemp.href = url;
     lienTemp.style.display = 'none';
+    /* Si le clic est pris en charge par le navigateur, on note qu'une
+       navigation a eu lieu pour ne PAS déclencher le fallback (sinon
+       double-fire du schéma ms-outlook:// → alerte « app introuvable »
+       et sortie de WebView sur iOS Safari). */
+    let handled = false;
+    lienTemp.addEventListener('click', function() { handled = true; });
     document.body.appendChild(lienTemp);
     lienTemp.click();
 
-    /* Fallback après 100 ms */
+    /* Fallback après 300 ms, uniquement si le clic n'a rien déclenché */
     setTimeout(function() {
-      document.body.removeChild(lienTemp);
-      window.location.href = url;
-    }, 100);
+      /* removeChild hors du chemin qui peut throw, pour éviter la fuite DOM */
+      if (lienTemp.parentNode) { lienTemp.parentNode.removeChild(lienTemp); }
+      if (!handled) {
+        window.location.href = url;
+      }
+    }, 300);
   }
 
   /* ----------------------------------------------------------
