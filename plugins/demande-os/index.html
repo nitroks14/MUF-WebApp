@@ -596,9 +596,10 @@
     }
 
     /* Mise à jour de la note de bas de formulaire */
+    const esc = window.MUF.escapeHtml;
     const to = domEmailTo.value || '(non configuré — voir Paramétrage)';
     domNoteDestinat.innerHTML =
-      '<strong>À :</strong> ' + to +
+      '<strong>À :</strong> ' + esc(to) +
       ' &nbsp;|&nbsp; <strong>CC :</strong> à sélectionner ou saisir ci-dessus' +
       '<br><em>Ouverture en brouillon uniquement — aucun envoi automatique.</em>';
   }
@@ -810,17 +811,19 @@
 
   /* Mise à jour de la note sur changement d'email */
   domEmailTo.addEventListener('input', function() {
+    const esc = window.MUF.escapeHtml;
     const to = domEmailTo.value.trim() || '(non configuré)';
     domNoteDestinat.innerHTML =
-      '<strong>À :</strong> ' + to +
-      ' &nbsp;|&nbsp; <strong>CC :</strong> ' + (domEmailCc.value.trim() || '—') +
+      '<strong>À :</strong> ' + esc(to) +
+      ' &nbsp;|&nbsp; <strong>CC :</strong> ' + esc(domEmailCc.value.trim() || '—') +
       '<br><em>Ouverture en brouillon uniquement — aucun envoi automatique.</em>';
   });
   domEmailCc.addEventListener('input', function() {
+    const esc = window.MUF.escapeHtml;
     const to = domEmailTo.value.trim() || '(non configuré)';
     domNoteDestinat.innerHTML =
-      '<strong>À :</strong> ' + to +
-      ' &nbsp;|&nbsp; <strong>CC :</strong> ' + (domEmailCc.value.trim() || '—') +
+      '<strong>À :</strong> ' + esc(to) +
+      ' &nbsp;|&nbsp; <strong>CC :</strong> ' + esc(domEmailCc.value.trim() || '—') +
       '<br><em>Ouverture en brouillon uniquement — aucun envoi automatique.</em>';
     /* Désactiver le chip actif si l'utilisateur saisit manuellement */
     domEmailsFreqList.querySelectorAll('.dos-email-chip').forEach(function(c) {
