@@ -475,11 +475,12 @@
      Pré-remplissage depuis window.Parametrage
      ---------------------------------------------------------- */
   function majNoteDestinat() {
+    var esc = window.MUF.escapeHtml;
     var to = domEmailTo.value.trim() || '(non configuré — voir Paramétrage)';
     var cc = domEmailCc.value.trim() || '—';
     domNoteDestinat.innerHTML =
-      '<strong>À :</strong> ' + to +
-      ' &nbsp;|&nbsp; <strong>CC :</strong> ' + cc +
+      '<strong>À :</strong> ' + esc(to) +
+      ' &nbsp;|&nbsp; <strong>CC :</strong> ' + esc(cc) +
       '<br><em>Le bouton Outlook génère un fichier .eml à ouvrir manuellement.</em>';
   }
 
