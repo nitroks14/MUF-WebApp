@@ -1268,6 +1268,9 @@
     var boundary = "MUF_LP_" + Date.now();
     var dateGMT  = new Date().toUTCString();
 
+    /* Anti-injection d'en-têtes : retirer tout CR/LF de l'adresse */
+    to = String(to == null ? '' : to).replace(/[\r\n]/g, '');
+
     var eml  = "From: \r\n";
     eml += "To: " + to + "\r\n";
     eml += "Subject: " + encoderEnteteRFC2047(sujet) + "\r\n";

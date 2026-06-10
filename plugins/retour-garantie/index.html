@@ -1047,6 +1047,10 @@
       var boundary = 'MUF_BRG_' + Date.now();
       var dateGMT  = new Date().toUTCString();
 
+      /* Anti-injection d'en-têtes : retirer tout CR/LF des adresses */
+      to = String(to == null ? '' : to).replace(/[\r\n]/g, '');
+      cc = String(cc == null ? '' : cc).replace(/[\r\n]/g, '');
+
       var eml  = 'From: \r\n';
       eml += 'To: ' + to + '\r\n';
       if (cc) { eml += 'Cc: ' + cc + '\r\n'; }
