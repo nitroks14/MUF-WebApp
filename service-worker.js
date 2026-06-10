@@ -190,8 +190,14 @@ async function strategieNavigation(requete) {
     if (reponseReseau && reponseReseau.ok) {
       /* Met à jour le cache du document de repli. */
       cache.put(FALLBACK_DOC, reponseReseau.clone());
+      return reponseReseau;
     }
-    return reponseReseau;
+    /* H7 : réponse réseau non valide (404/503 du CDN GitHub Pages, page d'erreur
+       de l'hébergeur…) : on préfère servir le shell en cache plutôt que de
+       propager une réponse cassée (aligné sur strategieNetworkFirst). */
+    const repliNonOk =
+      (await cache.match(FALLBACK_DOC)) || (await cache.match('./'));
+    return repliNonOk || reponseReseau;
   } catch (erreur) {
     const fallback =
       (await cache.match(FALLBACK_DOC)) ||
