@@ -44,6 +44,16 @@
   /* Débounce des synchros déclenchées par les mutations locales. */
   var DEBOUNCE_MS = 1500;
 
+  /* Retry/backoff après échec de push/pull (réseau intermittent, RLS…).
+     Délai = min(RETRY_MAX_MS, tentative * RETRY_PAS_MS), plafonné à
+     RETRY_MAX_TENTATIVES avant d'abandonner les relances automatiques et de
+     laisser l'état dégradé (state:error) comme signal. Le compteur repart à
+     zéro à chaque succès ET à chaque déclencheur "frais" (online, mutation,
+     login) afin qu'un état dégradé puisse toujours se rétablir. */
+  var RETRY_PAS_MS        = 5000;
+  var RETRY_MAX_MS        = 30000;
+  var RETRY_MAX_TENTATIVES = 6;
+
   /* ----------------------------------------------------------
      État interne
      ---------------------------------------------------------- */
@@ -52,6 +62,7 @@
   var _timer      = null;    /* timer de débounce */
   var _installe   = false;   /* déclencheurs déjà posés ? */
   var _listeners  = [];      /* callbacks onStatus */
+  var _tentatives = 0;       /* échecs consécutifs (retry/backoff) */
 
   /* ----------------------------------------------------------
      Helpers
@@ -263,6 +274,8 @@
         resultat.ok = true;
       });
     }).then(function () {
+      /* Succès : on réinitialise le compteur de tentatives. */
+      _tentatives = 0;
       notifierStatut({ state: 'done', pulled: resultat.pulled, pushed: resultat.pushed });
       return resultat;
     }).catch(function (err) {
@@ -273,10 +286,24 @@
       if (!reseau) {
         console.warn('[SyncManager] Échec de synchronisation :', msg);
       }
-      notifierStatut({ state: 'error', error: msg, network: reseau });
+      _tentatives++;
+      /* Tant qu'on est sous le plafond, on reprogramme une synchro avec un
+         backoff exponentiel borné (linéaire par paliers ici, plafonné à
+         RETRY_MAX_MS). Au-delà, on cesse les relances automatiques et on
+         laisse l'état dégradé (state:error) ; un déclencheur frais (online,
+         mutation, login) relancera et réinitialisera le compteur. */
+      var abandon = _tentatives >= RETRY_MAX_TENTATIVES;
+      notifierStatut({
+        state: 'error',
+        error: msg,
+        network: reseau,
+        tentative: _tentatives,
+        abandon: abandon,
+      });
       resultat.ok = false;
       resultat.reason = 'error';
       resultat.error = msg;
+      resultat._retry = !abandon;
       return resultat;
     }).then(function (res) {
       _enCours = false;
@@ -284,6 +311,10 @@
       if (_replanifier) {
         _replanifier = false;
         syncSoon();
+      } else if (res && res._retry) {
+        /* Échec transitoire sous le plafond : retry avec backoff. */
+        var delai = Math.min(RETRY_MAX_MS, _tentatives * RETRY_PAS_MS);
+        syncSoon(delai);
       }
       return res;
     });
@@ -307,14 +338,17 @@
     if (_installe) return;
     _installe = true;
 
-    /* 1. Mutation locale (db.js) → push débouncé. */
+    /* 1. Mutation locale (db.js) → push débouncé.
+       Déclencheur frais : on réarme le compteur de retry pour qu'un état
+       dégradé puisse se rétablir dès une nouvelle activité. */
     window.addEventListener(
       (window.ClientsDB && window.ClientsDB.EVENT_CHANGE) || 'clients-db-changed',
-      function () { syncSoon(); }
+      function () { _tentatives = 0; syncSoon(); }
     );
 
-    /* 2. Retour du réseau → synchro immédiate. */
+    /* 2. Retour du réseau → synchro immédiate (réarme le compteur de retry). */
     window.addEventListener('online', function () {
+      _tentatives = 0;
       notifierStatut({ state: 'idle' });
       syncSoon(200);
     });
@@ -325,7 +359,8 @@
       window.Auth.onChange(function (user) {
         var connecte = !!user;
         if (connecte && !dejaConnecte) {
-          /* Transition déconnecté → connecté : on synchronise. */
+          /* Transition déconnecté → connecté : on synchronise (compteur réarmé). */
+          _tentatives = 0;
           syncSoon(200);
         }
         dejaConnecte = connecte;
