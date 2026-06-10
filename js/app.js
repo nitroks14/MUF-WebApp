@@ -142,6 +142,13 @@ const navOverlay = document.getElementById('nav-overlay');
    le drawer n'est masqué (hidden) qu'une fois la transition CSS terminée. */
 const DRAWER_ANIM_MS = 300;
 
+/* Séquençage des chargements de plugins (M5) : chaque appel à chargerPlugin
+   incrémente ce compteur. Après chaque await, on vérifie qu'on est toujours
+   le chargement courant ; sinon on abandonne silencieusement pour éviter
+   qu'un fetch lent de A écrase l'affichage de B (navigation rapide A→B). */
+let _chargerSeq = 0;
+let _chargerAbort = null;
+
 /* ============================================================
    Construction de la navigation (drawer repliable unique)
    Appelée une seule fois au démarrage.
@@ -271,6 +278,15 @@ async function chargerPlugin(nom) {
      pour neutraliser tout vecteur XSS (#plugin-<img src=x onerror=…>). */
   const nomAffichage = window.MUF.escapeHtml(nom);
 
+  /* Séquençage (M5) : on s'enregistre comme chargement courant et on annule
+     le fetch précédent encore en vol. `estCourant()` permet d'abandonner après
+     chaque await si une navigation plus récente a eu lieu entre-temps. */
+  const seq = ++_chargerSeq;
+  const estCourant = () => seq === _chargerSeq;
+  if (_chargerAbort) { try { _chargerAbort.abort(); } catch (e) { /* ignore */ } }
+  const ctrl = new AbortController();
+  _chargerAbort = ctrl;
+
   /* Affichage du spinner de chargement */
   appContent.innerHTML = `
     <div class="plugin-loading" role="status" aria-live="polite">
@@ -282,13 +298,18 @@ async function chargerPlugin(nom) {
   const url = `./plugins/${nom}/index.html`;
 
   try {
-    const reponse = await fetch(url);
+    const reponse = await fetch(url, { signal: ctrl.signal });
+
+    /* Une navigation plus récente a pris la main : on abandonne sans écrire. */
+    if (!estCourant()) return;
 
     if (!reponse.ok) {
       throw new Error(`HTTP ${reponse.status} — ${reponse.statusText}`);
     }
 
     const html = await reponse.text();
+
+    if (!estCourant()) return;
 
     /* Injection du HTML dans la zone principale */
     appContent.innerHTML = html;
@@ -319,6 +340,11 @@ async function chargerPlugin(nom) {
     });
 
   } catch (erreur) {
+    /* Fetch annulé par une navigation plus récente : abandon silencieux. */
+    if (erreur && erreur.name === 'AbortError') return;
+    /* Une navigation plus récente a pris la main : ne pas écraser son écran. */
+    if (!estCourant()) return;
+
     console.error(`[MUF] Erreur chargement plugin "${nom}" :`, erreur);
 
     appContent.innerHTML = `
