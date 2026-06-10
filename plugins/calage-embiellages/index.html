@@ -457,7 +457,20 @@
      ---------------------------------------------------------- */
   document.getElementById('ce-btnAnalyser').addEventListener('click', function () {
     var Xth   = calculXtheorique();
-    var barre = barreUsed.checked ? parseFloat(epBarre.value || '0') : 0;
+
+    /* H3 : si la barre de calage est cochee mais que son epaisseur est vide ou
+       invalide, parseFloat(... || '0') renverrait 0 silencieusement -> cote base
+       fausse et voyant potentiellement vert a tort. On exige une epaisseur > 0. */
+    if (barreUsed.checked) {
+      var epBarreVal = parseFloat(epBarre.value);
+      if (epBarre.value.trim() === '' || isNaN(epBarreVal) || epBarreVal <= 0) {
+        alert('Veuillez saisir l\'epaisseur de la barre de calage (valeur > 0).');
+        epBarre.focus();
+        return;
+      }
+    }
+
+    var barre = barreUsed.checked ? parseFloat(epBarre.value) : 0;
     var base  = Xth + barre;
 
     var valeurs = [inputM1, inputM2, inputM3, inputM4].map(function (inp) {
