@@ -216,6 +216,18 @@
 (function() {
 'use strict';
 
+/* -----------------------------------------------------
+   Garde anti-double-montage (H5) : app.js réexécute les <script> du plugin à
+   chaque navigation. Sans démontage, le workspace Blockly précédent n'est jamais
+   disposé → fuite mémoire, 2ᵉ workspace injecté dans le même conteneur et
+   change-listeners parasites qui écrasent taxo[activeMachineKey]. On nettoie
+   donc systématiquement le montage précédent avant d'en (re)poser un.
+   Même pattern que les autres plugins (window.__xxxCleanup). */
+if (window.__taxoCleanup) {
+  try { window.__taxoCleanup(); } catch (e) { /* no-op */ }
+  window.__taxoCleanup = null;
+}
+
 /* =====================================================
    DONNEES PAR DEFAUT (copie TAXONOMIE plugin RI)
    ===================================================== */
@@ -528,6 +540,9 @@ var taxo;
 var workspace = null;
 var activeMachineKey = null;
 var chargementEnCours = false;
+/* H5 : conteneur d'injection Blockly + handler click, conservés pour démontage. */
+var injectionDiv = null;
+var onInjectionClick = null;
 
 /* Garde anti-rebond pour le dépli au clic (listener DOM `click`).
    Le clic sur l'icône ▾ qui replie le bloc bubble jusqu'au conteneur
@@ -1081,7 +1096,10 @@ function initBlockly() {
      affecté (édition du champ texte d'un bloc déplié OK).
      Purement visuel : setCollapsed émet un évènement UI ignoré par le listener
      de sauvegarde ci-dessus. */
-  workspace.getInjectionDiv().addEventListener('click', function(e) {
+  /* Handler nommé + référence au conteneur conservés pour pouvoir les retirer
+     au démontage (H5, voir window.__taxoCleanup). */
+  injectionDiv = workspace.getInjectionDiv();
+  onInjectionClick = function(e) {
     var blocks = workspace.getAllBlocks(false);
     for (var i = 0; i < blocks.length; i++) {
       var b = blocks[i];
@@ -1097,7 +1115,8 @@ function initBlockly() {
         return;
       }
     }
-  });
+  };
+  injectionDiv.addEventListener('click', onInjectionClick);
 
   /* 5. Bouton Reset : réinitialiser le workspace */
   document.getElementById('te-reset').addEventListener('click', function() {
@@ -1416,6 +1435,26 @@ chargerBlocklyEtInit();
 
 /* Recalcule le top des panneaux latéraux quand la fenêtre change de taille */
 window.addEventListener('resize', positionnerSidebars);
+
+/* -----------------------------------------------------
+   Démontage (H5) — exposé pour être appelé au prochain montage du plugin
+   (app.js réexécute les <script> sans nettoyer le DOM/les listeners au
+   préalable). On dispose le workspace Blockly (libère SVG + listeners internes),
+   on retire les écouteurs window/DOM posés ci-dessus et on coupe les références
+   pour permettre le GC. Même contrat que window.__cliCleanup, __cvCleanup, etc.
+   ----------------------------------------------------- */
+window.__taxoCleanup = function() {
+  window.removeEventListener('resize', positionnerSidebars);
+  if (injectionDiv && onInjectionClick) {
+    injectionDiv.removeEventListener('click', onInjectionClick);
+  }
+  injectionDiv = null;
+  onInjectionClick = null;
+  if (workspace) {
+    try { workspace.dispose(); } catch (e) { /* no-op */ }
+    workspace = null;
+  }
+};
 
 })();
 </script>
