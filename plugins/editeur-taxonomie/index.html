@@ -188,7 +188,9 @@
 <!-- Sidebar config GitHub (panel coulissant) -->
 <div class="te-sidebar" id="te-sidebar">
   <div style="margin-bottom:16px;font-weight:700;color:#003A70;">Config GitHub</div>
-  <div class="te-field"><label>Token (ghp_...)</label><input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off"></div>
+  <div class="te-field"><label>Token (ghp_...)</label><input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
+    <p style="font-size:var(--font-size-xs);color:#94a3b8;margin-top:4px;line-height:1.4;">Le token n'est pas conserve apres fermeture de l'onglet, pour des raisons de securite.</p>
+  </div>
   <div class="te-field"><label>Proprietaire (owner)</label><input type="text" id="gh-owner"></div>
   <div class="te-field"><label>Repo</label><input type="text" id="gh-repo" placeholder="MUF-WebApp"></div>
   <div class="te-field"><label>Branche</label><input type="text" id="gh-branch" placeholder="main"></div>
@@ -536,6 +538,10 @@ var TAXO_DEFAUT = {
    ===================================================== */
 var LS_KEY = 'taxo_editeur_draft';
 var LS_GH  = 'taxo_editeur_github';
+/* H2 : le PAT GitHub (contents:write) ne doit pas etre persiste en clair dans
+   localStorage. On le conserve uniquement en sessionStorage (efface a la
+   fermeture de l'onglet). Les autres champs de config restent dans LS_GH. */
+var SS_GH_TOKEN = 'taxo_editeur_github_token';
 var taxo;
 var workspace = null;
 var activeMachineKey = null;
@@ -680,14 +686,35 @@ function serializerTaxoJS(t) {
    CONFIG GITHUB
    ===================================================== */
 function chargerConfig() {
+  /* H2 : le token vient de sessionStorage (jamais de localStorage). */
+  document.getElementById('gh-token').value = sessionStorage.getItem(SS_GH_TOKEN) || '';
+
   var saved = localStorage.getItem(LS_GH);
   if (!saved) return;
-  var cfg = JSON.parse(saved);
-  document.getElementById('gh-token').value  = cfg.token  || '';
+  /* M7 : config localStorage potentiellement corrompue → try/catch + purge de
+     la cle invalide (meme garde defensive que l'import JSON). */
+  var cfg;
+  try {
+    cfg = JSON.parse(saved);
+  } catch (err) {
+    localStorage.removeItem(LS_GH);
+    return;
+  }
   document.getElementById('gh-owner').value  = cfg.owner  || '';
   document.getElementById('gh-repo').value   = cfg.repo   || '';
   document.getElementById('gh-branch').value = cfg.branch || 'main';
   document.getElementById('gh-path').value   = cfg.path   || 'plugins/rapport-intervention/index.html';
+
+  /* H2 : purge d'un eventuel token herite d'une ancienne version qui le
+     stockait en clair dans localStorage. On reecrit la config sans le token. */
+  if (Object.prototype.hasOwnProperty.call(cfg, 'token')) {
+    localStorage.setItem(LS_GH, JSON.stringify({
+      owner:  cfg.owner  || '',
+      repo:   cfg.repo   || '',
+      branch: cfg.branch || 'main',
+      path:   cfg.path   || 'plugins/rapport-intervention/index.html'
+    }));
+  }
 }
 
 function lireConfig() {
@@ -701,7 +728,20 @@ function lireConfig() {
 }
 
 document.getElementById('gh-save-config').addEventListener('click', function() {
-  localStorage.setItem(LS_GH, JSON.stringify(lireConfig()));
+  var cfg = lireConfig();
+  /* H2 : le token va en sessionStorage (efface a la fermeture de l'onglet) ;
+     les autres champs restent en localStorage, SANS le token. */
+  if (cfg.token) {
+    sessionStorage.setItem(SS_GH_TOKEN, cfg.token);
+  } else {
+    sessionStorage.removeItem(SS_GH_TOKEN);
+  }
+  localStorage.setItem(LS_GH, JSON.stringify({
+    owner:  cfg.owner,
+    repo:   cfg.repo,
+    branch: cfg.branch,
+    path:   cfg.path
+  }));
   showToast('Config GitHub sauvegardée', 'success');
 });
 
