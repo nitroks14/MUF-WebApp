@@ -331,11 +331,26 @@
    * @param {object} [patch] champs serveur à fusionner
    */
   function markSynced(id, patch) {
+    patch = patch || {};
+    /* H6 : empreinte de l'edition locale au moment du snapshot push (posee par
+       le sync-manager). Champ de controle interne, jamais persiste. */
+    var snapshotLocalTs = patch._snapshotLocalTs;
+    var champs = Object.assign({}, patch);
+    delete champs._snapshotLocalTs;
+
     return transaction(STORE_CLIENTS, 'readwrite').then(function (tx) {
       var store = tx.objectStore(STORE_CLIENTS);
       return promesseRequete(store.get(id)).then(function (existant) {
         if (!existant) return promesseTransaction(tx);
-        var maj = Object.assign({}, existant, patch || {});
+        /* H6 : si l'enregistrement a ete re-edite pendant le push en vol
+           (_localUpdatedAt courant != celui du snapshot), on NE doit PAS effacer
+           _dirty ni ecraser updated_at avec la valeur serveur (devenue obsolete) :
+           l'edition intermediaire doit rester a pousser au prochain cycle. */
+        if (snapshotLocalTs !== undefined &&
+            existant._localUpdatedAt !== snapshotLocalTs) {
+          return promesseTransaction(tx);
+        }
+        var maj = Object.assign({}, existant, champs);
         maj._dirty = false;
         store.put(maj);
         return promesseTransaction(tx);

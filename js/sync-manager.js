@@ -152,6 +152,11 @@
               updated_at: serveur.updated_at,
               deleted:    !!serveur.deleted,
             } : {};
+            /* H6 : empreinte de l'edition locale au moment du snapshot push.
+               markSynced refusera d'effacer _dirty / d'ecraser updated_at si
+               l'enregistrement a ete re-edite (nouvelle valeur de _localUpdatedAt)
+               pendant la latence reseau du push. */
+            patch._snapshotLocalTs = local._localUpdatedAt;
             return window.ClientsDB.markSynced(local.id, patch);
           });
 
