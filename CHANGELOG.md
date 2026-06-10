@@ -11,6 +11,38 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v84
+
+- **Correction des 9 findings HIGH de la revue de code 2026-06-10.**
+- **Nouveau helper partagé `js/utils.js` (`window.MUF.escapeHtml`)** — échappe
+  `& < > " '`, chargé dans le shell avant les autres scripts applicatifs. Ajouté
+  au précache (`ASSETS_STATIQUES`). Destiné à factoriser l'échappement XSS.
+- **[H9] `js/app.js`** : le nom de plugin issu de `location.hash` est désormais
+  échappé avant interpolation dans les deux `innerHTML` (spinner + page d'erreur)
+  de `chargerPlugin()` — neutralise `#plugin-<img src=x onerror=…>`.
+- **[H1] `plugins/clients`** : le champ machine `pns: string[]` (auto-apprentissage
+  / retour-garantie) n'était plus effacé à l'édition d'un client (fusion de la
+  machine d'origine dans `lireMachines()`).
+- **[H4] `plugins/clients`** : garde anti-résurrection si le client a été
+  soft-delete à distance pendant que la modale d'édition était ouverte.
+- **[H6] `js/sync-manager.js` + `js/db.js`** : `markSynced()` ne efface plus
+  `_dirty` ni n'écrase `updated_at` si l'enregistrement a été ré-édité pendant le
+  push réseau (empreinte `_snapshotLocalTs`).
+- **[H3] `plugins/calage-embiellages`** : épaisseur de barre de calage exigée
+  (> 0) avant calcul si la case est cochée.
+- **[H8] `plugins/calcul-vide`** : correction du volume de cale en mode ArUco
+  (`area × caleT` au lieu de `area × caleT²/depth`).
+- **[H7] `service-worker.js`** : `strategieNavigation` replie sur le shell en
+  cache sur réponse réseau non-OK (alignée sur `strategieNetworkFirst`).
+- **[H5] `plugins/editeur-taxonomie`** : démontage du workspace Blockly à la
+  navigation (`window.__taxoCleanup` : `dispose()` + retrait des listeners
+  resize / click injectionDiv) — corrige fuite mémoire + double workspace.
+- **[H2 / M7] `plugins/editeur-taxonomie`** : PAT GitHub déplacé en
+  `sessionStorage` (effacé à la fermeture de l'onglet) + avertissement ;
+  `JSON.parse` de la config protégé par try/catch.
+
+---
+
 ## v83
 
 - **Anti-autofill navigateur RÉELLEMENT robuste, factorisé (corrige le fix v82).**

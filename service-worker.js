@@ -18,9 +18,9 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache.
-   Version courante : v83. Historique des versions → voir CHANGELOG.md. */
-const CACHE_NOM     = 'muf-webapp-v83';
-const CACHE_PLUGINS = 'muf-plugins-v83';
+   Version courante : v84. Historique des versions → voir CHANGELOG.md. */
+const CACHE_NOM     = 'muf-webapp-v84';
+const CACHE_PLUGINS = 'muf-plugins-v84';
 
 /* Document de repli pour les navigations hors-ligne (PWA / refresh offline). */
 const FALLBACK_DOC = './index.html';
@@ -35,6 +35,7 @@ const ASSETS_STATIQUES = [
   './css/main.css',
   './css/auth.css',
   './js/config.js',
+  './js/utils.js',
   './js/libs/supabase.umd.js',
   './js/supabase-client.js',
   './js/auth.js',
