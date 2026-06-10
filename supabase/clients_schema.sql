@@ -69,6 +69,16 @@ create trigger clients_set_updated_at
 -- ---------------------------------------------------------------------
 -- Row Level Security
 -- ---------------------------------------------------------------------
+-- NB perf (advisor Supabase auth_rls_initplan) : auth.uid() est enveloppé dans
+-- un sous-select `(select auth.uid())` pour n'être évalué qu'UNE fois par requête
+-- (et non par ligne). Comportement identique, plan optimisé. Migration appliquée
+-- en prod le 2026-06-10 (optimize_clients_rls_initplan).
+--
+-- NB sécurité : la base porte aussi un event trigger `public.rls_auto_enable()`
+-- (SECURITY DEFINER) qui active automatiquement la RLS sur toute nouvelle table
+-- du schéma `public`. Son EXECUTE a été retiré à PUBLIC le 2026-06-10
+-- (migration revoke_public_execute_rls_auto_enable) — l'event trigger continue
+-- de se déclencher indépendamment de ce privilège.
 alter table public.clients enable row level security;
 
 -- Lecture : uniquement ses propres lignes (y compris les soft-deletes, afin
@@ -77,7 +87,7 @@ drop policy if exists clients_select_own on public.clients;
 create policy clients_select_own
   on public.clients
   for select
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 -- Insertion : la ligne créée doit appartenir à l'utilisateur courant.
 -- (user_id n'est pas envoyé par le client : le défaut auth.uid() le remplit.)
@@ -85,20 +95,22 @@ drop policy if exists clients_insert_own on public.clients;
 create policy clients_insert_own
   on public.clients
   for insert
-  with check (auth.uid() = user_id);
+  with check ((select auth.uid()) = user_id);
 
 -- Mise à jour : uniquement ses propres lignes (le soft-delete passe par ici).
 drop policy if exists clients_update_own on public.clients;
 create policy clients_update_own
   on public.clients
   for update
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
--- Suppression physique : interdite par défaut (on utilise le soft-delete).
--- Décommenter si une purge réelle devait être autorisée à l'usager :
--- drop policy if exists clients_delete_own on public.clients;
--- create policy clients_delete_own
---   on public.clients
---   for delete
---   using (auth.uid() = user_id);
+-- Suppression physique : une policy DELETE EXISTE en production (chaque usager
+-- peut supprimer physiquement ses propres lignes). L'app n'utilise que le
+-- soft-delete (colonne `deleted`), donc cette policy n'est pas exercée en
+-- pratique — mais elle est présente côté serveur, versionnée ici pour cohérence.
+drop policy if exists clients_delete_own on public.clients;
+create policy clients_delete_own
+  on public.clients
+  for delete
+  using ((select auth.uid()) = user_id);
