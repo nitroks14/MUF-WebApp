@@ -304,6 +304,10 @@
   <!-- Config globale (URL + clé publique Supabase) — doit être le premier script -->
   <script src="./js/config.js"></script>
 
+  <!-- Utilitaires partagés (window.MUF : escapeHtml…) — sans dépendance,
+       chargés avant les autres scripts applicatifs et les plugins. -->
+  <script src="./js/utils.js"></script>
+
   <!-- supabase-js v2 VENDORISÉ en local (build UMD officiel) : expose window.supabase.
        Servi localement (et non depuis un CDN) pour permettre le démarrage hors-ligne. -->
   <script src="./js/libs/supabase.umd.js"></script>

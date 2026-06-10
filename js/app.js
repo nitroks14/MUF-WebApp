@@ -266,11 +266,16 @@ function initialiserDrawer() {
    la recréation des balises <script>.
    ============================================================ */
 async function chargerPlugin(nom) {
+  /* Sécurité (H9) : « nom » provient de location.hash et est interpolé dans
+     des innerHTML (spinner + page d'erreur). On l'échappe systématiquement
+     pour neutraliser tout vecteur XSS (#plugin-<img src=x onerror=…>). */
+  const nomAffichage = window.MUF.escapeHtml(nom);
+
   /* Affichage du spinner de chargement */
   appContent.innerHTML = `
     <div class="plugin-loading" role="status" aria-live="polite">
       <div class="spinner" aria-hidden="true"></div>
-      <span>Chargement de ${nom}…</span>
+      <span>Chargement de ${nomAffichage}…</span>
     </div>
   `;
 
@@ -326,8 +331,8 @@ async function chargerPlugin(nom) {
         </svg>
         <p class="plugin-error-title">Impossible de charger le module</p>
         <p class="plugin-error-msg">
-          Le module <strong>${nom}</strong> n'est pas disponible.<br>
-          Vérifiez que le fichier <code>plugins/${nom}/index.html</code> existe.
+          Le module <strong>${nomAffichage}</strong> n'est pas disponible.<br>
+          Vérifiez que le fichier <code>plugins/${nomAffichage}/index.html</code> existe.
         </p>
         <a href="#" class="btn btn-outline mt-16">Retour à l'accueil</a>
       </div>
