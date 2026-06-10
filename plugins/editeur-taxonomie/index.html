@@ -265,7 +265,7 @@ var TAXO_DEFAUT = {
             label: 'Outillage soudure',
             elements: [
               { label: 'Téflon', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Joint de soudure', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
+              { label: 'Joint de soudure', actions: [{ type: 'controle' }, { type: 'remplacement' }] }
             ]
           }
         ]
@@ -404,129 +404,49 @@ var TAXO_DEFAUT = {
       {
         label: 'Formage',
         subcats: [
-          {
-            label: 'Embiellage',
-            elements: [
-              { label: 'Bielles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Manivelles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Paliers', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Ressorts', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-            ]
-          },
-          {
-            label: 'Système de vide',
-            elements: [
-              { label: 'Vannes de vide', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Tuyaux', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Joints de raccord', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-            ]
-          },
-          {
-            label: 'Outillage formage',
-            elements: [
-              { label: 'Joints d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Membranes', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Plaque de formage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Douilles de guidage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-            ]
-          }
+          { label: 'Embiellage', elements: [{ label: 'Mécanisme', actions: [{ type: 'controle', note: 'visuelle et manuelle de l\'absence de jeu anormal', etats: 'Bon/Moyen/Dégradé' }, { type: 'remplacement', note: 'des pièces d\'usure' }, { type: 'remplacement', note: 'vérin de montée' }, { type: 'remplacement', note: 'vérin d\'assistance' }, { type: 'reglage', note: 'du calage mécanique de la machine: réglage des bielles, contrôle du PMH, équerrage et hauteur de verrouillage.' }, { type: 'graissage', note: 'des organes mécaniques' }, { type: 'graissage', note: '/!\\ Veuillez effectuer le graissage des organes mécaniques conformément au plan de lubrification afin d\'assurer la durabilité de l\'équipement.' }] }, { label: 'Compensation épaisseur film', actions: [{ type: 'controle', note: 'Inspection visuelle', etats: 'Bon/Moyen/Dégradé' }, { type: 'remplacement', note: 'des pièces d\'usure' }] }] },
+          { label: 'Système de vide', elements: [{ label: 'Vannes de vide', actions: [{ type: 'nettoyage', note: 'Niveau de propreté', etats: 'Conforme/À nettoyer' }, { type: 'remplacement', note: 'des joints' }, { type: 'graissage', etats: 'Graisse pneumatique/Compound O₂' }] }, { label: 'Tuyaux', actions: [{ type: 'controle', etats: 'Bon/Moyen/Dégradé' }, { type: 'nettoyage' }, { type: 'remplacement', note: 'de', etats: '1 tuyau/2 tuyaux/3 tuyaux/tous les tuyaux' }] }, { label: 'Sonde', actions: [{ type: 'controle', note: 'du tuyau de mesure', etats: 'Conforme/À nettoyer' }, { type: 'nettoyage' }, { type: 'remplacement' }, { type: 'reglage', note: 'Calibration', etats: 'Offset de:' }] }] },
+          { label: 'Outillage', elements: [{ label: 'État des lieux visuel', actions: [{ type: 'controle', etats: 'Bon/Moyen/Dégradé' }] }, { label: 'Joints d\'outillage', actions: [{ type: 'controle', etats: 'Bon/Moyen/Dégradé' }, { type: 'remplacement' }] }, { label: 'Membranes', actions: [{ type: 'controle', etats: 'Bon/Dégradé' }, { type: 'remplacement' }] }, { label: 'Plaque de formage', actions: [{ type: 'controle', etats: 'Bon/Moyen/Dégradé' }, { type: 'remplacement' }, { type: 'reglage', note: 'Reprise du calage du plan de chauffe' }] }, { label: 'Réglage de hauteur', actions: [{ type: 'controle', note: 'de l\'outillage inférieur', etats: 'Bon/Moyen/Dégradé' }, { type: 'controle', note: 'de la plaque de refroidissement', etats: 'Bon/Moyen/Dégradé' }, { type: 'nettoyage' }, { type: 'remplacement', note: 'des pieces d\'usure' }, { type: 'reglage', etats: 'offset de' }] }, { label: 'Couteaux de perforation', actions: [{ type: 'controle', etats: 'Bon/Moyen/Dégradé' }, { type: 'remplacement', note: 'de', etats: 'quelques couteaux/tous les couteaux' }] }] }
         ]
       },
       {
         label: 'Soudure',
         subcats: [
-          {
-            label: 'Embiellage',
-            elements: [
-              { label: 'Bielles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Manivelles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Paliers', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Ressorts', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-            ]
-          },
-          {
-            label: 'Système de vide / gaz',
-            elements: [
-              { label: 'Vannes de vide', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Vannes de gaz', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Tuyaux', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Joints de raccord', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-            ]
-          },
-          {
-            label: 'Outillage soudure',
-            elements: [
-              { label: 'Pavés de soudure', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Membranes / diaphragmes', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Joints d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Douilles de guidage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Paliers', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Ressorts d\'outillage', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-            ]
-          }
+          { label: 'Embiellage', elements: [{ label: 'Mécanisme', actions: [{ type: 'controle', note: 'visuelle et manuelle de l\'absence de jeu anormal', etats: 'Bon/Moyen/Dégradé' }, { type: 'remplacement', note: 'des pièces d\'usure' }, { type: 'remplacement', note: 'vérin de montée' }, { type: 'remplacement', note: 'vérin d\'assistance' }, { type: 'reglage', note: 'du calage mécanique de la machine: réglage des bielles, contrôle du PMH, équerrage et hauteur de verrouillage.' }, { type: 'graissage', note: 'des organes mécaniques' }, { type: 'controle', note: '/!\\ Veuillez effectuer le graissage des organes mécaniques conformément au plan de lubrification afin d\'assurer la durabilité de l\'équipement.' }] }] },
+          { label: 'Système de vide / gaz', elements: [{ label: 'Vannes de vide', actions: [{ type: 'nettoyage', note: 'Niveau de propreté', etats: 'Conforme/À nettoyer' }, { type: 'remplacement', note: 'des joints' }, { type: 'graissage', etats: 'Graisse pneumatique/Compound O₂' }] }, { label: 'Tuyaux', actions: [{ type: 'controle', etats: 'Bon/Moyen/Dégradé' }, { type: 'nettoyage' }, { type: 'remplacement', note: 'de', etats: '1 tuyau/2 tuyaux/3 tuyaux/tous les tuyaux' }] }, { label: 'Sonde', actions: [{ type: 'controle', note: 'du tuyau de mesure', etats: 'Conforme/À nettoyer' }, { type: 'nettoyage' }, { type: 'remplacement' }, { type: 'reglage', note: 'Calibration', etats: 'Offset de:' }] }, { label: 'Vannes de gaz', actions: [{ type: 'controle', note: 'membrane', etats: 'Bon/Dégradé' }, { type: 'remplacement' }] }] },
+          { label: 'Outillage soudure', elements: [{ label: 'Plaques de soudure', actions: [{ type: 'controle', etats: 'Bon/Moyen/Dégradé' }, { type: 'remplacement' }] }, { label: 'Membranes', actions: [{ type: 'controle', etats: 'Bon/Dégradé' }, { type: 'nettoyage' }, { type: 'remplacement' }] }, { label: 'Douilles de guidage', actions: [{ type: 'controle', etats: 'Bon/Moyen/Dégradé' }, { type: 'nettoyage' }, { type: 'remplacement' }] }, { label: 'Ressorts d\'outillage', actions: [{ type: 'controle', etats: 'Bon/Moyen/Dégradé' }, { type: 'nettoyage' }, { type: 'remplacement' }] }, { label: 'Joints d\'outillage (Racleurs et joint de 3,2mm)', actions: [{ type: 'controle', etats: 'Bon/Moyen/Dégradé' }, { type: 'remplacement' }] }, { label: 'Joint de soudure', actions: [{ type: 'controle', etats: 'Bon/Dégradé' }, { type: 'remplacement' }] }] }
         ]
       },
       {
         label: 'Découpe transversale',
         subcats: [
-          {
-            label: 'Coupe',
-            elements: [
-              { label: 'Lames transversales', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Contre-lames', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Presses flans', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Coupelles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-            ]
-          }
+          { label: 'Rigide', elements: [{ label: 'Mécanisme', actions: [{ type: 'controle', note: 'visuelle et manuelle de l\'absence de jeu anormal', etats: 'Bon/Moyen/Dégradé' }, { type: 'remplacement', note: 'des pièces d\'usure' }, { type: 'remplacement', note: 'vérin de montée' }, { type: 'reglage', note: 'Réalisation du calage mécanique de la coupe' }, { type: 'graissage', note: 'des organes mécaniques' }, { type: 'graissage', note: '/!\\ Veuillez effectuer le graissage des organes mécaniques conformément au plan de lubrification afin d\'assurer la durabilité de l\'équipement.' }] }, { label: 'Sabot de coupe', actions: [{ type: 'controle', etats: 'Bon/Moyen/Dégradé' }, { type: 'remplacement' }] }, { label: 'Barre de contre-pression', actions: [{ type: 'controle', etats: 'Bon/Dégradé' }, { type: 'remplacement' }] }, { label: 'Coupelles de décharge rapide', actions: [{ type: 'remplacement' }] }] },
+          { label: 'Souple', elements: [{ label: 'Presses flans', actions: [{ type: 'controle', etats: 'Bon/Moyen/Dégradé' }, { type: 'nettoyage', etats: 'Conforme/Nettoyé/À nettoyer' }, { type: 'remplacement' }] }, { label: 'Coupelles de décharge rapide', actions: [{ type: 'remplacement' }] }] }
         ]
       },
       {
         label: 'Découpe longitudinale',
         subcats: [
-          {
-            label: 'Coupe',
-            elements: [
-              { label: 'Lame longitudinale', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Contre-lame', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Réglage position', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-            ]
-          }
+          { label: '', elements: [{ label: 'Mécanisme', actions: [{ type: 'controle', note: 'visuelle et manuelle de l\'absence de jeu anormal', etats: 'Bon/Moyen/Dégradé' }, { type: 'remplacement', note: 'des pièces d\'usure' }] }, { label: 'Lame circulaire', actions: [{ type: 'controle', etats: 'Bon/Dégradé' }, { type: 'nettoyage' }, { type: 'remplacement' }] }, { label: 'Fentes/Contre-lame', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }, { label: 'Réglage position', actions: [{ type: 'controle' }, { type: 'reglage' }] }] }
         ]
       },
       {
-        label: 'Avance film',
+        label: 'Déroulement film',
         subcats: [
-          {
-            label: 'Déroulement',
-            elements: [
-              { label: 'Rouleaux', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Douilles', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Frein bobine', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Tension film', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-            ]
-          },
-          {
-            label: 'Chaîne d\'avance',
-            elements: [
-              { label: 'Chaînes', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Pignons', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Pinces', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Ressorts de pince', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-            ]
-          }
+          { label: 'Inférieur', elements: [{ label: 'Mécanisme', actions: [{ type: 'controle', note: 'visuelle et manuelle de l\'absence de jeu anormal', etats: 'Bon/Moyen/Dégradé' }, { type: 'remplacement', note: 'des pièces d\'usure' }, { type: 'nettoyage' }, { type: 'graissage' }] }] },
+          { label: 'Supérieur', elements: [{ label: 'Mécanisme', actions: [{ type: 'controle', note: 'visuelle et manuelle de l\'absence de jeu anormal', etats: 'Bon/Moyen/Dégradé' }, { type: 'remplacement', note: 'des pièces d\'usure' }, { type: 'nettoyage' }, { type: 'graissage' }] }, { label: 'Frein film imprimé', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }] }
+        ]
+      },
+      {
+        label: 'Entrainement film',
+        subcats: [
+          { label: 'Chaîne d\'avance', elements: [{ label: 'Chaînes', actions: [{ type: 'controle', note: 'de l\'allongement', etats: 'Reprise tension/Hors cotes' }, { type: 'controle', note: 'visuelle et manuelle de l\'absence de jeu anormal', etats: 'Conforme/Dégradé' }, { type: 'nettoyage' }, { type: 'remplacement', note: 'de quelques pinces et ressorts' }] }, { label: 'Pignons', actions: [{ type: 'controle', note: 'visuelle et manuelle de l\'absence de jeu anormal', etats: 'Conforme/Dégradé' }, { type: 'nettoyage' }, { type: 'remplacement' }, { type: 'lubrification', etats: 'Bon/Mauvais' }] }] }
         ]
       },
       {
         label: 'Divers',
         subcats: [
-          {
-            label: 'Thermique',
-            elements: [
-              { label: 'Contrôleurs de chauffe', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Pyromètre', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] },
-              { label: 'Circuit de refroidissement', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }
-            ]
-          }
+          { label: 'Thermique', elements: [{ label: 'Contacteur de chauffe', actions: [{ type: 'remplacement' }] }, { label: 'Circuit de refroidissement', actions: [{ type: 'controle' }, { type: 'nettoyage' }, { type: 'remplacement' }] }] }
         ]
       }
     ]
