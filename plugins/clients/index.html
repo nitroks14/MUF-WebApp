@@ -972,9 +972,15 @@
     dom.machinesEmpty.style.display = vide ? 'block' : 'none';
   }
 
-  function ajouterLigneMachine(type, numero, annee) {
+  function ajouterLigneMachine(type, numero, annee, machineOriginale) {
     var row = document.createElement('div');
     row.className = 'cli-machine-row';
+
+    /* H1 : on conserve la machine d'origine (avec ses sous-champs non éditables
+       par le formulaire, notamment pns: string[] alimenté par l'auto-apprentissage
+       et retour-garantie). lireMachines() la fusionnera pour ne rien effacer.
+       Pour une nouvelle ligne saisie à la main, machineOriginale est undefined. */
+    row._machineOriginale = machineOriginale || null;
 
     var inType = document.createElement('input');
     inType.type = 'text';
@@ -1028,9 +1034,20 @@
       var annee = row.querySelector('.cli-m-annee').value.trim();
       /* On ignore les lignes totalement vides (aucun des trois champs rempli). */
       if (type || numero || annee) {
-        var m = { type: type, numero: numero };
-        /* annee n'est ajoutée que si renseignée, pour ne pas polluer le JSONB. */
-        if (annee) m.annee = annee;
+        /* H1 : on repart de la machine d'origine pour préserver ses sous-champs
+           non éditables ici (pns: string[] et tout futur champ inconnu du
+           formulaire), puis on applique les seuls champs éditables. */
+        var m = Object.assign({}, row._machineOriginale || {}, {
+          type: type,
+          numero: numero,
+        });
+        /* annee : ajoutée si renseignée, retirée sinon, pour ne pas polluer le
+           JSONB ni conserver une année obsolète héritée de l'original. */
+        if (annee) {
+          m.annee = annee;
+        } else {
+          delete m.annee;
+        }
         out.push(m);
       }
     });
@@ -1132,7 +1149,9 @@
       dom.email.value = client.email || '';
       dom.codeClient.value = client.code_client || '';
       (client.machines || []).forEach(function (m) {
-        ajouterLigneMachine(m.type, m.numero, m.annee);
+        /* On transmet l'objet machine complet (4ᵉ arg) pour préserver pns &
+           autres sous-champs à l'enregistrement — voir H1 dans lireMachines(). */
+        ajouterLigneMachine(m.type, m.numero, m.annee, m);
       });
     } else {
       dom.formTitle.textContent = 'Nouveau client';
