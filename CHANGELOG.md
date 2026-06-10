@@ -11,6 +11,38 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v85
+
+- **Correction des findings MEDIUM « code » de la revue 2026-06-10.**
+- **[M1 / M11] `plugins/demande-os`** : les e-mails (`domEmailTo` / `domEmailCc`)
+  et la valeur `email_maintenance` (Supabase `user_metadata`) sont désormais
+  échappés via `window.MUF.escapeHtml` avant interpolation dans les trois
+  `innerHTML` de la note destinataires — neutralise le XSS stocké.
+- **[M9] `plugins/retour-garantie`** : même échappement dans `majNoteDestinat()`
+  (déclenché aussi au chargement via `restaurerBrouillon()`).
+- **[M10] `plugins/retour-garantie` + `plugins/liste-pieces`** : filtrage des
+  CR/LF des en-têtes `To:`/`Cc:` des fichiers `.eml` (anti-injection d'en-têtes).
+- **[M6] `plugins/liste-pieces`** : l'encoded-word RFC 2047 du sujet est découpé
+  en chunks ≤ 45 octets (jointure `\r\n ` / folding), sans couper un caractère
+  UTF-8 multi-octets ; `unescape()` déprécié remplacé par `TextEncoder`.
+- **[M12] `plugins/demande-os`** : suppression du double-fire de l'URI
+  `ms-outlook://` sur iOS (flag `handled` posé au clic, fallback à 300 ms
+  seulement si non géré, `removeChild` sécurisé).
+- **[M2] `js/auth.js`** : garde côté client du domaine `@multivac.fr` à
+  l'inscription (défense en profondeur ; barrière réelle côté Supabase).
+- **[M4] `js/sync-manager.js`** : retry avec backoff borné après échec de push
+  (`min(30 s, tentative × 5 s)`, plafond 6 tentatives, compteur réinitialisé au
+  succès et aux déclencheurs frais online/mutation/login).
+- **[M5] `js/app.js`** : séquençage de `chargerPlugin()` (compteur `seq` +
+  `AbortController`) pour éviter qu'un fetch lent écrase l'affichage d'une
+  navigation plus récente.
+- **[M8] `plugins/editeur-taxonomie` + `plugins/rapport-intervention`** :
+  `TAXO_DEFAUT` aligné à l'identique sur la `TAXONOMIE` du rapport d'intervention
+  (thermoformeuse enrichie, entrée debug « Essais taxonomie » supprimée) — évite
+  qu'un Reset+Push depuis l'éditeur écrase les données riches du RI.
+
+---
+
 ## v84
 
 - **Correction des 9 findings HIGH de la revue de code 2026-06-10.**
