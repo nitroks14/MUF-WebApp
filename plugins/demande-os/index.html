@@ -688,17 +688,8 @@
     const tech1   = domTech1 ? domTech1.value.trim() : '';
     const tech2   = domTech2 ? domTech2.value.trim() : '';
 
-    /* Signature du technicien depuis Parametrage */
-    let signature = '';
-    if (window.Parametrage) {
-      const prenom = window.Parametrage.get('prenom') || '';
-      const nom    = window.Parametrage.get('nom')    || '';
-      if (prenom || nom) {
-        signature = '\n\n--\n' + [prenom, nom].filter(Boolean).join(' ');
-      }
-    }
-
-    /* Corps de l'email */
+    /* Corps de l'email (la signature n'est plus injectée ici : on laisse
+       Outlook ajouter la signature enregistrée par l'utilisateur). */
     let corps =
       'Nom du client : ' + client + '\n' +
       'Type et N° de la machine : ' + machine + '\n' +
@@ -715,14 +706,11 @@
       if (split === 'Oui') {
         corps += '\nTechnicien' + (tech2 ? 's : ' + tech1 + ' et ' + tech2 : ' : ' + tech1);
       }
-      corps += '\n(merci de préciser formellement si l\'OS est splitté)';
     }
     if (code === 'garantie') {
       corps += '\nGarantie : ' + garantieEtat +
                " (date à vérifier avec l'assistante / validation RTR)";
     }
-
-    corps += signature;
 
     const sujet = "Demande de création d'OS – " + client + ' – ' + machine;
 
