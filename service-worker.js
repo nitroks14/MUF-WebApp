@@ -75,6 +75,11 @@ const ASSETS_PLUGINS = [
   './plugins/rapport-intervention/index.html',
   './plugins/retour-garantie/index.html',
   './plugins/editeur-taxonomie/index.html',
+  /* Template Excel fetché à l'exécution par liste-pieces (chargerTemplate →
+     fetch(TEMPLATE_PATH)). Précaché ici pour que la génération de fiche
+     fonctionne offline même si le plugin n'a jamais été ouvert online.
+     URL-encodé (espaces) pour correspondre à l'URL de fetch normalisée. */
+  './plugins/liste-pieces/assets/Fichier%20de%20base%20liste%20PR.xlsx',
 ];
 
 /* ============================================================
