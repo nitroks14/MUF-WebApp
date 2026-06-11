@@ -1615,6 +1615,8 @@
     var steps   = 40;
     var P_eq    = ATM; /* pression après équilibrage (utilisée pour le résultat affiché) */
     var volTotal = volAval + volAmont;
+    /* Avertissement UX non bloquant (n'affecte aucun calcul). */
+    var rootsNotice = '';
 
     /* ---- MODE RÉSEAU ----
      * Modèle unifié : descente logarithmique limitée par la conductance.
@@ -1641,6 +1643,18 @@
       }
 
       var bypassTarring = parseFloat(st.rootsBypassTarring) || 40;
+
+      /* Avertissement UX non bloquant : un Roots est selectionne mais la cible
+         se situe AU-DESSUS (>=) de son seuil d'engagement (tarage by-pass).
+         Dans ce regime rootsGain() vaut 1 : le Roots n'apporte aucun gain pour
+         atteindre la cible -> on previent l'utilisateur sans bloquer ni modifier
+         le calcul. */
+      if (hasRootsBooster && pFinal >= bypassTarring) {
+        rootsNotice = 'Le Roots « ' + st.rootsModel + ' » ne s\'engage qu\'en dessous de ' +
+                      bypassTarring + ' mbar : pour une cible de ' + pFinal +
+                      ' mbar, il n\'apporte aucun gain. La pompe primaire / le réseau suffit.';
+      }
+
       var dInletN  = parseFloat(st.networkInletDiameter) || 50;
       var dSourceN = parseFloat(st.sourceTubeDiameter)   || 60;
       var dEffN    = Math.min(dInletN, dSourceN);
@@ -1706,7 +1720,7 @@
 
     if (!isFinite(t)) { renderEmpty(); return; }
 
-    renderResults(volAval, volAmont, t, penalty, st, P_eq);
+    renderResults(volAval, volAmont, t, penalty, st, P_eq, rootsNotice);
   }
 
   /* ============================================================
@@ -1719,10 +1733,17 @@
     if (elPdfBtnWrap) elPdfBtnWrap.style.display = 'none';
   }
 
-  function renderResults(volAval, volAmont, timeSeconds, penalty, st, P_eq) {
+  function renderResults(volAval, volAmont, timeSeconds, penalty, st, P_eq, rootsNotice) {
     var tempsFormate = formatTime(timeSeconds);
     var interp       = interpret(timeSeconds);
     var nomPompe     = st.sourceType === 'pump' ? st.pumpModel : 'Réseau ' + st.networkPressure + ' mbar';
+
+    /* Avertissement UX non bloquant (ex. Roots inutile pour la cible). */
+    var noticeHtml = rootsNotice
+      ? '<div class="cv-result-notice" style="background:#fffbea;border:1px solid #f0c000;' +
+        'border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:#7a5b00;">' +
+        '⚠️ ' + rootsNotice + '</div>'
+      : '';
 
     var volAvalL  = (volAval * 1000).toFixed(3);
     var volAmontL = (volAmont * 1000).toFixed(3);
@@ -1738,6 +1759,7 @@
 
     elResultsContent.innerHTML =
       '<div class="cv-results-panel">' +
+        noticeHtml +
         '<h3>Estimation</h3>' +
         '<div class="cv-result-time">' + tempsFormate + '</div>' +
         '<div class="cv-interp-center">' +
