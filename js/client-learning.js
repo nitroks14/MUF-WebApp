@@ -95,17 +95,11 @@
       .trim();
   }
 
-  /* Échappement HTML par regex (pas de DOM créé à chaque appel — module
-     indépendant, dupliqué à l'identique dans client-autocomplete.js).
-     Les 5 caractères sensibles sont échappés ; « & » EN PREMIER pour ne pas
-     ré-échapper les entités qu'on vient d'introduire. */
+  /* Échappement HTML : délégation au helper partagé window.MUF.escapeHtml
+     (js/utils.js, chargé avant ce module dans le shell). On garde un nom
+     local par commodité d'appel dans le reste du module. */
   function escapeHtml(str) {
-    return String(str == null ? '' : str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+    return window.MUF.escapeHtml(str);
   }
 
   /* ----------------------------------------------------------

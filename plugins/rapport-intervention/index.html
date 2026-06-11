@@ -1469,12 +1469,11 @@
   /* ============================================================
      Utilitaires d'échappement HTML / attributs
      ============================================================ */
+  /* Délégation au helper partagé window.MUF.escapeHtml (js/utils.js, chargé
+     tôt dans le shell et précaché) : échappe aussi l'apostrophe simple,
+     contrairement à l'ancienne implémentation locale. */
   function escHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+    return window.MUF.escapeHtml(str);
   }
 
   function escAttr(str) {
