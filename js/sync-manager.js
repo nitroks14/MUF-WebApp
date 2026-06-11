@@ -138,7 +138,7 @@
      ---------------------------------------------------------- */
   function push(supabase) {
     return window.ClientsDB.getDirty().then(function (sales) {
-      if (!sales.length) return 0;
+      if (!sales.length) return { count: 0, maxUpdated: null };
 
       var lignes = sales.map(versLigneServeur);
 
@@ -151,7 +151,15 @@
 
           var renvoyees = res.data || [];
           var parId = {};
-          renvoyees.forEach(function (l) { parId[l.id] = l; });
+          /* H : on retient aussi le max(updated_at) serveur des lignes pushées
+             (valeurs canoniques renvoyées par .select() de l'upsert), pour
+             garantir que le lastSync du cycle couvre bien ce qu'on vient de
+             pousser, même si le pull qui suit ne les remonte pas. */
+          var maxUpdated = null;
+          renvoyees.forEach(function (l) {
+            parId[l.id] = l;
+            if (plusRecent(l.updated_at, maxUpdated)) maxUpdated = l.updated_at;
+          });
 
           /* Retire le flag dirty et applique les valeurs canoniques du serveur
              (updated_at via trigger, user_id via défaut auth.uid()…). */
@@ -171,7 +179,9 @@
             return window.ClientsDB.markSynced(local.id, patch);
           });
 
-          return Promise.all(maj).then(function () { return sales.length; });
+          return Promise.all(maj).then(function () {
+            return { count: sales.length, maxUpdated: maxUpdated };
+          });
         });
     });
   }
@@ -179,7 +189,7 @@
   /* ----------------------------------------------------------
      PULL — récupération des lignes serveur vers IndexedDB
      ---------------------------------------------------------- */
-  function pull(supabase) {
+  function pull(supabase, maxPushedUpdatedAt) {
     return window.ClientsDB.getLastSync().then(function (lastSync) {
       var requete = supabase.from(TABLE).select('*');
 
@@ -192,16 +202,26 @@
         if (res.error) throw res.error;
 
         var lignes = res.data || [];
-        if (!lignes.length) return 0;
 
-        /* Détermine le nouveau lastSync = max(updated_at) reçu. */
+        /* Détermine le nouveau lastSync = max(updated_at) :
+           - des lignes pullées,
+           - ET des lignes pushées ce cycle (maxPushedUpdatedAt), dont les
+             updated_at serveur sont déjà connus (réponse du .select() de
+             l'upsert). On garantit ainsi que le lastSync couvre nos propres
+             écritures même quand le pull ne les remonte pas (sinon re-pull
+             inutile au cycle suivant). On ne descend jamais sous lastSync. */
         var maxUpdated = lastSync || null;
+        if (plusRecent(maxPushedUpdatedAt, maxUpdated)) maxUpdated = maxPushedUpdatedAt;
         lignes.forEach(function (l) {
           if (plusRecent(l.updated_at, maxUpdated)) maxUpdated = l.updated_at;
         });
 
         return appliquerPull(lignes).then(function () {
-          if (maxUpdated) return window.ClientsDB.setLastSync(maxUpdated);
+          /* On persiste le lastSync s'il a progressé par rapport à l'existant
+             (lignes pullées OU push de ce cycle). */
+          if (maxUpdated && plusRecent(maxUpdated, lastSync)) {
+            return window.ClientsDB.setLastSync(maxUpdated);
+          }
         }).then(function () {
           return lignes.length;
         });
@@ -265,10 +285,12 @@
 
     return clientPret().then(function (supabase) {
       /* Push d'abord (propage les changements locaux), puis pull (récupère le
-         reste) : ainsi nos écritures sont prises en compte dans le lastSync. */
-      return push(supabase).then(function (nbPush) {
-        resultat.pushed = nbPush;
-        return pull(supabase);
+         reste) : ainsi nos écritures sont prises en compte dans le lastSync.
+         H : on transmet au pull le max(updated_at) serveur des lignes pushées
+         afin que le lastSync du cycle les couvre de façon garantie. */
+      return push(supabase).then(function (resPush) {
+        resultat.pushed = resPush.count;
+        return pull(supabase, resPush.maxUpdated);
       }).then(function (nbPull) {
         resultat.pulled = nbPull;
         resultat.ok = true;
