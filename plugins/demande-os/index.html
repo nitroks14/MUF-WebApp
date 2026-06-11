@@ -751,27 +751,31 @@
     let url = 'ms-outlook://compose?to=' + to + '&subject=' + sub + '&body=' + bod;
     if (cc) url += '&cc=' + cc;
 
-    /* Ouverture via un lien caché (plus fiable sur iOS Safari) */
-    const lienTemp = document.createElement('a');
-    lienTemp.href = url;
-    lienTemp.style.display = 'none';
-    /* Si le clic est pris en charge par le navigateur, on note qu'une
-       navigation a eu lieu pour ne PAS déclencher le fallback (sinon
-       double-fire du schéma ms-outlook:// → alerte « app introuvable »
-       et sortie de WebView sur iOS Safari). */
-    let handled = false;
-    lienTemp.addEventListener('click', function() { handled = true; });
-    document.body.appendChild(lienTemp);
-    lienTemp.click();
+    /* Une SEULE méthode de navigation par plateforme, pour éviter le
+       double-fire du schéma ms-outlook:// (deux navigations → alerte
+       « app introuvable » sur iOS Safari) tout en conservant l'ouverture
+       d'Outlook desktop sur Windows.
+       - iOS/iPadOS : le clic sur un <a> caché est la méthode fiable et
+         déclenche UNE seule navigation vers l'URI custom.
+       - Windows/desktop : c'est la navigation directe (window.location.href)
+         qui ouvre Outlook desktop ; le clic sur l'<a> ne le lance pas. */
+    var isIOS = /iP(hone|od|ad)/.test(navigator.platform) ||
+                (/Mac/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
 
-    /* Fallback après 300 ms, uniquement si le clic n'a rien déclenché */
-    setTimeout(function() {
-      /* removeChild hors du chemin qui peut throw, pour éviter la fuite DOM */
-      if (lienTemp.parentNode) { lienTemp.parentNode.removeChild(lienTemp); }
-      if (!handled) {
-        window.location.href = url;
-      }
-    }, 300);
+    if (isIOS) {
+      const lienTemp = document.createElement('a');
+      lienTemp.href = url;
+      lienTemp.style.display = 'none';
+      document.body.appendChild(lienTemp);
+      lienTemp.click();
+      /* Nettoyage du lien temporaire sans fuite DOM (removeChild hors du
+         chemin qui peut throw). */
+      setTimeout(function() {
+        if (lienTemp.parentNode) { lienTemp.parentNode.removeChild(lienTemp); }
+      }, 300);
+    } else {
+      window.location.href = url;
+    }
   }
 
   /* ----------------------------------------------------------
