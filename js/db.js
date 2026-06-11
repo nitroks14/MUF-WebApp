@@ -271,14 +271,27 @@
    * @returns {Promise<object|null>} l'enregistrement supprimé, ou null si absent
    */
   function remove(id) {
-    return getRaw(id).then(function (c) {
-      if (!c) return null;
-      var now = maintenantISO();
-      c.deleted         = true;
-      c.updated_at      = now;
-      c._localUpdatedAt = now;
-      c._dirty          = true;
-      return ecrire(c, 'remove');
+    /* G : lecture (get) et écriture (put) DANS LA MÊME transaction readwrite
+       pour éliminer la fenêtre TOCTOU qui existait quand le get et le put se
+       faisaient dans deux transactions séparées. Modèle aligné sur markSynced. */
+    return transaction(STORE_CLIENTS, 'readwrite').then(function (tx) {
+      var store = tx.objectStore(STORE_CLIENTS);
+      return promesseRequete(store.get(id)).then(function (c) {
+        if (!c) {
+          /* Absent : on laisse la transaction se terminer sans écriture. */
+          return promesseTransaction(tx).then(function () { return null; });
+        }
+        var now = maintenantISO();
+        c.deleted         = true;
+        c.updated_at      = now;
+        c._localUpdatedAt = now;
+        c._dirty          = true;
+        store.put(c);
+        return promesseTransaction(tx).then(function () { return c; });
+      });
+    }).then(function (saved) {
+      if (saved) notifierChangement('remove', saved.id);
+      return saved;
     });
   }
 
