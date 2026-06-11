@@ -774,7 +774,12 @@
         if (lienTemp.parentNode) { lienTemp.parentNode.removeChild(lienTemp); }
       }, 300);
     } else {
-      window.location.href = url;
+      /* Windows/desktop : ms-outlook://compose ouvre Outlook mais NE pré-remplit
+         PAS le brouillon. mailto: ouvre le client par défaut (Outlook) AVEC le
+         brouillon renseigné (objet + corps + destinataires). */
+      var mailto = 'mailto:' + domEmailTo.value.trim() + '?subject=' + sub + '&body=' + bod;
+      if (cc) mailto += '&cc=' + cc;
+      window.location.href = mailto;
     }
   }
 
