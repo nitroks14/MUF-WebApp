@@ -718,7 +718,67 @@
   }
 
   /* ----------------------------------------------------------
-     Ouverture du brouillon Outlook (deep link ms-outlook://)
+     Encodeurs .eml — copie des versions éprouvées de retour-garantie
+     (RFC 2047 pour l'objet, quoted-printable pour le corps HTML).
+     ---------------------------------------------------------- */
+  function encoderEnteteRFC2047(texte) {
+    if (/^[\x00-\x7F]*$/.test(texte)) { return texte; }
+    var bytes = new TextEncoder().encode(texte);
+    var mots = [];
+    var i = 0;
+    while (i < bytes.length) {
+      var fin = Math.min(i + 45, bytes.length);
+      while (fin > i && fin < bytes.length && (bytes[fin] & 0xC0) === 0x80) {
+        fin--;
+      }
+      var binaire = '';
+      for (var j = i; j < fin; j++) {
+        binaire += String.fromCharCode(bytes[j]);
+      }
+      mots.push('=?UTF-8?B?' + btoa(binaire) + '?=');
+      i = fin;
+    }
+    return mots.join('\r\n ');
+  }
+
+  function encoderQuotedPrintable(texte) {
+    var bytes = new TextEncoder().encode(texte);
+    var out   = '';
+    var col   = 0;
+    function pousser(fragment) {
+      if (col + fragment.length > 75) {
+        out += '=\r\n';
+        col = 0;
+      }
+      out += fragment;
+      col += fragment.length;
+    }
+    for (var i = 0; i < bytes.length; i++) {
+      var c = bytes[i];
+      if (c === 0x0D && i + 1 < bytes.length && bytes[i + 1] === 0x0A) {
+        out += '\r\n';
+        col = 0;
+        i++;
+        continue;
+      }
+      if (c === 0x0A) {
+        out += '\r\n';
+        col = 0;
+        continue;
+      }
+      if (c >= 0x20 && c <= 0x7E && c !== 0x3D) {
+        pousser(String.fromCharCode(c));
+      } else {
+        var hex = c.toString(16).toUpperCase();
+        if (hex.length < 2) { hex = '0' + hex; }
+        pousser('=' + hex);
+      }
+    }
+    return out;
+  }
+
+  /* ----------------------------------------------------------
+     Ouverture du brouillon : .eml X-Unsent (desktop) / ms-outlook:// (iOS)
      ---------------------------------------------------------- */
   function ouvrirBrouillonOutlook() {
     const erreurs = valider();
@@ -762,12 +822,42 @@
         if (lienTemp.parentNode) { lienTemp.parentNode.removeChild(lienTemp); }
       }, 300);
     } else {
-      /* Windows/desktop : ms-outlook://compose ouvre Outlook mais NE pré-remplit
-         PAS le brouillon. mailto: ouvre le client par défaut (Outlook) AVEC le
-         brouillon renseigné (objet + corps + destinataires). */
-      var mailto = 'mailto:' + domEmailTo.value.trim() + '?subject=' + sub + '&body=' + bod;
-      if (cc) mailto += '&cc=' + cc;
-      window.location.href = mailto;
+      /* Windows/desktop : générer un .eml X-Unsent (vrai brouillon Outlook,
+         sauvé dans les Brouillons, signature Outlook ajoutée). Pas de pièce
+         jointe → message HTML simple, corps en Tahoma 12 comme les autres plugins. */
+      var norm = function (v) {
+        return String(v == null ? '' : v).replace(/[\r\n]/g, '').replace(/;/g, ',').replace(/\s*,\s*/g, ', ').trim();
+      };
+      var emlTo = norm(domEmailTo.value);
+      var emlCc = norm(domEmailCc.value);
+      var corpsHtml = '<html><body><div style="font-family:Tahoma,Geneva,sans-serif;font-size:12pt;color:#000000;">'
+        + window.MUF.escapeHtml(corps).replace(/\r\n/g, '<br>').replace(/\n/g, '<br>')
+        + '</div></body></html>';
+      var eml = 'From: \r\n';
+      if (emlTo) { eml += 'To: ' + emlTo + '\r\n'; }
+      if (emlCc) { eml += 'Cc: ' + emlCc + '\r\n'; }
+      eml += 'Subject: ' + encoderEnteteRFC2047(sujet) + '\r\n';
+      eml += 'Date: ' + new Date().toUTCString() + '\r\n';
+      eml += 'MIME-Version: 1.0\r\n';
+      eml += 'Content-Type: text/html; charset=utf-8\r\n';
+      eml += 'Content-Transfer-Encoding: quoted-printable\r\n';
+      eml += 'X-Unsent: 1\r\n';
+      eml += '\r\n';
+      eml += encoderQuotedPrintable(corpsHtml) + '\r\n';
+
+      var baseNomEml = 'Demande_OS_' + String(domClient.value || 'client').replace(/[^a-zA-Z0-9]/g, '_');
+      var blobEml = new Blob([eml], { type: 'application/octet-stream' });
+      var urlEml = URL.createObjectURL(blobEml);
+      var lienDl = document.createElement('a');
+      lienDl.href = urlEml;
+      lienDl.download = baseNomEml + '.eml';
+      lienDl.style.display = 'none';
+      document.body.appendChild(lienDl);
+      lienDl.click();
+      setTimeout(function () {
+        if (lienDl.parentNode) { lienDl.parentNode.removeChild(lienDl); }
+        URL.revokeObjectURL(urlEml);
+      }, 1000);
     }
   }
 
