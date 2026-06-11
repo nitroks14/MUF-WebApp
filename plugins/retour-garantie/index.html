@@ -1149,7 +1149,7 @@
       eml += '\r\n';
       /* Corps en HTML : Outlook garde le message en mode HTML → la signature
          insérée conserve son espacement natif et se place après le corps. */
-      var corpsHtml = '<html><body><div style="font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#000000;">'
+      var corpsHtml = '<html><body><div style="font-family:Tahoma,Geneva,sans-serif;font-size:12pt;color:#000000;">'
         + window.MUF.escapeHtml(corps).replace(/\r\n/g, '<br>').replace(/\n/g, '<br>')
         + '</div></body></html>';
       eml += encoderQuotedPrintable(corpsHtml) + '\r\n';
