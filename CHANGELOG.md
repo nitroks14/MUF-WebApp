@@ -11,6 +11,33 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v87
+
+- **Correction de régressions remontées en prod après le déploiement v2.0.0.**
+- **Demande d'OS — réouverture d'Outlook (Windows).** `ouvrirBrouillonOutlook()`
+  dans [`plugins/demande-os/index.html`](./plugins/demande-os/index.html) :
+  suppression du flag `handled` (cassé : le clic du lien caché le passait
+  toujours à `true`, neutralisant le fallback). Désormais une **seule** méthode
+  de navigation par plateforme — clic sur `<a>` caché en iOS/iPadOS,
+  `window.location.href` (qui ouvre Outlook desktop) sous Windows/desktop. Plus
+  de double-fire de l'URI `ms-outlook://` sur iOS, et Outlook se rouvre sous
+  Windows.
+- **Brouillons .eml — corps texte invisible sous Outlook Windows.** Dans
+  [`plugins/liste-pieces/index.html`](./plugins/liste-pieces/index.html) et
+  [`plugins/retour-garantie/index.html`](./plugins/retour-garantie/index.html) :
+  la partie `text/plain` passe de `Content-Transfer-Encoding: 8bit` à
+  `quoted-printable` (nouvel helper `encoderQuotedPrintable`, soft-wrap 76 cols,
+  CRLF préservés). Outlook affichait mal une partie 8bit UTF-8 accentuée.
+- **Brouillons .eml — destinataires non repris sous Apple Mail.** Normalisation
+  RFC 5322 des en-têtes `To:`/`Cc:` (séparateur `;` → `,`, espaces nettoyés) et
+  en-tête `To:` omis s'il est vide (un `To:` vide perturbe le parsing). Voir
+  *best-effort* : comportement Apple Mail sur .eml `X-Unsent` à confirmer côté
+  utilisateur.
+- **`encoderEnteteRFC2047` de retour-garantie aligné** sur la version robuste de
+  liste-pieces (M6) : `TextEncoder` + découpage des encoded-words sous 75 chars.
+- **Bump cache** : plugins modifiés → `CACHE_NOM` / `CACHE_PLUGINS` passés de
+  `v86` à `v87`.
+
 ## v86
 
 - **Version PRODUIT `2.0.0`.** Introduction d'une version produit en semver,
