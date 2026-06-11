@@ -11,6 +11,33 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v93
+
+- **Lot de correctifs « quick wins » issus de la revue de code du 2026-06-10.**
+- **Calage embiellages** ([`plugins/calage-embiellages/index.html`](./plugins/calage-embiellages/index.html)) :
+  refus d'une hauteur Y ≤ 0 (cote X théorique invalide) et ajout de gardes `null`
+  dans `calculXtheorique()` (type/joint non cochés) pour éviter un crash sur état
+  incohérent. La fonction renvoie désormais `null` dans ce cas, géré par l'appelant.
+- **Demande d'OS** ([`plugins/demande-os/index.html`](./plugins/demande-os/index.html)) :
+  la note des destinataires est désormais rafraîchie après `reinitialiser()` (un
+  CC résiduel restait affiché). Mise à jour factorisée dans `majNoteDestinat()`,
+  réutilisée par les écouteurs de saisie et le reset. Le chemin `.eml`/`ms-outlook://`
+  n'est pas touché.
+- **Liste de pièces** ([`plugins/liste-pieces/index.html`](./plugins/liste-pieces/index.html)) :
+  toast informatif après import Excel (la date d'intervention et le descriptif
+  court ne figurent pas dans le template et sont remis aux valeurs par défaut ;
+  l'utilisateur est invité à les vérifier).
+- **Calcul vide** ([`plugins/calcul-vide/index.html`](./plugins/calcul-vide/index.html)) :
+  avertissement UX non bloquant quand un Roots est sélectionné alors que la cible
+  est au-dessus de son seuil d'engagement (gain = 1, aucun bénéfice). Aucune
+  formule ni constante de calibration modifiée.
+- **Retour garantie** ([`plugins/retour-garantie/index.html`](./plugins/retour-garantie/index.html)) :
+  avertissement de troncature (non bloquant) quand la section technicien dépasse
+  la hauteur utile d'une page A4. La pagination multi-page reste à faire (chantier
+  séparé). Rendu PDF inchangé.
+- **Bump cache** : plugins modifiés → `CACHE_NOM` / `CACHE_PLUGINS` passés de
+  `v92` à `v93`.
+
 ## v87
 
 - **Correction de régressions remontées en prod après le déploiement v2.0.0.**
