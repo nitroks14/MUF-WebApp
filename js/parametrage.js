@@ -343,9 +343,16 @@
     /**
      * S'abonner aux changements du cache (ex : refresh cloud → re-render UI).
      * @param {function(object)} cb appelé avec une copie de la config
+     * @returns {function():void} fonction de désinscription (à appeler dans le
+     *   cleanup du plugin pour éviter l'accumulation de listeners au fil des
+     *   rechargements). No-op si cb invalide.
      */
     onChange(cb) {
-      if (typeof cb === 'function') _listeners.push(cb);
+      if (typeof cb !== 'function') return function () {};
+      _listeners.push(cb);
+      return function () {
+        _listeners = _listeners.filter(function (l) { return l !== cb; });
+      };
     },
   };
 

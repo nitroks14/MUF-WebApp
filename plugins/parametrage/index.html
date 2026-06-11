@@ -210,6 +210,15 @@
 (function () {
   'use strict';
 
+  /* Cleanup du montage précédent avant d'en (re)poser un (le chargeur remplace
+     #app-content sans nous prévenir). Ici : désinscription du listener
+     Parametrage.onChange pour éviter l'accumulation au fil des rechargements.
+     Même pattern que les autres plugins (window.__xxxCleanup). */
+  if (window.__paramCleanup) {
+    try { window.__paramCleanup(); } catch (e) { /* no-op */ }
+    window.__paramCleanup = null;
+  }
+
   /* ----------------------------------------------------------
      Section compte connecté (lecture seule)
      ---------------------------------------------------------- */
@@ -558,11 +567,18 @@
   }
 
   if (window.Parametrage && typeof window.Parametrage.onChange === 'function') {
-    window.Parametrage.onChange(function () {
+    /* onChange retourne une fonction de désinscription : on la conserve pour la
+       déclencher au démontage (window.__paramCleanup), sinon le listener
+       s'accumule à chaque rechargement du plugin. */
+    var desabonnerParam = window.Parametrage.onChange(function () {
       /* Évite d'écraser ce que l'utilisateur est en train de taper. */
       if (unChampALeFocus()) return;
       remplirFormulaire();
     });
+    window.__paramCleanup = function () {
+      if (typeof desabonnerParam === 'function') desabonnerParam();
+      desabonnerParam = null;
+    };
   }
 
   if (window.Parametrage && typeof window.Parametrage.syncFromCloud === 'function') {
