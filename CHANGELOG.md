@@ -11,6 +11,20 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v86
+
+- **Version PRODUIT `2.0.0`.** Introduction d'une version produit en semver,
+  distincte du compteur de cache du Service Worker. Source unique de vérité :
+  la constante `APP_VERSION = '2.0.0'` en tête de [`js/app.js`](./js/app.js).
+- **Badge de version dans la nav.** Affichage discret de `v2.0.0` en bas du
+  drawer de navigation (`#nav-drawer`), injecté en JS depuis `APP_VERSION`
+  (`textContent`, idempotent via l'`id` unique `app-version-badge` → pas
+  d'empilement si la nav est reconstruite). Style atténué dans
+  [`css/main.css`](./css/main.css) (`.app-version-badge`, gris/blanc atténué,
+  `font-size-xs`, centré).
+- **Bump cache** : assets du shell modifiés (`js/app.js`, `css/main.css`) →
+  `CACHE_NOM` / `CACHE_PLUGINS` passés de `v85` à `v86`.
+
 ## v85
 
 - **Correction des findings MEDIUM « code » de la revue 2026-06-10.**
