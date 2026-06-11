@@ -781,6 +781,19 @@
     var footerH   = 10;
     var sectionH2 = headerH2 + nbRetMin * rowH2 + defautH + constatH + footerH;
 
+    /* Avertissement de troncature (non bloquant) : la section technicien est
+       dessinee en un seul bloc (pas de pagination interne). Si elle depasse la
+       hauteur utile d'une page A4 (280 - 14 = 266 mm de marge a marge), le bas
+       (texte, footer, bordure) sera coupe par jsPDF. On previent l'utilisateur
+       pour qu'il raccourcisse le defaut/constat ; le rendu n'est PAS modifie.
+       NB : pagination multi-page = chantier separe (voir compte-rendu). */
+    var HAUTEUR_UTILE_PAGE = 280 - 14;
+    if (sectionH2 > HAUTEUR_UTILE_PAGE) {
+      alert('Attention : le contenu de la section technicien (défaut / constat) ' +
+            'est trop long pour tenir sur une page et sera tronqué dans le PDF. ' +
+            'Raccourcissez le texte pour un rendu complet.');
+    }
+
     /* Saut de page si la section ne tient pas sur la page courante */
     if (y + sectionH2 > 280) { doc.addPage(); y = 14; }
 
