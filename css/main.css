@@ -309,6 +309,20 @@ img {
   overflow-wrap: anywhere;
 }
 
+/* Badge de version PRODUIT — discret, ancré en bas du drawer.
+   Fond du drawer = bleu marine foncé → texte blanc atténué. */
+.app-version-badge {
+  padding: 4px 12px 12px;
+  padding-left: max(12px, env(safe-area-inset-left));
+  padding-right: max(12px, env(safe-area-inset-right));
+  text-align: center;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.55);
+  user-select: none;
+}
+
 /* Voile cliquable : referme le drawer en touchant ailleurs */
 .nav-overlay {
   position: fixed;

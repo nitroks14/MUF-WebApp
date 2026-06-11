@@ -9,6 +9,14 @@
 'use strict';
 
 /* ============================================================
+   Version PRODUIT de l'application (semver) — source unique de vérité.
+   À NE PAS confondre avec le compteur de cache du Service Worker
+   (CACHE_NOM/CACHE_PLUGINS « v86 »), qui est purement interne au cache.
+   Affichée en badge discret en bas du drawer de navigation.
+   ============================================================ */
+const APP_VERSION = '2.0.0';
+
+/* ============================================================
    Configuration — liste des plugins disponibles
    Ajouter un plugin ici pour qu'il apparaisse dans la nav
    ============================================================ */
@@ -171,6 +179,30 @@ function construireNavigation() {
     `;
     drawerNav.appendChild(lien);
   });
+
+  afficherBadgeVersion();
+}
+
+/* ============================================================
+   Badge de version PRODUIT en bas du drawer (discret).
+   Source unique : la constante APP_VERSION (préfixe « v »).
+   Idempotent : si le badge existe déjà (nav reconstruite), on
+   se contente de mettre à jour son texte — pas d'empilement.
+   On utilise textContent (jamais innerHTML) : pas d'injection.
+   ============================================================ */
+function afficherBadgeVersion() {
+  if (!navDrawer) return;
+
+  let badge = document.getElementById('app-version-badge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = 'app-version-badge';
+    badge.className = 'app-version-badge';
+    badge.setAttribute('aria-label', `Version de l'application`);
+    /* Ancré en bas du drawer, après la grille des modules. */
+    navDrawer.appendChild(badge);
+  }
+  badge.textContent = `v${APP_VERSION}`;
 }
 
 /* ============================================================
