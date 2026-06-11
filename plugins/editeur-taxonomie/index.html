@@ -700,6 +700,16 @@ function decoderBase64UTF8(b64) {
   return new TextDecoder('utf-8').decode(octets);
 }
 
+/* Encode une chaîne UTF-8 en base64 (pour le PUT GitHub), symétrique de
+   decoderBase64UTF8. Remplace l'ancien btoa(unescape(encodeURIComponent(...)))
+   qui s'appuyait sur unescape() déprécié. */
+function encoderUTF8Base64(texte) {
+  var octets = new TextEncoder().encode(texte);
+  var binaire = '';
+  for (var i = 0; i < octets.length; i++) { binaire += String.fromCharCode(octets[i]); }
+  return btoa(binaire);
+}
+
 /* Lit le sha courant du fichier sur la branche */
 async function lireShaCourant(apiBase, headers, branch) {
   var resp = await fetch(apiBase + '?ref=' + encodeURIComponent(branch), { headers: headers });
@@ -756,7 +766,7 @@ async function gererPush() {
       throw new Error('Bloc TAXONOMIE introuvable dans le fichier. Vérifiez le chemin.');
     }
     var newContent = fichier.content.replace(regex, newBlock);
-    var encoded = btoa(unescape(encodeURIComponent(newContent)));
+    var encoded = encoderUTF8Base64(newContent);
 
     /* 3 — PUT (avec un seul retry en cas de 409 Conflict : sha périmé) */
     var putResp = await envoyerPut(apiBase, headers, encoded, fichier.sha, cfg.branch);
@@ -765,7 +775,7 @@ async function gererPush() {
       /* sha périmé : re-GET du sha à jour et nouvelle tentative unique */
       var frais = await lireShaCourant(apiBase, headers, cfg.branch);
       var newContent2 = frais.content.replace(regex, newBlock);
-      var encoded2 = btoa(unescape(encodeURIComponent(newContent2)));
+      var encoded2 = encoderUTF8Base64(newContent2);
       putResp = await envoyerPut(apiBase, headers, encoded2, frais.sha, cfg.branch);
     }
 
