@@ -385,6 +385,10 @@
       alert("Veuillez saisir la hauteur du pied d'outillage (Y).");
       return;
     }
+    if (parseFloat(inputY.value) <= 0) {
+      alert('La hauteur Y doit être strictement positive.');
+      return;
+    }
     if (typeChecked.value === 'soudure') {
       var jointChecked = document.querySelector('input[name="ce-joint"]:checked');
       if (!jointChecked) {
@@ -426,7 +430,10 @@
      Calcul de la cote X théorique
      ---------------------------------------------------------- */
   function calculXtheorique() {
-    var type = document.querySelector('input[name="ce-type"]:checked').value;
+    var typeEl = document.querySelector('input[name="ce-type"]:checked');
+    /* Garde null : etat incoherent (aucun type coche) -> ne pas crasher. */
+    if (!typeEl) return null;
+    var type = typeEl.value;
     var Y    = parseFloat(inputY.value);
     var E    = 0.5; /* jeu mécanique constant */
 
@@ -435,6 +442,8 @@
     }
 
     var jointEl = document.querySelector('input[name="ce-joint"]:checked');
+    /* Garde null : type soudure sans joint coche -> ne pas crasher. */
+    if (!jointEl) return null;
     var J = parseFloat(jointEl.value);
     return Y + J - E;
   }
@@ -457,6 +466,13 @@
      ---------------------------------------------------------- */
   document.getElementById('ce-btnAnalyser').addEventListener('click', function () {
     var Xth   = calculXtheorique();
+
+    /* Garde : etat incoherent (type/joint non coches) -> calculXtheorique
+       renvoie null. On evite un NaN silencieux dans la suite du calcul. */
+    if (Xth === null || isNaN(Xth)) {
+      alert("Etat incomplet : verifiez le type d'embiellage et le joint.");
+      return;
+    }
 
     /* H3 : si la barre de calage est cochee mais que son epaisseur est vide ou
        invalide, parseFloat(... || '0') renverrait 0 silencieusement -> cote base
