@@ -18,11 +18,11 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache.
-   Version courante : v89. Historique des versions → voir CHANGELOG.md.
-   NB : ce compteur (v89) est le cache du SW, distinct de la version
+   Version courante : v90. Historique des versions → voir CHANGELOG.md.
+   NB : ce compteur (v90) est le cache du SW, distinct de la version
    PRODUIT de l'app (APP_VERSION = 2.0.0, cf. js/app.js). */
-const CACHE_NOM     = 'muf-webapp-v89';
-const CACHE_PLUGINS = 'muf-plugins-v89';
+const CACHE_NOM     = 'muf-webapp-v90';
+const CACHE_PLUGINS = 'muf-plugins-v90';
 
 /* Document de repli pour les navigations hors-ligne (PWA / refresh offline). */
 const FALLBACK_DOC = './index.html';

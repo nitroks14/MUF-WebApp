@@ -1144,10 +1144,15 @@
 
       /* Partie 1 : corps texte (quoted-printable pour un rendu fiable Outlook). */
       eml += '--' + boundary + '\r\n';
-      eml += 'Content-Type: text/plain; charset=utf-8\r\n';
+      eml += 'Content-Type: text/html; charset=utf-8\r\n';
       eml += 'Content-Transfer-Encoding: quoted-printable\r\n';
       eml += '\r\n';
-      eml += encoderQuotedPrintable(corps) + '\r\n';
+      /* Corps en HTML : Outlook garde le message en mode HTML → la signature
+         insérée conserve son espacement natif et se place après le corps. */
+      var corpsHtml = '<html><body><div style="font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#000000;">'
+        + window.MUF.escapeHtml(corps).replace(/\r\n/g, '<br>').replace(/\n/g, '<br>')
+        + '</div></body></html>';
+      eml += encoderQuotedPrintable(corpsHtml) + '\r\n';
       eml += '\r\n';
 
       /* Partie 2 : pièce jointe PDF */
