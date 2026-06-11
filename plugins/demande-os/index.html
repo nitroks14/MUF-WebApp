@@ -891,6 +891,22 @@
     });
     majVisibilite();
     majVisibiliteSplit();
+    /* Rafraichir la note des destinataires : sans cela, le CC residuel
+       (chip ou saisie precedente) resterait affiche apres reset. */
+    majNoteDestinat();
+  }
+
+  /* ----------------------------------------------------------
+     Mise à jour de la note des destinataires (À / CC).
+     Factorisée pour rester cohérente entre saisie email et reset.
+     ---------------------------------------------------------- */
+  function majNoteDestinat() {
+    const esc = window.MUF.escapeHtml;
+    const to = domEmailTo.value.trim() || '(non configuré)';
+    domNoteDestinat.innerHTML =
+      '<strong>À :</strong> ' + esc(to) +
+      ' &nbsp;|&nbsp; <strong>CC :</strong> ' + esc(domEmailCc.value.trim() || '—') +
+      '<br><em>Ouverture en brouillon uniquement — aucun envoi automatique.</em>';
   }
 
   /* ----------------------------------------------------------
@@ -906,21 +922,9 @@
   domBtnReset.addEventListener('click', reinitialiser);
 
   /* Mise à jour de la note sur changement d'email */
-  domEmailTo.addEventListener('input', function() {
-    const esc = window.MUF.escapeHtml;
-    const to = domEmailTo.value.trim() || '(non configuré)';
-    domNoteDestinat.innerHTML =
-      '<strong>À :</strong> ' + esc(to) +
-      ' &nbsp;|&nbsp; <strong>CC :</strong> ' + esc(domEmailCc.value.trim() || '—') +
-      '<br><em>Ouverture en brouillon uniquement — aucun envoi automatique.</em>';
-  });
+  domEmailTo.addEventListener('input', majNoteDestinat);
   domEmailCc.addEventListener('input', function() {
-    const esc = window.MUF.escapeHtml;
-    const to = domEmailTo.value.trim() || '(non configuré)';
-    domNoteDestinat.innerHTML =
-      '<strong>À :</strong> ' + esc(to) +
-      ' &nbsp;|&nbsp; <strong>CC :</strong> ' + esc(domEmailCc.value.trim() || '—') +
-      '<br><em>Ouverture en brouillon uniquement — aucun envoi automatique.</em>';
+    majNoteDestinat();
     /* Désactiver le chip actif si l'utilisateur saisit manuellement */
     domEmailsFreqList.querySelectorAll('.dos-email-chip').forEach(function(c) {
       c.classList.remove('dos-chip-actif');
