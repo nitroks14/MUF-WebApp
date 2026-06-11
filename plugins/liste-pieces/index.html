@@ -1573,7 +1573,11 @@
 
         applyFormData(data);
         saveToLocal();
-        showToast("Import réussi (" + data.parts.length + " ligne(s))");
+        /* Le template Excel ne contient pas de cellule pour la date
+           d'intervention ni le descriptif court : ils sont remis aux valeurs
+           par defaut (date du jour / vide) a l'import. On previent l'utilisateur
+           qu'il doit les verifier/ressaisir. */
+        showToast("Import OK (" + data.parts.length + " ligne(s)) — vérifiez la date d'intervention et le descriptif court.");
       } catch (err) {
         console.error("[LP] Erreur import :", err);
         showToast("Impossible de lire le fichier Excel.", true);
