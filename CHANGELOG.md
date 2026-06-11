@@ -11,6 +11,52 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v95
+
+- **Lot « robustesse / dette technique » issu de la revue de code du 2026-06-10.**
+- **Manifest** ([`manifest.json`](./manifest.json)) : dédoublement des icônes en
+  entrées distinctes `purpose: "any"` et `purpose: "maskable"` (au lieu du
+  `"any maskable"` combiné, ambigu pour certains navigateurs).
+- **Helper partagé `escapeHtml`** : migration des implémentations locales
+  dupliquées vers `window.MUF.escapeHtml` ([`js/utils.js`](./js/utils.js)) dans
+  [`js/client-autocomplete.js`](./js/client-autocomplete.js),
+  [`js/client-learning.js`](./js/client-learning.js) et
+  [`plugins/clients/index.html`](./plugins/clients/index.html). La variante
+  `escHtml` du rapport d'intervention (qui n'échappait pas l'apostrophe) est
+  alignée par délégation au helper partagé.
+- **Éditeur taxonomie** ([`plugins/editeur-taxonomie/index.html`](./plugins/editeur-taxonomie/index.html)) :
+  remplacement de `btoa(unescape(encodeURIComponent(...)))` (push GitHub, cas
+  nominal + retry 409) par un helper `encoderUTF8Base64` basé sur `TextEncoder`,
+  symétrique du `decoderBase64UTF8` existant.
+- **Service Worker** ([`service-worker.js`](./service-worker.js)) :
+  `self.clients.claim()` chaîné dans le `waitUntil()` de l'event `activate`
+  (après le nettoyage des caches) au lieu d'un appel hors cycle ; précache du
+  template Excel de `liste-pieces`
+  (`./plugins/liste-pieces/assets/Fichier%20de%20base%20liste%20PR.xlsx`),
+  fetché à l'exécution → génération de fiche désormais possible offline même si
+  le plugin n'a jamais été ouvert online. Stratégie de cache inchangée.
+- **Anti-autofill** ([`js/anti-autofill.js`](./js/anti-autofill.js)) : le scan du
+  `MutationObserver` est batché par frame (`requestAnimationFrame`, repli
+  `setTimeout`) au lieu d'un scan par vague de mutations (coût sur DOM massif).
+  Couverture identique ; mécanisme anti-autofill (token leurre, neutralisation
+  du `name`) inchangé.
+- **Base locale** ([`js/db.js`](./js/db.js)) : `remove()` fusionne sa lecture et
+  son écriture dans une seule transaction `readwrite` (élimination de la fenêtre
+  TOCTOU), sur le modèle de `markSynced`. Comportement (soft-delete, `_dirty`,
+  notification) préservé.
+- **Synchronisation** ([`js/sync-manager.js`](./js/sync-manager.js)) : le
+  `lastSync` du cycle intègre désormais le `max(updated_at)` serveur des lignes
+  pushées (réponse du `.select()` de l'upsert), garantissant qu'il couvre nos
+  propres écritures et évitant un re-pull inutile. Garde de conflit et push H6
+  inchangés.
+- **Paramétrage** ([`js/parametrage.js`](./js/parametrage.js),
+  [`plugins/parametrage/index.html`](./plugins/parametrage/index.html)) :
+  `Parametrage.onChange` retourne une fonction de désinscription ; le plugin
+  paramétrage la déclenche au démontage via `window.__paramCleanup` (pattern
+  standard des autres plugins) pour éviter l'accumulation de listeners.
+- **Bump cache** : assets shell/plugins modifiés → `CACHE_NOM` / `CACHE_PLUGINS`
+  passés de `v94` à `v95`.
+
 ## v94
 
 - **Calcul vide** ([`plugins/calcul-vide/index.html`](./plugins/calcul-vide/index.html)) :
