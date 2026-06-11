@@ -1371,9 +1371,12 @@
     eml += encoderQuotedPrintable(corpsHtml) + "\r\n\r\n";
 
     /* Partie 2 : pièce jointe XLSX */
+    /* Filename garanti ASCII dans les en-têtes MIME (les paramètres filename ne
+       sont pas RFC 2231-encodés) : on neutralise tout caractère non-ASCII résiduel. */
+    var filenameSafe = String(filename).replace(/[^\x20-\x7E]/g, "_");
     eml += "--" + boundary + "\r\n";
-    eml += "Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; name=\"" + filename + "\"\r\n";
-    eml += "Content-Disposition: attachment; filename=\"" + filename + "\"\r\n";
+    eml += "Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; name=\"" + filenameSafe + "\"\r\n";
+    eml += "Content-Disposition: attachment; filename=\"" + filenameSafe + "\"\r\n";
     eml += "Content-Transfer-Encoding: base64\r\n";
     eml += "\r\n";
     eml += b64.match(/.{1,76}/g).join("\r\n");

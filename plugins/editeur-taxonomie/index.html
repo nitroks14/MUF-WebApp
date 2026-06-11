@@ -761,7 +761,9 @@ async function gererPush() {
 
     /* 2 — Remplacer le bloc TAXONOMIE */
     var newBlock = serializerTaxoJS(taxo);
-    var regex = /var TAXONOMIE = \{[\s\S]*?\n  \};/;
+    /* Regex tolérante à l'indentation/espaces (évite un faux « bloc introuvable »
+       si le fichier cible est légèrement reformaté). */
+    var regex = /var TAXONOMIE\s*=\s*\{[\s\S]*?\n[\t ]*\};/;
     if (!regex.test(fichier.content)) {
       throw new Error('Bloc TAXONOMIE introuvable dans le fichier. Vérifiez le chemin.');
     }
