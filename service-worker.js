@@ -122,17 +122,21 @@ self.addEventListener('install', evenement => {
    ============================================================ */
 self.addEventListener('activate', evenement => {
   evenement.waitUntil(
-    caches.keys().then(nomsCaches => {
-      return Promise.all(
+    (async () => {
+      /* Nettoyage des anciens caches (hors caches courants) */
+      const nomsCaches = await caches.keys();
+      await Promise.all(
         nomsCaches
           .filter(nom => nom !== CACHE_NOM && nom !== CACHE_PLUGINS)
           .map(nom => caches.delete(nom))
       );
-    })
-  );
 
-  /* Prise de contrôle immédiate de tous les onglets ouverts */
-  self.clients.claim();
+      /* Prise de contrôle immédiate de tous les onglets ouverts, une fois
+         le nettoyage terminé. Chaîné DANS le waitUntil pour que l'activation
+         reste en vol jusqu'à la fin du claim (au lieu d'un appel hors cycle). */
+      await self.clients.claim();
+    })()
+  );
 });
 
 /* ============================================================
