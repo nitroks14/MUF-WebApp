@@ -1022,8 +1022,78 @@
      dans Outlook quand il contient « é », « è » ou « — ». */
   function encoderEnteteRFC2047(texte) {
     if (/^[\x00-\x7F]*$/.test(texte)) { return texte; }
-    var utf8 = unescape(encodeURIComponent(texte));
-    return '=?UTF-8?B?' + btoa(utf8) + '?=';
+    /* Octets UTF-8 via TextEncoder (remplace unescape() déprécié). */
+    var bytes = new TextEncoder().encode(texte);
+    /* RFC 2047 : un encoded-word ne doit pas dépasser 75 caractères. On
+       découpe en chunks de 45 octets (≈ 60 chars en base64, marge sous 75
+       une fois ajoutés "=?UTF-8?B?" et "?="), puis on plie (folding) les
+       encoded-words avec "\r\n " conformément à la RFC. */
+    var mots = [];
+    var i = 0;
+    while (i < bytes.length) {
+      var fin = Math.min(i + 45, bytes.length);
+      /* Ne pas couper au milieu d'un caractère UTF-8 multi-octets : reculer
+         la borne tant qu'on tombe sur un octet de continuation (10xxxxxx). */
+      while (fin > i && fin < bytes.length && (bytes[fin] & 0xC0) === 0x80) {
+        fin--;
+      }
+      var binaire = '';
+      for (var j = i; j < fin; j++) {
+        binaire += String.fromCharCode(bytes[j]);
+      }
+      mots.push('=?UTF-8?B?' + btoa(binaire) + '?=');
+      i = fin;
+    }
+    return mots.join('\r\n ');
+  }
+
+  /* Encodage quoted-printable (RFC 2045) du corps texte.
+     Outlook Windows rend mal une partie text/plain « 8bit » contenant des
+     octets UTF-8 accentués (corps qui n'apparaît pas). Le QP est le format le
+     plus robuste, lu correctement par Outlook ET Apple Mail.
+     - octets non-imprimables, « = » et octets > 0x7E → « =XX » (hex majuscule) ;
+     - soft-wrap des lignes à 76 colonnes via un soft line break « =\r\n » ;
+     - préservation des sauts de ligne réels en CRLF. */
+  function encoderQuotedPrintable(texte) {
+    var bytes = new TextEncoder().encode(texte);
+    var out   = '';
+    var col   = 0;
+    /* Ajoute un fragment (1 à 3 caractères ASCII représentant 1 octet source)
+       en gérant le soft-wrap à 76 colonnes. */
+    function pousser(fragment) {
+      if (col + fragment.length > 75) {
+        out += '=\r\n';
+        col = 0;
+      }
+      out += fragment;
+      col += fragment.length;
+    }
+    for (var i = 0; i < bytes.length; i++) {
+      var c = bytes[i];
+      /* CRLF d'origine : émettre un vrai saut de ligne (hard break) et
+         réinitialiser la colonne. On consomme le \n qui suit un \r. */
+      if (c === 0x0D && i + 1 < bytes.length && bytes[i + 1] === 0x0A) {
+        out += '\r\n';
+        col = 0;
+        i++;
+        continue;
+      }
+      /* \n isolé → hard break CRLF. */
+      if (c === 0x0A) {
+        out += '\r\n';
+        col = 0;
+        continue;
+      }
+      /* Caractères imprimables ASCII sauf « = » (0x3D) → tels quels. */
+      if (c >= 0x20 && c <= 0x7E && c !== 0x3D) {
+        pousser(String.fromCharCode(c));
+      } else {
+        var hex = c.toString(16).toUpperCase();
+        if (hex.length < 2) { hex = '0' + hex; }
+        pousser('=' + hex);
+      }
+    }
+    return out;
   }
 
   /* Repli .eml — mécanisme historique conservé à l'identique : construit un
@@ -1047,12 +1117,23 @@
       var boundary = 'MUF_BRG_' + Date.now();
       var dateGMT  = new Date().toUTCString();
 
-      /* Anti-injection d'en-têtes : retirer tout CR/LF des adresses */
-      to = String(to == null ? '' : to).replace(/[\r\n]/g, '');
-      cc = String(cc == null ? '' : cc).replace(/[\r\n]/g, '');
+      /* Anti-injection d'en-têtes : retirer tout CR/LF des adresses.
+         Normalisation RFC 5322 : séparateur d'adresses « , » (le « ; » d'Outlook
+         n'est pas reconnu par Apple Mail), espaces de bord nettoyés. */
+      var normaliserAdresses = function (v) {
+        return String(v == null ? '' : v)
+                 .replace(/[\r\n]/g, '')
+                 .replace(/;/g, ',')
+                 .replace(/\s*,\s*/g, ', ')
+                 .trim();
+      };
+      to = normaliserAdresses(to);
+      cc = normaliserAdresses(cc);
 
       var eml  = 'From: \r\n';
-      eml += 'To: ' + to + '\r\n';
+      /* En-tête To: émis uniquement s'il est renseigné : un « To: » vide perturbe
+         le parsing des destinataires (notamment Apple Mail sur .eml X-Unsent). */
+      if (to) { eml += 'To: ' + to + '\r\n'; }
       if (cc) { eml += 'Cc: ' + cc + '\r\n'; }
       eml += 'Subject: ' + encoderEnteteRFC2047(sujet) + '\r\n';
       eml += 'Date: ' + dateGMT + '\r\n';
@@ -1061,12 +1142,12 @@
       eml += 'X-Unsent: 1\r\n';
       eml += '\r\n';
 
-      /* Partie 1 : corps texte */
+      /* Partie 1 : corps texte (quoted-printable pour un rendu fiable Outlook). */
       eml += '--' + boundary + '\r\n';
       eml += 'Content-Type: text/plain; charset=utf-8\r\n';
-      eml += 'Content-Transfer-Encoding: 8bit\r\n';
+      eml += 'Content-Transfer-Encoding: quoted-printable\r\n';
       eml += '\r\n';
-      eml += corps + '\r\n';
+      eml += encoderQuotedPrintable(corps) + '\r\n';
       eml += '\r\n';
 
       /* Partie 2 : pièce jointe PDF */
