@@ -171,20 +171,49 @@
     if (root.__antiAutofillObserver) return root.__antiAutofillObserver;
     if (typeof MutationObserver !== 'function') return null;
 
+    /* Batching : plutôt que de scanner à CHAQUE vague de mutations (coûteux sur
+       un DOM massif, ex. ajout de 20 lignes de tableau d'un coup), on accumule
+       les nœuds ajoutés dans un buffer et on ne lance le traitement qu'UNE fois
+       par frame via requestAnimationFrame. La couverture est identique (on
+       traite exactement les mêmes nœuds, juste regroupés) ; seul le nombre de
+       passes de protect() est réduit. Repli sur traitement synchrone si rAF
+       indisponible. protect() étant idempotent (data-anti-autofill="1"), un
+       doublon éventuel dans le buffer est sans effet. */
+    var raf = (typeof requestAnimationFrame === 'function')
+      ? requestAnimationFrame
+      : function (cb) { return setTimeout(cb, 16); };
+
+    var bufferNodes = [];
+    var flushPlanifie = false;
+
+    function flush() {
+      flushPlanifie = false;
+      var aTraiter = bufferNodes;
+      bufferNodes = [];
+      for (var i = 0; i < aTraiter.length; i++) {
+        var node = aTraiter[i];
+        /* Le nœud lui-même… */
+        protect(node);
+        /* …et ses descendants champs. */
+        if (node.querySelectorAll) {
+          var sous = node.querySelectorAll('input, textarea, select');
+          for (var k = 0; k < sous.length; k++) protect(sous[k]);
+        }
+      }
+    }
+
     var obs = new MutationObserver(function (mutations) {
       for (var i = 0; i < mutations.length; i++) {
         var ajoutes = mutations[i].addedNodes;
         for (var j = 0; j < ajoutes.length; j++) {
           var node = ajoutes[j];
           if (node.nodeType !== 1) continue;
-          /* Le node lui-même… */
-          protect(node);
-          /* …et ses descendants champs. */
-          if (node.querySelectorAll) {
-            var sous = node.querySelectorAll('input, textarea, select');
-            for (var k = 0; k < sous.length; k++) protect(sous[k]);
-          }
+          bufferNodes.push(node);
         }
+      }
+      if (bufferNodes.length && !flushPlanifie) {
+        flushPlanifie = true;
+        raf(flush);
       }
     });
     obs.observe(root, { childList: true, subtree: true });
