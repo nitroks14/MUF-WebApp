@@ -11,6 +11,23 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v94
+
+- **Calcul vide** ([`plugins/calcul-vide/index.html`](./plugins/calcul-vide/index.html)) :
+  suppression de l'option `DN65` du sélecteur de diamètre d'arrivée vide. Elle
+  réutilisait par erreur la valeur de `DN60` (`value="60"`). Décision : suppression
+  pure (pas de correction de valeur). Aucune logique ne dépendait de cette option.
+- **Retour garantie** ([`plugins/retour-garantie/index.html`](./plugins/retour-garantie/index.html)) :
+  pagination multi-page de la section « À REMPLIR PAR LE TECHNICIEN » du PDF. Le
+  contenu (pièces retournées, défaut, constat, footer) coule désormais proprement
+  sur plusieurs pages au lieu d'être tronqué par jsPDF. Le label vertical bleu et
+  les bordures latérales sont redessinés par page ; le footer date/signature n'est
+  reporté que sur la dernière page. Le cas court (1 page) reste visuellement
+  identique. La pagination profite à l'impression comme à l'e-mail `.eml` (PDF en
+  PJ), `construirePDF` étant partagée. L'alerte de troncature (v93) est retirée.
+- **Bump cache** : plugins modifiés → `CACHE_NOM` / `CACHE_PLUGINS` passés de
+  `v93` à `v94`.
+
 ## v93
 
 - **Lot de correctifs « quick wins » issus de la revue de code du 2026-06-10.**
