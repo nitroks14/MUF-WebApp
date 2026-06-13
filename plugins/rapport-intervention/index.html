@@ -517,7 +517,7 @@
      Taxonomie complète des machines et stations
      Structure : machine → stations → { label, subcats: [ { label, elements: [] } ] }
      ============================================================ */
-        var TAXONOMIE = {
+        var TAXONOMIE_FALLBACK = {
     cloche: {
       label: "Cloche (Série C)",
       stations: [
@@ -642,7 +642,7 @@
   };
 
   /* Libellés d'affichage par identifiant d'action */
-  var ACTION_LABELS = {
+  var ACTION_LABELS_FALLBACK = {
     controle:      'Contrôle',
     nettoyage:     'Nettoyage',
     remplacement:  'Remplacement',
@@ -650,6 +650,10 @@
     lubrification: 'Lubrification',
     reglage:       'Réglage'
   };
+
+  /* Variables actives (remplacées au chargement de la taxonomie distante) */
+  var TAXONOMIE = TAXONOMIE_FALLBACK;
+  var ACTION_LABELS = ACTION_LABELS_FALLBACK;
 
   /* Mapping inverse libellé -> id (data-action utilise le libellé) */
   var ACTION_IDS = {};
@@ -661,6 +665,96 @@
       }
     }
   })();
+
+  /* === Cache IndexedDB taxonomie === */
+  var IDB_NAME = 'muf_ri_taxo';
+  var IDB_STORE = 'cache';
+
+  function ouvrirIDB() {
+    return new Promise(function(resolve, reject) {
+      var req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = function(e) { e.target.result.createObjectStore(IDB_STORE); };
+      req.onsuccess = function(e) { resolve(e.target.result); };
+      req.onerror = function() { reject(req.error); };
+    });
+  }
+
+  function lireIDB() {
+    return ouvrirIDB().then(function(db) {
+      return new Promise(function(resolve, reject) {
+        var tx = db.transaction(IDB_STORE, 'readonly');
+        var req = tx.objectStore(IDB_STORE).get('taxo');
+        req.onsuccess = function() { resolve(req.result || null); };
+        req.onerror = function() { reject(req.error); };
+      });
+    }).catch(function() { return null; });
+  }
+
+  function ecrireIDB(data) {
+    return ouvrirIDB().then(function(db) {
+      return new Promise(function(resolve, reject) {
+        var tx = db.transaction(IDB_STORE, 'readwrite');
+        var req = tx.objectStore(IDB_STORE).put(data, 'taxo');
+        req.onsuccess = function() { resolve(); };
+        req.onerror = function() { reject(req.error); };
+      });
+    }).catch(function() {});
+  }
+
+  function appliquerDonneesTaxo(data) {
+    TAXONOMIE = data.machines || TAXONOMIE_FALLBACK;
+    ACTION_LABELS = data.actionLabels || ACTION_LABELS_FALLBACK;
+    /* Reconstruire ACTION_IDS */
+    ACTION_IDS = {};
+    var k;
+    for (k in ACTION_LABELS) {
+      if (Object.prototype.hasOwnProperty.call(ACTION_LABELS, k)) {
+        ACTION_IDS[ACTION_LABELS[k]] = k;
+      }
+    }
+  }
+
+  async function chargerTaxonomie() {
+    /* 1. Cache IndexedDB */
+    var cached = await lireIDB();
+    if (cached) {
+      appliquerDonneesTaxo(cached);
+      /* Refresh en arrière-plan */
+      fetchEtMettreAJour(cached.version);
+      return;
+    }
+    /* 2. Premier chargement : fetch réseau */
+    try {
+      afficherStatut('Chargement de la taxonomie…', '');
+      var resp = await fetch('https://raw.githubusercontent.com/nitroks14/muf-ri-taxonomy/main/taxonomy.json');
+      if (!resp.ok) { throw new Error('HTTP ' + resp.status); }
+      var data = await resp.json();
+      await ecrireIDB(data);
+      appliquerDonneesTaxo(data);
+      afficherStatut('', '');
+    } catch (e) {
+      /* Fallback silencieux sur les données inline */
+      afficherStatut('Taxonomie locale (hors ligne)', '');
+    }
+  }
+
+  function fetchEtMettreAJour(versionCachee) {
+    fetch('https://raw.githubusercontent.com/nitroks14/muf-ri-taxonomy/main/version.json')
+      .then(function(r) { return r.json(); })
+      .then(function(v) {
+        if (v.version !== versionCachee) {
+          return fetch('https://raw.githubusercontent.com/nitroks14/muf-ri-taxonomy/main/taxonomy.json')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              ecrireIDB(data);
+              appliquerDonneesTaxo(data);
+              /* Re-render si une machine est déjà sélectionnée */
+              if (etat.typeMachine) { appliquerMachine(etat.typeMachine); }
+            });
+        }
+      })
+      .catch(function() {});
+  }
 
   /* Normalise une action (string héritée ou objet) en objet {type, note?, etats?} */
   function normaliserAction(action) {
@@ -1502,19 +1596,21 @@
   /* ============================================================
      Initialisation
      ============================================================ */
-  var donnees = chargerDepuisLS();
-  if (donnees) {
-    /* Fusionner les données restaurées dans etat */
-    if (donnees.typeIntervention) { etat.typeIntervention = donnees.typeIntervention; }
-    if (donnees.binome)           { etat.binome           = donnees.binome; }
-    if (donnees.typeMachine)      { etat.typeMachine      = donnees.typeMachine; }
-    if (donnees.travaux && typeof donnees.travaux === 'object') { etat.travaux = donnees.travaux; }
-    if (donnees.etats && typeof donnees.etats === 'object') { etat.etats = donnees.etats; }
-    if (Array.isArray(donnees.tests)) { etat.tests = donnees.tests; }
-  }
+  chargerTaxonomie().then(function() {
+    var donnees = chargerDepuisLS();
+    if (donnees) {
+      /* Fusionner les données restaurées dans etat */
+      if (donnees.typeIntervention) { etat.typeIntervention = donnees.typeIntervention; }
+      if (donnees.binome)           { etat.binome           = donnees.binome; }
+      if (donnees.typeMachine)      { etat.typeMachine      = donnees.typeMachine; }
+      if (donnees.travaux && typeof donnees.travaux === 'object') { etat.travaux = donnees.travaux; }
+      if (donnees.etats && typeof donnees.etats === 'object') { etat.etats = donnees.etats; }
+      if (Array.isArray(donnees.tests)) { etat.tests = donnees.tests; }
+    }
 
-  restaurerDepuisEtat();
-  mettreAJourApercu();
+    restaurerDepuisEtat();
+    mettreAJourApercu();
+  });
 
 })();
 </script>
