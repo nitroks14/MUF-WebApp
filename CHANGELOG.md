@@ -11,6 +11,28 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v97
+
+- **Rapport d'intervention — Phase 4 : notification de mise à jour de la taxonomie**
+  ([`plugins/rapport-intervention/index.html`](./plugins/rapport-intervention/index.html)).
+  Le rafraîchissement en arrière-plan de la taxonomie (Phase 3) ré-appliquait la
+  nouvelle version **en silence**, au risque de modifier les listes/états sous le
+  technicien en pleine saisie. Désormais :
+  - Si un **rapport est en cours** (machine sélectionnée, travaux/états/tests
+    saisis — cf. `rapportEnCours()`), la nouvelle version est mémorisée
+    (`taxoEnAttente`) et une **bannière discrète** non intrusive
+    (`#ri-taxo-notice`, `role="status"` / `aria-live="polite"`) propose un bouton
+    « Recharger la taxonomie ». L'application n'a lieu que sur action explicite,
+    puis re-render via `appliquerMachine()` et masquage de la bannière.
+  - Si **aucun rapport n'est en cours**, application directe + message de
+    confirmation discret « Taxonomie mise à jour vX.Y.Z » (`afficherStatut`).
+  - La bannière est un élément DOM dédié, distinct de `#ri-archive-status`, pour
+    éviter tout conflit avec les messages transitoires (« Copié ! », etc.).
+  - Robustesse offline conservée : le `.catch()` silencieux et le fallback inline
+    sont inchangés.
+- **Bump cache** : asset plugin modifié → `CACHE_NOM` / `CACHE_PLUGINS` passés de
+  `v96` à `v97`.
+
 ## v95
 
 - **Lot « robustesse / dette technique » issu de la revue de code du 2026-06-10.**

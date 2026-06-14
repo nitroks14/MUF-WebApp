@@ -300,6 +300,32 @@
     .ri-actions .btn { width: 100%; }
   }
 
+  /* ---- Notification mise à jour taxonomie (discrète, non intrusive) ---- */
+  .ri-taxo-notice {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-left: 3px solid var(--color-primary, #3182CE);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
+  }
+  .ri-taxo-notice[hidden] { display: none; }
+  .ri-taxo-notice .ri-taxo-notice-text { line-height: 1.4; }
+
+  @media (min-width: 480px) {
+    .ri-taxo-notice {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+  }
+
   /* ---- Machine non sélectionnée ---- */
   .ri-no-machine {
     background: var(--color-bg);
@@ -497,6 +523,8 @@
       </button>
       <button class="btn btn-outline btn-sm" id="ri-btn-reset" type="button">Réinitialiser</button>
     </div>
+
+    <div class="ri-taxo-notice" id="ri-taxo-notice" role="status" aria-live="polite" hidden></div>
 
     <p class="ri-archive-status" id="ri-archive-status" aria-live="polite"></p>
 
@@ -738,6 +766,21 @@
     }
   }
 
+  /* Données de taxonomie reçues en arrière-plan mais non encore appliquées
+     parce qu'un rapport est en cours d'édition (cf. rapportEnCours). */
+  var taxoEnAttente = null;
+
+  /* Vrai si le technicien a commencé un rapport : machine sélectionnée,
+     ou travaux / états / tests saisis. Dans ce cas on n'applique pas une
+     nouvelle taxonomie en silence (les listes changeraient sous lui). */
+  function rapportEnCours() {
+    if (etat.typeMachine) { return true; }
+    if (etat.travaux && Object.keys(etat.travaux).length > 0) { return true; }
+    if (etat.etats && Object.keys(etat.etats).length > 0) { return true; }
+    if (etat.tests && etat.tests.length > 0) { return true; }
+    return false;
+  }
+
   function fetchEtMettreAJour(versionCachee) {
     fetch('https://raw.githubusercontent.com/nitroks14/muf-ri-taxonomy/main/version.json')
       .then(function(r) { return r.json(); })
@@ -747,13 +790,58 @@
             .then(function(r) { return r.json(); })
             .then(function(data) {
               ecrireIDB(data);
-              appliquerDonneesTaxo(data);
-              /* Re-render si une machine est déjà sélectionnée */
-              if (etat.typeMachine) { appliquerMachine(etat.typeMachine); }
+              if (rapportEnCours()) {
+                /* Rapport en cours : ne rien changer sous le technicien.
+                   On mémorise la nouvelle version et on propose de l'appliquer. */
+                taxoEnAttente = data;
+                afficherMajTaxoDisponible(v.version);
+              } else {
+                /* Aucun rapport en cours : application directe + confirmation. */
+                appliquerDonneesTaxo(data);
+                if (etat.typeMachine) { appliquerMachine(etat.typeMachine); }
+                afficherStatut('Taxonomie mise à jour v' + v.version, 'ok');
+              }
             });
         }
       })
       .catch(function() {});
+  }
+
+  /* Notification discrète (bannière dédiée, distincte de #ri-archive-status
+     pour ne pas entrer en conflit avec les messages « Copié ! » etc.) :
+     une nouvelle version est disponible mais n'a pas été appliquée
+     (rapport en cours). Bouton explicite pour recharger. */
+  function afficherMajTaxoDisponible(version) {
+    if (!domTaxoNotice) { return; }
+    domTaxoNotice.innerHTML =
+      '<span class="ri-taxo-notice-text">Nouvelle version de la taxonomie ' +
+      'disponible (v' + escHtml(version) + ').</span>' +
+      '<button type="button" class="btn btn-outline btn-sm" id="ri-btn-reload-taxo">' +
+      'Recharger la taxonomie</button>';
+    domTaxoNotice.hidden = false;
+    var btn = el('ri-btn-reload-taxo');
+    if (btn) { btn.addEventListener('click', appliquerTaxoEnAttente); }
+  }
+
+  /* Masque et vide la bannière de notification de mise à jour. */
+  function masquerMajTaxo() {
+    if (!domTaxoNotice) { return; }
+    domTaxoNotice.hidden = true;
+    domTaxoNotice.innerHTML = '';
+  }
+
+  /* Applique la taxonomie mise en attente (sur action explicite),
+     re-render le rapport en cours puis efface la notification. */
+  function appliquerTaxoEnAttente() {
+    if (!taxoEnAttente) { masquerMajTaxo(); return; }
+    appliquerDonneesTaxo(taxoEnAttente);
+    taxoEnAttente = null;
+    /* Re-render si une machine est déjà sélectionnée */
+    if (etat.typeMachine) { appliquerMachine(etat.typeMachine); }
+    /* Retire la notification une fois la nouvelle version appliquée */
+    masquerMajTaxo();
+    afficherStatut('Taxonomie mise à jour', 'ok');
+    setTimeout(function () { afficherStatut('', ''); }, 2000);
   }
 
   /* Normalise une action (string héritée ou objet) en objet {type, note?, etats?} */
@@ -872,6 +960,7 @@
   var domBtnCopier      = el('ri-btn-copier');
   var domBtnReset       = el('ri-btn-reset');
   var domStatut         = el('ri-archive-status');
+  var domTaxoNotice     = el('ri-taxo-notice');
 
   /* ============================================================
      Debounce sauvegarde
