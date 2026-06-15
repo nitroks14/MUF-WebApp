@@ -832,11 +832,11 @@
 <!-- Résultats -->
 <div class="card mb-24">
   <div class="card-header">
-    <h2 class="card-title cv-section-title">Resultats</h2>
+    <h2 class="card-title cv-section-title">Résultats</h2>
   </div>
   <div class="card-body">
     <div id="cv-results-content">
-      <p class="cv-results-empty">Renseignez les parametres ci-dessus pour obtenir une estimation.</p>
+      <p class="cv-results-empty">Renseignez les paramètres ci-dessus pour obtenir une estimation.</p>
     </div>
   </div>
 </div>
@@ -855,7 +855,7 @@
       <polyline points="7 10 12 15 17 10"/>
       <line x1="12" y1="15" x2="12" y2="3"/>
     </svg>
-    Telecharger le rapport PDF
+    Télécharger le rapport PDF
   </button>
 </div>
 
@@ -1727,7 +1727,7 @@
      ============================================================ */
 
   function renderEmpty() {
-    elResultsContent.innerHTML = '<p class="cv-results-empty">Renseignez les parametres ci-dessus pour obtenir une estimation.</p>';
+    elResultsContent.innerHTML = '<p class="cv-results-empty">Renseignez les paramètres ci-dessus pour obtenir une estimation.</p>';
     lastResults = null;
     if (elPdfBtnWrap) elPdfBtnWrap.style.display = 'none';
   }
@@ -1982,14 +1982,14 @@
 
       if (st.sourceType === 'pump') {
         ligneKV('Type :', 'Pompe de vide', y, col1X, larg / 2);
-        ligneKV('Modele :', st.pumpModel || '—', y, col2X, colW2);
+        ligneKV('Modèle :', st.pumpModel || '—', y, col2X, colW2);
       } else {
-        ligneKV('Type :', 'Reseau vide', y, col1X, larg / 2);
-        ligneKV('Pression reseau :', (st.networkPressure || '—') + ' mbar abs', y, col2X, colW2);
+        ligneKV('Type :', 'Réseau vide', y, col1X, larg / 2);
+        ligneKV('Pression réseau :', (st.networkPressure || '—') + ' mbar abs', y, col2X, colW2);
         y += 6;
-        ligneKV('DN arrivee vide :', 'DN' + (st.networkInletDiameter || '—'), y, col1X, larg / 2);
-        var reserveTxt = st.hasReserve ? 'Oui (reseau batiment)' : 'Non';
-        ligneKV('Grosse reserve :', reserveTxt, y, col2X, colW2);
+        ligneKV('DN arrivée vide :', 'DN' + (st.networkInletDiameter || '—'), y, col1X, larg / 2);
+        var reserveTxt = st.hasReserve ? 'Oui (réseau bâtiment)' : 'Non';
+        ligneKV('Grosse réserve :', reserveTxt, y, col2X, colW2);
         y += 6;
         if (!st.hasReserve && st.descenteLength) {
           ligneKV('Long. descente :', (st.descenteLength || '0') + ' m', y, col1X, larg / 2);
@@ -2008,7 +2008,7 @@
       var hasRoots = st.rootsModel && st.rootsModel !== 'Aucune';
       doc.rect(mG, y - 3, larg, hasRoots ? 12 : 6, 'F');
 
-      ligneKV('Modele Roots :', st.rootsModel || 'Aucune', y, col1X, larg);
+      ligneKV('Modèle Roots :', st.rootsModel || 'Aucune', y, col1X, larg);
       if (hasRoots && rootsModels[st.rootsModel] && rootsModels[st.rootsModel].hasBypass) {
         y += 6;
         ligneKV('Tarage bypass :', (st.rootsBypassTarring || '—') + ' mbar abs', y, col1X, larg);
@@ -2022,10 +2022,10 @@
       y += 6;
 
       var machineDescs = {
-        centralized_vanne: 'Vannes centralisees (repartiteur cote source)',
-        remote_vanne:      'Vannes deportees (proches de l\'outillage)',
-        bol_remote:        'Bol decanteur + vannes deportees',
-        bol_only:          'Bol decanteur seul (sans vanne deportee)'
+        centralized_vanne: 'Vannes centralisées (répartiteur côté source)',
+        remote_vanne:      'Vannes déportées (proches de l\'outillage)',
+        bol_remote:        'Bol décanteur + vannes déportées',
+        bol_only:          'Bol décanteur seul (sans vanne déportée)'
       };
       var hasBol  = (st.machineType === 'bol_remote' || st.machineType === 'bol_only');
 
@@ -2039,16 +2039,16 @@
       ligneKV('Long. tuyau source :', (st.sourceTubeLength || '0') + ' m', y, col2X, colW2);
       y += 6;
       if (hasRoots) {
-        ligneKV('Long. 2eme tuyau (DN60) :', (st.sourceTube2Length || '0') + ' m', y, col1X, larg);
+        ligneKV('Long. 2ème tuyau (DN60) :', (st.sourceTube2Length || '0') + ' m', y, col1X, larg);
         y += 6;
       }
       if (hasBol) {
-        ligneKV('DN 3eme tuyau (bol) :', 'DN' + (st.tube3Diameter || '—'), y, col1X, larg / 2);
-        ligneKV('Long. 3eme tuyau :', (st.tube3Length || '0') + ' m', y, col2X, colW2);
+        ligneKV('DN 3ème tuyau (bol) :', 'DN' + (st.tube3Diameter || '—'), y, col1X, larg / 2);
+        ligneKV('Long. 3ème tuyau :', (st.tube3Length || '0') + ' m', y, col2X, colW2);
         y += 6;
       }
       var nV = parseInt(st.repartiteurVoies) || 4;
-      ligneKV('Repartiteur :', nV + ' voies', y, col1X, larg / 2);
+      ligneKV('Répartiteur :', nV + ' voies', y, col1X, larg / 2);
       ligneKV('DN tuyaux outillage x' + nV + ' :', 'DN' + (st.outillageTubesDiameter || '—'), y, col2X, colW2);
       y += 6;
       ligneKV('Long. tuyaux outillage :', (st.outillageTubesLength || '0') + ' m', y, col1X, larg / 2);
@@ -2070,7 +2070,7 @@
       /* ----------------------------------------------------------
          SECTION RESULTATS
          ---------------------------------------------------------- */
-      enteteSection('Resultats du calcul', y);
+      enteteSection('Résultats du calcul', y);
       y += 6;
 
       /* Panneau bleu résultats */
@@ -2121,14 +2121,14 @@
         doc.line(mG + 2, yPos + 1.5, mD - 2, yPos + 1.5);
       }
 
-      resultLigne('Volume aval (a pomper)', (r.volAval * 1000).toFixed(3) + ' L', ry);
+      resultLigne('Volume aval (à pomper)', (r.volAval * 1000).toFixed(3) + ' L', ry);
       ry += 5;
-      resultLigne('Volume amont (pre-evacue)', (r.volAmont * 1000).toFixed(3) + ' L', ry);
+      resultLigne('Volume amont (pré-évacué)', (r.volAmont * 1000).toFixed(3) + ' L', ry);
       ry += 5;
       resultLigne('Source de vide', r.nomPompe, ry);
       ry += 5;
       if (st.sourceType === 'pump' && r.P_eq !== undefined) {
-        resultLigne('Pression equilibrage (ouverture vannes)', r.P_eq.toFixed(0) + ' mbar', ry);
+        resultLigne('Pression équilibrage (ouverture vannes)', r.P_eq.toFixed(0) + ' mbar', ry);
         ry += 5;
       }
       if (r.facteur) {
@@ -2152,8 +2152,8 @@
       doc.setTextColor(150, 150, 150);
       doc.setFont('helvetica', 'normal');
       doc.text(
-        'MUF-WebApp — Multivac France  |  Calcul de vide  |  Document genere le ' +
-        new Date().toLocaleDateString('fr-FR') + ' a ' +
+        'MUF-WebApp — Multivac France  |  Calcul de vide  |  Document généré le ' +
+        new Date().toLocaleDateString('fr-FR') + ' à ' +
         new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
         105, 290, { align: 'center' }
       );
@@ -2171,7 +2171,7 @@
         construirePDF(window.jspdf.jsPDF);
       } catch (e) {
         console.error('[CalcVide] Erreur generation PDF :', e);
-        alert('Erreur lors de la generation du PDF.');
+        alert('Erreur lors de la génération du PDF.');
       } finally {
         if (elBtnPdf) elBtnPdf.disabled = false;
       }
@@ -2186,13 +2186,13 @@
           construirePDF(jsPDF);
         } catch (e) {
           console.error('[CalcVide] Erreur generation PDF :', e);
-          alert('Erreur lors de la generation du PDF. Verifiez votre connexion et reessayez.');
+          alert('Erreur lors de la génération du PDF. Vérifiez votre connexion et réessayez.');
         } finally {
           if (elBtnPdf) elBtnPdf.disabled = false;
         }
       };
       script.onerror = function () {
-        alert('Impossible de charger jsPDF. Verifiez votre connexion internet.');
+        alert('Impossible de charger jsPDF. Vérifiez votre connexion internet.');
         if (elBtnPdf) elBtnPdf.disabled = false;
       };
       document.body.appendChild(script);

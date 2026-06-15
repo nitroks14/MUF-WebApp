@@ -11,6 +11,19 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v98
+
+- **Calcul mise sous vide — harmonisation des accents du copy user-facing**
+  ([`plugins/calcul-vide/index.html`](./plugins/calcul-vide/index.html)).
+  Rétablissement des accents français corrects sur les chaînes affichées à
+  l'utilisateur (titres, message d'invite, alertes d'erreur PDF) et sur les
+  libellés/valeurs du rapport PDF généré (sections Source de vide, Roots,
+  Configuration machine, Résultats, pied de page). Modification purement
+  cosmétique : aucun identifiant technique (clés d'objet `machineType`, ids
+  DOM, clés localStorage), ni logique de calcul, n'a été touché.
+- **Bump cache** : asset plugin modifié → `CACHE_NOM` / `CACHE_PLUGINS` passés de
+  `v97` à `v98`.
+
 ## v97
 
 - **Rapport d'intervention — Phase 4 : notification de mise à jour de la taxonomie**
