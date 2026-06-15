@@ -249,6 +249,28 @@
     border-radius: 6px;
   }
 
+  /* Saisie de valeur mesurée (action de type 'mesure') */
+  .ri-mesure-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    justify-content: center;
+  }
+  .ri-mesure {
+    width: 72px;
+    font-size: 0.8rem;
+    padding: 3px 6px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    text-align: right;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ri-mesure-unite {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+
   /* ---- Responsive tableau mobile ---- */
   @media (max-width: 767px) {
     .ri-table thead { display: none; }
@@ -676,7 +698,8 @@
     remplacement:  'Remplacement',
     graissage:     'Graissage',
     lubrification: 'Lubrification',
-    reglage:       'Réglage'
+    reglage:       'Réglage',
+    mesure:        'Mesure'
   };
 
   /* Variables actives (remplacées au chargement de la taxonomie distante) */
@@ -777,6 +800,7 @@
     if (etat.typeMachine) { return true; }
     if (etat.travaux && Object.keys(etat.travaux).length > 0) { return true; }
     if (etat.etats && Object.keys(etat.etats).length > 0) { return true; }
+    if (etat.mesures && Object.keys(etat.mesures).length > 0) { return true; }
     if (etat.tests && etat.tests.length > 0) { return true; }
     return false;
   }
@@ -912,6 +936,19 @@
     return [];
   }
 
+  /* Pour un élément, retourne l'unité de la première action 'mesure' trouvée
+     dans la taxonomie ('' si aucune / pas d'unité). Sert au rendu du rapport. */
+  function unitePourMesure(machine, stationLabel, subcatLabel, elementLabel) {
+    var actions = actionsTaxonomie(machine, stationLabel, subcatLabel, elementLabel);
+    var i;
+    for (i = 0; i < actions.length; i++) {
+      if (actions[i].type === 'mesure') {
+        return actions[i].unite ? String(actions[i].unite).trim() : '';
+      }
+    }
+    return '';
+  }
+
   /* Pour un (élément, type d'action), retourne la liste des notes NON VIDES
      de toutes les actions de ce type définies dans la taxonomie.
      Un élément peut avoir plusieurs actions du même type différenciées par leur note. */
@@ -942,6 +979,10 @@
     typeMachine: '',
     travaux: {},
     etats: {},
+    /* mesures[station][subcat][element][libellé action] = valeur saisie (string).
+       Calque la structure de etat.etats. Utilisé par les actions de type 'mesure'
+       (tests de vide : vide max atteint, perte de vide…). */
+    mesures: {},
     tests: []
   };
 
@@ -1150,7 +1191,7 @@
     table.className = 'ri-table';
 
     /* Ordre canonique des colonnes */
-    var ALL_ACTIONS = ['controle', 'nettoyage', 'remplacement', 'graissage', 'lubrification', 'reglage'];
+    var ALL_ACTIONS = ['controle', 'nettoyage', 'remplacement', 'graissage', 'lubrification', 'reglage', 'mesure'];
 
     /* Récupère la liste des actions (objets) d'un élément, avec compat string héritée */
     function actionsDeLelement(elemCheck) {
@@ -1208,7 +1249,33 @@
       for (ci2 = 0; ci2 < actionsPresentes.length; ci2++) {
         var aId = actionsPresentes[ci2];
         var aLabel = ACTION_LABELS[aId];
-        if (actionParType[aId]) {
+        if (aId === 'mesure' && actionParType[aId]) {
+          /* Action Mesure : champ numérique + unité en suffixe (au lieu de
+             la case à cocher + dropdown états). L'unité vient de la taxonomie
+             (action.unite) ; la valeur est saisie par le technicien. */
+          var uniteRaw = actionParType[aId].unite ? String(actionParType[aId].unite).trim() : '';
+          var uniteSuffix = uniteRaw
+            ? '<span class="ri-mesure-unite">' + escHtml(uniteRaw) + '</span>'
+            : '';
+          /* Tooltip : notes de toutes les actions mesure de cet élément (aide visuelle) */
+          var notesMesure = notesPourType(machine, stationLabel, subcat.label, elementLabel, aId);
+          var titleMesure = notesMesure.length
+            ? ' title="' + escAttr(notesMesure.join(' ; ')) + '"'
+            : '';
+          trHtml +=
+            '<td class="ri-check-cell" data-label="' + escAttr(aLabel) + '"' + titleMesure + '>' +
+              '<span class="ri-mesure-wrap">' +
+                '<input type="number" inputmode="decimal" step="any" class="ri-mesure"' + titleMesure +
+                ' data-station="' + escAttr(stationLabel) + '"' +
+                ' data-subcat="' + escAttr(subcat.label) + '"' +
+                ' data-element="' + escAttr(elementLabel) + '"' +
+                ' data-action="' + escAttr(aLabel) + '"' +
+                ' placeholder="valeur"' +
+                ' aria-label="Mesure — ' + escAttr(elementLabel) + ' — ' + escAttr(aLabel) + '">' +
+                uniteSuffix +
+              '</span>' +
+            '</td>';
+        } else if (actionParType[aId]) {
           /* Select d'état si la liste résolue est non vide
              (union des états de toutes les actions de ce type pour cet élément) */
           var selectHtml = '';
@@ -1294,6 +1361,35 @@
         });
       }
 
+      /* Champs de mesure (actions de type 'mesure') : restauration + listener */
+      var inputsMesure = tr.querySelectorAll('.ri-mesure');
+      var mi;
+      for (mi = 0; mi < inputsMesure.length; mi++) {
+        var inputMesure = inputsMesure[mi];
+        var valMesure = obtenirMesure(
+          inputMesure.getAttribute('data-station'),
+          inputMesure.getAttribute('data-subcat'),
+          inputMesure.getAttribute('data-element'),
+          inputMesure.getAttribute('data-action')
+        );
+        if (valMesure) { inputMesure.value = valMesure; }
+
+        var gererMesure = function (e) {
+          var inp = e.target;
+          definirMesure(
+            inp.getAttribute('data-station'),
+            inp.getAttribute('data-subcat'),
+            inp.getAttribute('data-element'),
+            inp.getAttribute('data-action'),
+            (inp.value || '').trim()
+          );
+          demanderSauvegarde();
+          mettreAJourApercu();
+        };
+        inputMesure.addEventListener('input', gererMesure);
+        inputMesure.addEventListener('change', gererMesure);
+      }
+
       tbody.appendChild(tr);
     }
 
@@ -1343,6 +1439,40 @@
         if (Object.keys(etat.etats[station][subcat]).length === 0) { delete etat.etats[station][subcat]; }
       }
       if (etat.etats[station] && Object.keys(etat.etats[station]).length === 0) { delete etat.etats[station]; }
+    }
+  }
+
+  /* ---- Valeurs mesurées (actions de type 'mesure') ---------------------
+     Structure : etat.mesures[station][subcat][element][actionLabel] = valeur (string).
+     Calque les helpers de etat.etats (lecture / écriture-purge). */
+  function obtenirMesure(station, subcat, element, actionLabel) {
+    if (!etat.mesures[station]) { return ''; }
+    if (!etat.mesures[station][subcat]) { return ''; }
+    var parElement = etat.mesures[station][subcat][element];
+    if (!parElement || typeof parElement !== 'object') { return ''; }
+    return parElement[actionLabel] || '';
+  }
+
+  function definirMesure(station, subcat, element, actionLabel, valeur) {
+    if (valeur !== '' && valeur != null) {
+      if (!etat.mesures[station]) { etat.mesures[station] = {}; }
+      if (!etat.mesures[station][subcat]) { etat.mesures[station][subcat] = {}; }
+      if (typeof etat.mesures[station][subcat][element] !== 'object' || !etat.mesures[station][subcat][element]) {
+        etat.mesures[station][subcat][element] = {};
+      }
+      etat.mesures[station][subcat][element][actionLabel] = valeur;
+    } else {
+      if (etat.mesures[station] && etat.mesures[station][subcat]) {
+        var pe = etat.mesures[station][subcat][element];
+        if (pe && typeof pe === 'object') {
+          delete pe[actionLabel];
+          if (Object.keys(pe).length === 0) { delete etat.mesures[station][subcat][element]; }
+        } else {
+          delete etat.mesures[station][subcat][element];
+        }
+        if (Object.keys(etat.mesures[station][subcat]).length === 0) { delete etat.mesures[station][subcat]; }
+      }
+      if (etat.mesures[station] && Object.keys(etat.mesures[station]).length === 0) { delete etat.mesures[station]; }
     }
   }
 
@@ -1515,6 +1645,46 @@
       lignes.push(SEP_FIN);
     }
 
+    /* Mesures (tests de vide, etc.) — valeurs numériques saisies.
+       Ex. de ligne : "Vide max atteint (phase dynamique) : 2 mbar".
+       Le libellé de ligne privilégie la note de l'action (plus parlante)
+       et retombe sur le nom de l'élément à défaut. */
+    var stationsMes = Object.keys(etat.mesures);
+    if (stationsMes.length > 0) {
+      lignes.push(' MESURES');
+      lignes.push(SEP_FIN);
+      var smi;
+      for (smi = 0; smi < stationsMes.length; smi++) {
+        var stMesLabel = stationsMes[smi];
+        lignes.push(' ▸ ' + stMesLabel);
+        var subMes = Object.keys(etat.mesures[stMesLabel]);
+        var scmi;
+        for (scmi = 0; scmi < subMes.length; scmi++) {
+          var scMesLabel = subMes[scmi];
+          var elemsMes = Object.keys(etat.mesures[stMesLabel][scMesLabel]);
+          var emi;
+          for (emi = 0; emi < elemsMes.length; emi++) {
+            var elMesLabel = elemsMes[emi];
+            var parAction = etat.mesures[stMesLabel][scMesLabel][elMesLabel];
+            if (!parAction || typeof parAction !== 'object') { continue; }
+            var notesMes = notesPourType(etat.typeMachine, stMesLabel, scMesLabel, elMesLabel, 'mesure');
+            var uniteMes = unitePourMesure(etat.typeMachine, stMesLabel, scMesLabel, elMesLabel);
+            var actLabels = Object.keys(parAction);
+            var ami;
+            for (ami = 0; ami < actLabels.length; ami++) {
+              var valMes = parAction[actLabels[ami]];
+              if (valMes === '' || valMes == null) { continue; }
+              var libMes = notesMes.length ? notesMes.join(' ; ') : elMesLabel;
+              lignes.push('   • ' + libMes + ' : ' + valMes + (uniteMes ? ' ' + uniteMes : ''));
+            }
+          }
+        }
+        if (smi < stationsMes.length - 1) { lignes.push(''); }
+      }
+      lignes.push('');
+      lignes.push(SEP_FIN);
+    }
+
     /* Tests */
     if (etat.tests.length > 0) {
       lignes.push(' TESTS ET VALIDATIONS');
@@ -1602,6 +1772,7 @@
     etat.typeMachine = '';
     etat.travaux = {};
     etat.etats = {};
+    etat.mesures = {};
     etat.tests = [];
 
     appliquerTypeIntervention('solo');
@@ -1694,6 +1865,7 @@
       if (donnees.typeMachine)      { etat.typeMachine      = donnees.typeMachine; }
       if (donnees.travaux && typeof donnees.travaux === 'object') { etat.travaux = donnees.travaux; }
       if (donnees.etats && typeof donnees.etats === 'object') { etat.etats = donnees.etats; }
+      if (donnees.mesures && typeof donnees.mesures === 'object') { etat.mesures = donnees.mesures; }
       if (Array.isArray(donnees.tests)) { etat.tests = donnees.tests; }
     }
 

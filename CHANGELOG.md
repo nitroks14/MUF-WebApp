@@ -11,6 +11,23 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v99
+
+- **Rapport d'intervention — type d'action « Mesure » (saisie de valeur numérique)**
+  ([`plugins/rapport-intervention/index.html`](./plugins/rapport-intervention/index.html)).
+  Nouveau type d'action `mesure` (libellé « Mesure ») destiné aux relevés
+  chiffrés (tests de vide : vide max atteint en phase dynamique, perte de vide
+  en phase statique, etc.). Pour une action `mesure`, la cellule affiche un
+  champ numérique (`<input type="number" inputmode="decimal" step="any">`) suivi
+  de l'unité issue de la taxonomie (`action.unite`), au lieu de la case à cocher
+  + dropdown d'états. Les valeurs sont stockées dans `etat.mesures`
+  (structure calquée sur `etat.etats`), persistées/restaurées dans le brouillon,
+  prises en compte par `rapportEnCours()` et reportées dans une section
+  « MESURES » du rapport généré (ex. `Vide max atteint (phase dynamique) : 2 mbar`).
+  Contrat de données aligné avec l'éditeur muf-ri-editor (bloc action + unité).
+- **Bump cache** : asset plugin modifié → `CACHE_NOM` / `CACHE_PLUGINS` passés de
+  `v98` à `v99`.
+
 ## v98
 
 - **Calcul mise sous vide — harmonisation des accents du copy user-facing**
