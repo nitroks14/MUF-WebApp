@@ -18,11 +18,11 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache.
-   Version courante : v100. Historique des versions → voir CHANGELOG.md.
-   NB : ce compteur (v100) est le cache du SW, distinct de la version
+   Version courante : v101. Historique des versions → voir CHANGELOG.md.
+   NB : ce compteur (v101) est le cache du SW, distinct de la version
    PRODUIT de l'app (APP_VERSION = 2.0.0, cf. js/app.js). */
-const CACHE_NOM     = 'muf-webapp-v100';
-const CACHE_PLUGINS = 'muf-plugins-v100';
+const CACHE_NOM     = 'muf-webapp-v101';
+const CACHE_PLUGINS = 'muf-plugins-v101';
 
 /* Document de repli pour les navigations hors-ligne (PWA / refresh offline). */
 const FALLBACK_DOC = './index.html';
@@ -54,13 +54,12 @@ const ASSETS_STATIQUES = [
   './js/libs/fuse.min.js',
   './js/libs/qrcode.min.js',
   './js/libs/jsQR.min.js',
-  /* Libs de plugins VENDORISÉES (offline complet) : jsPDF, xlsx + ExcelJS,
-     Blockly. Précachées ici car chargées en lazy depuis la racine.
+  /* Libs de plugins VENDORISÉES (offline complet) : jsPDF, xlsx + ExcelJS.
+     Précachées ici car chargées en lazy depuis la racine.
      Historique détaillé des versions du Service Worker → voir CHANGELOG.md. */
   './js/libs/jspdf.umd.min.js',
   './js/libs/xlsx.full.min.js',
   './js/libs/exceljs.min.js',
-  './js/libs/blockly/blockly.min.js',
 ];
 
 /* Plugins : leur HTML est précaché pour garantir la navigation hors-ligne.

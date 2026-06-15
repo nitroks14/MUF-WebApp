@@ -11,6 +11,18 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v101
+
+- **Suppression de la lib Blockly orpheline** (`js/libs/blockly/`, ~1,1 Mo).
+  Cette lib n'était utilisée que par l'éditeur de taxonomie embarqué, retiré en
+  v100. Elle était devenue orpheline tout en restant précachée inutilement.
+  Retraits :
+  - Dossier `js/libs/blockly/` supprimé entièrement.
+  - `service-worker.js` : asset `./js/libs/blockly/blockly.min.js` retiré de
+    `ASSETS_STATIQUES` (+ commentaire mis à jour).
+- **Bump cache** : liste de précache modifiée → `CACHE_NOM` / `CACHE_PLUGINS`
+  passés de `v100` à `v101`.
+
 ## v100
 
 - **Suppression de l'éditeur de taxonomie embarqué** (shell + plugin caché).
