@@ -18,11 +18,11 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache.
-   Version courante : v99. Historique des versions → voir CHANGELOG.md.
-   NB : ce compteur (v99) est le cache du SW, distinct de la version
+   Version courante : v100. Historique des versions → voir CHANGELOG.md.
+   NB : ce compteur (v100) est le cache du SW, distinct de la version
    PRODUIT de l'app (APP_VERSION = 2.0.0, cf. js/app.js). */
-const CACHE_NOM     = 'muf-webapp-v99';
-const CACHE_PLUGINS = 'muf-plugins-v99';
+const CACHE_NOM     = 'muf-webapp-v100';
+const CACHE_PLUGINS = 'muf-plugins-v100';
 
 /* Document de repli pour les navigations hors-ligne (PWA / refresh offline). */
 const FALLBACK_DOC = './index.html';
@@ -74,7 +74,6 @@ const ASSETS_PLUGINS = [
   './plugins/calcul-vide/index.html',
   './plugins/rapport-intervention/index.html',
   './plugins/retour-garantie/index.html',
-  './plugins/editeur-taxonomie/index.html',
   /* Template Excel fetché à l'exécution par liste-pieces (chargerTemplate →
      fetch(TEMPLATE_PATH)). Précaché ici pour que la génération de fiche
      fonctionne offline même si le plugin n'a jamais été ouvert online.

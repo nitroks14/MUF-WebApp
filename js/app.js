@@ -439,16 +439,6 @@ function afficherAccueil() {
 }
 
 /* ============================================================
-   Bouton engrenage taxonomie — affiché uniquement sur le plugin RI
-   ============================================================ */
-function mettreAJourBoutonTaxo() {
-  var hash = window.location.hash;
-  var estRI = (hash === '#plugin-rapport-intervention');
-  var btn = document.getElementById('taxo-gear-btn');
-  if (btn) btn.classList.toggle('visible', estRI);
-}
-
-/* ============================================================
    Routeur — lit le hash de l'URL et décide quoi afficher
    ============================================================ */
 function router() {
@@ -458,7 +448,6 @@ function router() {
     /* Accueil */
     mettreAJourNavActive(null);
     afficherAccueil();
-    mettreAJourBoutonTaxo();
     return;
   }
 
@@ -467,21 +456,12 @@ function router() {
     const nomPlugin = matchPlugin[1];
     mettreAJourNavActive(nomPlugin);
     chargerPlugin(nomPlugin);
-    mettreAJourBoutonTaxo();
-    return;
-  }
-
-  if (hash === '#editeur-taxonomie') {
-    mettreAJourNavActive(null);
-    chargerPlugin('editeur-taxonomie');
-    mettreAJourBoutonTaxo();
     return;
   }
 
   /* Hash inconnu → accueil */
   mettreAJourNavActive(null);
   afficherAccueil();
-  mettreAJourBoutonTaxo();
 }
 
 /* ============================================================
@@ -508,7 +488,6 @@ function enregistrerServiceWorker() {
 function init() {
   construireNavigation();
   initialiserDrawer();
-  mettreAJourBoutonTaxo();
 
   /* Écoute des changements de hash (navigation) */
   window.addEventListener('hashchange', router);

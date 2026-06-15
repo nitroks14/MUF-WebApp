@@ -11,6 +11,25 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v100
+
+- **Suppression de l'éditeur de taxonomie embarqué** (shell + plugin caché).
+  L'édition de la taxonomie est désormais assurée par la PWA autonome
+  `muf-ri-editor` (dépôt séparé). L'éditeur Blockly embarqué et son accès
+  (roue dentée ambre `#taxo-gear-btn` + modale PIN `#taxo-lock-overlay`) étaient
+  devenus un doublon. Retraits :
+  - `index.html` : bouton `#taxo-gear-btn`, son CSS, la modale de verrouillage
+    `#taxo-lock-overlay` + CSS associé, le script du PIN et du gear.
+  - `js/app.js` : fonction `mettreAJourBoutonTaxo()`, route spéciale du hash
+    `#editeur-taxonomie` dans `router()`, et tous les appels orphelins.
+  - Dossier `plugins/editeur-taxonomie/` supprimé entièrement.
+  - `service-worker.js` : asset `./plugins/editeur-taxonomie/index.html` retiré
+    de `ASSETS_PLUGINS`.
+  Le plugin `rapport-intervention` n'est pas impacté : il consomme la taxonomie
+  via fetch GitHub, pas via l'éditeur embarqué.
+- **Bump cache** : assets shell + liste de précache modifiés → `CACHE_NOM` /
+  `CACHE_PLUGINS` passés de `v99` à `v100`.
+
 ## v99
 
 - **Rapport d'intervention — type d'action « Mesure » (saisie de valeur numérique)**
