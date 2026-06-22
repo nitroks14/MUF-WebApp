@@ -352,6 +352,13 @@
        + Fuse.js + ClientAutocomplete. Chargé avant app.js / les plugins. -->
   <script src="./js/client-learning.js"></script>
 
+  <!-- Client « Cerveau Multivac » (window.MUF.brain) — wrapper HTTP mince
+       vers l'API d'assistance (POST {BRAIN_URL}/v1/ask). Chargé APRÈS auth.js
+       (dépend de window.Auth.getToken pour le JWT) et avant app.js / les
+       plugins qui pourront l'invoquer. Dégradé gracieux tant que
+       MUF_CONFIG.BRAIN_URL est vide (cf. js/config.js). -->
+  <script src="./js/brain.js"></script>
+
   <!-- Module Paramétrage - doit être chargé avant app.js -->
   <script src="./js/parametrage.js"></script>
 

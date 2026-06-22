@@ -18,11 +18,13 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache.
-   Version courante : v96. Historique des versions → voir CHANGELOG.md.
-   NB : ce compteur (v96) est le cache du SW, distinct de la version
-   PRODUIT de l'app (APP_VERSION = 2.0.0, cf. js/app.js). */
-const CACHE_NOM     = 'muf-webapp-v96';
-const CACHE_PLUGINS = 'muf-plugins-v96';
+   Version courante : v97. Historique des versions → voir CHANGELOG.md.
+   NB : ce compteur (v97) est le cache du SW, distinct de la version
+   PRODUIT de l'app (APP_VERSION = 2.0.0, cf. js/app.js).
+   bump cache v96 -> v97 : ajout du client Cerveau (js/brain.js) au précache
+   (Lot 5 — window.MUF.brain). */
+const CACHE_NOM     = 'muf-webapp-v97';
+const CACHE_PLUGINS = 'muf-plugins-v97';
 
 /* Document de repli pour les navigations hors-ligne (PWA / refresh offline). */
 const FALLBACK_DOC = './index.html';
@@ -48,6 +50,7 @@ const ASSETS_STATIQUES = [
   './js/anti-autofill.js',
   './js/client-autocomplete.js',
   './js/client-learning.js',
+  './js/brain.js',
   './js/aruco-marker.js',
   './js/aruco-vision.js',
   './js/libs/lz-string.min.js',
