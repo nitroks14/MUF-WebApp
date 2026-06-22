@@ -18,13 +18,16 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache.
-   Version courante : v97. Historique des versions → voir CHANGELOG.md.
-   NB : ce compteur (v97) est le cache du SW, distinct de la version
+   Version courante : v98. Historique des versions → voir CHANGELOG.md.
+   NB : ce compteur (v98) est le cache du SW, distinct de la version
    PRODUIT de l'app (APP_VERSION = 2.0.0, cf. js/app.js).
    bump cache v96 -> v97 : ajout du client Cerveau (js/brain.js) au précache
-   (Lot 5 — window.MUF.brain). */
-const CACHE_NOM     = 'muf-webapp-v97';
-const CACHE_PLUGINS = 'muf-plugins-v97';
+   (Lot 5 — window.MUF.brain).
+   bump cache v97 -> v98 : ajout du plugin « Assistant Cerveau »
+   (plugins/assistant-cerveau/index.html) au précache, plugin réservé gaté
+   sur MUF_CONFIG.BRAIN_OWNER_IDS (Phase 3 — UI window.MUF.brain.ask). */
+const CACHE_NOM     = 'muf-webapp-v98';
+const CACHE_PLUGINS = 'muf-plugins-v98';
 
 /* Document de repli pour les navigations hors-ligne (PWA / refresh offline). */
 const FALLBACK_DOC = './index.html';
@@ -78,6 +81,11 @@ const ASSETS_PLUGINS = [
   './plugins/rapport-intervention/index.html',
   './plugins/retour-garantie/index.html',
   './plugins/editeur-taxonomie/index.html',
+  /* Plugin réservé « Assistant Cerveau » (gaté sur MUF_CONFIG.BRAIN_OWNER_IDS,
+     cf. js/app.js). Précaché comme les autres plugins ; l'asset n'est de toute
+     façon servi/rendu qu'aux utilisateurs autorisés (l'entrée est masquée pour
+     les autres et l'accès direct par hash est bloqué). */
+  './plugins/assistant-cerveau/index.html',
   /* Template Excel fetché à l'exécution par liste-pieces (chargerTemplate →
      fetch(TEMPLATE_PATH)). Précaché ici pour que la génération de fiche
      fonctionne offline même si le plugin n'a jamais été ouvert online.

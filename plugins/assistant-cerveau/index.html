@@ -1,0 +1,437 @@
+<!--
+  Plugin : Assistant Cerveau
+  Mini-UI au-dessus de window.MUF.brain.ask() (cf. js/brain.js) : pose une
+  question au « Cerveau Multivac » (RAG + LLM hébergé côté VM, joignable via
+  tailnet) et affiche la réponse.
+
+  Plugin RÉSERVÉ : son entrée n'apparaît dans la nav/l'accueil que pour les
+  utilisateurs dont l'ID Supabase ∈ MUF_CONFIG.BRAIN_OWNER_IDS (gating dans
+  js/app.js). Ce HTML ne fait donc PAS de contrôle d'accès lui-même.
+
+  Conventions repo : IIFE strict, IDs préfixés « ac- », var, charte CSS via
+  variables --color-*, anti-XSS systématique via window.MUF.escapeHtml.
+-->
+
+<style>
+  /* ============================================================
+     Styles spécifiques au plugin Assistant Cerveau
+     ============================================================ */
+
+  .ac-intro {
+    font-size: var(--font-size-sm, 13px);
+    color: var(--color-text-muted, #666);
+    margin: 0 0 16px 0;
+    line-height: 1.5;
+  }
+
+  .ac-field {
+    margin-bottom: 12px;
+  }
+
+  .ac-field label {
+    display: block;
+    font-size: var(--font-size-sm, 13px);
+    font-weight: 600;
+    color: var(--color-text, #111);
+    margin-bottom: 6px;
+  }
+
+  .ac-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 96px;
+    resize: vertical;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border, #d0d5dd);
+    border-radius: var(--radius-sm, 6px);
+    font-size: var(--font-size-base, 14px);
+    font-family: inherit;
+    line-height: 1.45;
+    background: var(--color-bg, #fff);
+    color: var(--color-text, #111);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .ac-textarea:focus {
+    outline: none;
+    border-color: var(--color-primary, #003A70);
+    box-shadow: 0 0 0 3px rgba(0, 58, 112, 0.12);
+  }
+
+  .ac-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .ac-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 18px;
+    min-height: var(--input-height, 40px);
+    background: var(--color-primary, #003A70);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm, 6px);
+    font-size: var(--font-size-base, 14px);
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .ac-btn:hover:not(:disabled) { background: var(--color-primary-dark, #002850); }
+  .ac-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  /* Spinner inline (état « le Cerveau réfléchit… ») */
+  .ac-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: ac-spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes ac-spin { to { transform: rotate(360deg); } }
+
+  /* Statut texte à côté du bouton (chargement / hint) */
+  .ac-status {
+    font-size: var(--font-size-sm, 13px);
+    color: var(--color-text-muted, #666);
+  }
+
+  /* Bandeau d'erreur gracieux (Cerveau injoignable, etc.) */
+  .ac-error {
+    margin-top: 16px;
+    padding: 12px 14px;
+    background: #fee2e2;
+    border: 1px solid #f5b5b5;
+    border-radius: var(--radius-sm, 6px);
+    color: #991b1b;
+    font-size: var(--font-size-sm, 13px);
+    line-height: 1.45;
+  }
+
+  .ac-error-title { font-weight: 700; margin-bottom: 2px; }
+
+  /* Zone de réponse */
+  .ac-answer {
+    margin-top: 16px;
+  }
+
+  .ac-answer-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .ac-chip {
+    display: inline-block;
+    padding: 3px 10px;
+    background: var(--color-bg-alt, #F8F9FA);
+    border: 1px solid var(--color-border, #d0d5dd);
+    border-radius: 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-muted, #666);
+  }
+
+  .ac-answer-body {
+    background: var(--color-bg-alt, #F8F9FA);
+    border: 1px solid var(--color-border, #d0d5dd);
+    border-radius: var(--radius-sm, 6px);
+    padding: 14px 16px;
+    font-size: var(--font-size-base, 14px);
+    color: var(--color-text, #111);
+    line-height: 1.55;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  /* Rendu markdown léger de la réponse */
+  .ac-answer-body h3 {
+    font-size: var(--font-size-base, 14px);
+    font-weight: 700;
+    color: var(--color-primary, #003A70);
+    margin: 14px 0 6px;
+  }
+  .ac-answer-body h3:first-child { margin-top: 0; }
+  .ac-answer-body p { margin: 0 0 10px; }
+  .ac-answer-body p:last-child { margin-bottom: 0; }
+  .ac-answer-body ul {
+    margin: 0 0 10px;
+    padding-left: 20px;
+  }
+  .ac-answer-body li { margin-bottom: 4px; }
+  .ac-answer-body code {
+    background: rgba(0, 58, 112, 0.08);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.92em;
+  }
+  .ac-answer-body strong { font-weight: 700; }
+</style>
+
+<div class="card mb-24">
+  <div class="card-header">
+    <h2 class="card-title">Assistant Cerveau</h2>
+  </div>
+  <div class="card-body">
+    <p class="ac-intro">
+      Posez une question au « Cerveau Multivac » (assistant interne).
+      La génération prend une dizaine de secondes : merci de patienter
+      pendant la réflexion.
+    </p>
+
+    <div class="ac-field">
+      <label for="ac-question">Votre question</label>
+      <textarea id="ac-question" class="ac-textarea"
+                placeholder="ex : Procédure de calibration du capteur de vide sur une R230 ?"
+                autocomplete="off"></textarea>
+    </div>
+
+    <div class="ac-actions">
+      <button id="ac-ask" type="button" class="ac-btn">
+        <span id="ac-ask-spinner" class="ac-spinner" hidden></span>
+        <span id="ac-ask-label">Demander</span>
+      </button>
+      <span id="ac-status" class="ac-status" role="status" aria-live="polite"></span>
+    </div>
+
+    <!-- Bandeau d'erreur (masqué par défaut) -->
+    <div id="ac-error" class="ac-error" role="alert" hidden></div>
+
+    <!-- Réponse (masquée par défaut) -->
+    <div id="ac-answer" class="ac-answer" hidden>
+      <div id="ac-answer-meta" class="ac-answer-meta"></div>
+      <div id="ac-answer-body" class="ac-answer-body"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ----------------------------------------------------------
+     Helper d'échappement HTML — délégué au helper partagé du shell
+     (js/utils.js, chargé très tôt). Repli défensif local si jamais
+     window.MUF.escapeHtml manquait (ne devrait pas arriver).
+     ---------------------------------------------------------- */
+  function escapeHtml(str) {
+    if (window.MUF && typeof window.MUF.escapeHtml === 'function') {
+      return window.MUF.escapeHtml(str);
+    }
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  /* -- Références DOM -- */
+  var elQuestion   = document.getElementById('ac-question');
+  var elAsk        = document.getElementById('ac-ask');
+  var elAskSpinner = document.getElementById('ac-ask-spinner');
+  var elAskLabel   = document.getElementById('ac-ask-label');
+  var elStatus     = document.getElementById('ac-status');
+  var elError      = document.getElementById('ac-error');
+  var elAnswer     = document.getElementById('ac-answer');
+  var elAnswerMeta = document.getElementById('ac-answer-meta');
+  var elAnswerBody = document.getElementById('ac-answer-body');
+
+  /* Garde : si le HTML n'est pas monté (ne devrait pas arriver), on sort. */
+  if (!elQuestion || !elAsk) return;
+
+  /* ----------------------------------------------------------
+     Rendu markdown LÉGER et SÛR.
+     La réponse du Cerveau peut contenir une structure type markdown
+     (### titres, listes « - »/« * », **gras**, `code`). On l'échappe
+     INTÉGRALEMENT d'abord (anti-XSS), PUIS on ne réintroduit que des
+     balises de présentation contrôlées. Aucun HTML brut de la réponse
+     n'est jamais interprété.
+     ---------------------------------------------------------- */
+  function rendreInline(texteEchappe) {
+    /* `texteEchappe` est DÉJÀ passé par escapeHtml : on n'opère que sur des
+       marqueurs markdown (qui ne contiennent pas de < > après échappement). */
+    return texteEchappe
+      /* **gras** */
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      /* `code inline` */
+      .replace(/`([^`]+)`/g, '<code>$1</code>');
+  }
+
+  function rendreMarkdownLeger(texte) {
+    var lignes = String(texte == null ? '' : texte).split(/\r?\n/);
+    var html = '';
+    var dansListe = false;
+
+    function fermerListe() {
+      if (dansListe) { html += '</ul>'; dansListe = false; }
+    }
+
+    lignes.forEach(function (ligne) {
+      var brut = ligne.trim();
+
+      if (brut === '') { fermerListe(); return; }
+
+      /* Titres ### / ## / # → <h3> (un seul niveau visuel, sobre). */
+      var mTitre = brut.match(/^#{1,6}\s+(.*)$/);
+      if (mTitre) {
+        fermerListe();
+        html += '<h3>' + rendreInline(escapeHtml(mTitre[1])) + '</h3>';
+        return;
+      }
+
+      /* Puces « - », « * » ou « • ». */
+      var mPuce = brut.match(/^[-*•]\s+(.*)$/);
+      if (mPuce) {
+        if (!dansListe) { html += '<ul>'; dansListe = true; }
+        html += '<li>' + rendreInline(escapeHtml(mPuce[1])) + '</li>';
+        return;
+      }
+
+      /* Paragraphe ordinaire. */
+      fermerListe();
+      html += '<p>' + rendreInline(escapeHtml(brut)) + '</p>';
+    });
+
+    fermerListe();
+    return html;
+  }
+
+  /* ----------------------------------------------------------
+     Gestion des états d'affichage (chargement / erreur / réponse).
+     ---------------------------------------------------------- */
+  function setChargement(actif) {
+    elAsk.disabled = actif;
+    elQuestion.disabled = actif;
+    elAskSpinner.hidden = !actif;
+    elAskLabel.textContent = actif ? 'Patientez…' : 'Demander';
+    elStatus.textContent = actif ? 'Le Cerveau réfléchit… (environ 12-16 s)' : '';
+  }
+
+  function masquerError() {
+    elError.hidden = true;
+    elError.innerHTML = '';
+  }
+
+  function afficherError(message) {
+    elAnswer.hidden = true;
+    elError.hidden = false;
+    elError.innerHTML =
+      '<div class="ac-error-title">Une erreur est survenue</div>' +
+      '<div>' + escapeHtml(message) + '</div>';
+  }
+
+  function afficherReponse(data) {
+    masquerError();
+
+    var reponse = data && typeof data.reponse === 'string' ? data.reponse : '';
+    if (reponse.trim() === '') {
+      afficherError('Le Cerveau a répondu, mais sans contenu exploitable.');
+      return;
+    }
+
+    /* Méta optionnelles : confiance + provider utilisé (discret). */
+    var meta = '';
+    if (data && (data.confiance !== undefined && data.confiance !== null)) {
+      var c = data.confiance;
+      var cTexte = (typeof c === 'number')
+        ? Math.round(c * 100) + ' %'
+        : String(c);
+      meta += '<span class="ac-chip">Confiance : ' + escapeHtml(cTexte) + '</span>';
+    }
+    if (data && data.provider_utilise) {
+      meta += '<span class="ac-chip">Source : ' + escapeHtml(String(data.provider_utilise)) + '</span>';
+    }
+    elAnswerMeta.innerHTML = meta;
+    elAnswerMeta.style.display = meta ? '' : 'none';
+
+    elAnswerBody.innerHTML = rendreMarkdownLeger(reponse);
+    elAnswer.hidden = false;
+  }
+
+  /* ----------------------------------------------------------
+     Message d'erreur lisible à partir du rejet de brain.ask().
+     On distingue le cas « Cerveau injoignable » (hors tailnet / réseau KO)
+     des autres erreurs, pour un message clair et non technique.
+     ---------------------------------------------------------- */
+  function messageDepuisErreur(err) {
+    var brut = (err && err.message) ? String(err.message) : '';
+    var b = brut.toLowerCase();
+
+    if (b.indexOf('failed to fetch') !== -1 ||
+        b.indexOf('networkerror') !== -1 ||
+        b.indexOf('délai dépassé') !== -1 ||
+        b.indexOf('delai depasse') !== -1 ||
+        b.indexOf('non configurée') !== -1 ||
+        b.indexOf('non configuree') !== -1) {
+      return 'Cerveau injoignable (hors réseau ?). Assurez-vous d\'être '
+           + 'connecté au réseau Tailscale de l\'entreprise, puis réessayez.';
+    }
+    if (b.indexOf('aucune session') !== -1 || b.indexOf('token') !== -1) {
+      return 'Session expirée : reconnectez-vous puis réessayez.';
+    }
+    /* Message brut du client en dernier recours (déjà préfixé « Cerveau : »). */
+    return brut || 'Le Cerveau est momentanément indisponible.';
+  }
+
+  /* ----------------------------------------------------------
+     Action principale — envoi de la question.
+     ---------------------------------------------------------- */
+  function demander() {
+    var question = elQuestion.value.trim();
+
+    masquerError();
+    elAnswer.hidden = true;
+
+    if (question === '') {
+      afficherError('Veuillez saisir une question avant de demander.');
+      elQuestion.focus();
+      return;
+    }
+
+    /* Dégradé gracieux si le client Cerveau n'est pas disponible du tout. */
+    if (!window.MUF || !window.MUF.brain || typeof window.MUF.brain.ask !== 'function') {
+      afficherError('Cerveau injoignable (hors réseau ?). Le service d\'assistance '
+                  + 'n\'est pas disponible pour le moment.');
+      return;
+    }
+
+    setChargement(true);
+
+    window.MUF.brain.ask(question)
+      .then(function (data) {
+        afficherReponse(data);
+      })
+      .catch(function (err) {
+        /* Rejet = cas NORMAL (Cerveau indisponible), pas de log bruyant. */
+        afficherError(messageDepuisErreur(err));
+      })
+      .then(function () {
+        /* finally-like : restaure l'UI dans tous les cas. */
+        setChargement(false);
+      });
+  }
+
+  /* ----------------------------------------------------------
+     Câblage des évènements.
+     - Clic sur « Demander ».
+     - Ctrl/Cmd + Entrée dans le textarea = envoi rapide.
+     ---------------------------------------------------------- */
+  elAsk.addEventListener('click', demander);
+
+  elQuestion.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      demander();
+    }
+  });
+
+})();
+</script>

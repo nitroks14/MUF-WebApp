@@ -41,5 +41,19 @@
      * dégradé silencieux (ask() rejette proprement, aucun appel réseau).
      */
     BRAIN_URL: 'https://vm-pc.tail1b2aa8.ts.net',
+
+    /**
+     * Liste des IDs utilisateur Supabase autorisés à VOIR et UTILISER le plugin
+     * « Assistant Cerveau » (plugins/assistant-cerveau). Pour tout autre
+     * utilisateur, l'entrée du plugin reste INVISIBLE (ni dans le drawer, ni
+     * sur l'accueil) et l'accès direct par hash est bloqué (cf. js/app.js).
+     *
+     * Tableau (pour évolutivité : on pourra élargir l'accès sans changer le
+     * code de gating). Le gating compare l'« id » de l'utilisateur Supabase
+     * connecté (window.Auth.getUser().id) à cette liste.
+     *
+     * Actuellement : Nicolas uniquement.
+     */
+    BRAIN_OWNER_IDS: ['74ac7efa-a460-41fa-8443-65aefc385b3f'],
   };
 })();
