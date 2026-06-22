@@ -32,15 +32,14 @@
     ALLOWED_EMAIL_DOMAIN: 'multivac.fr',
 
     /**
-     * URL HTTPS du « Cerveau Multivac » exposé via `tailscale serve`.
-     * VIDE pour l'instant : l'exposition HTTPS n'existe pas encore. Tant que
-     * cette valeur reste vide, le client js/brain.js (window.MUF.brain) passe
-     * en mode dégradé silencieux (ask() rejette proprement, aucun appel réseau).
-     * À renseigner après exposition (sans slash final), p.ex.
-     * 'https://muf-brain.<tailnet>.ts.net'. Valeur PUBLIQUE : l'accès est
-     * protégé par le JWT Supabase (Authorization: Bearer), pas par le secret
-     * de cette URL.
+     * URL HTTPS du « Cerveau Multivac » exposé via `tailscale serve`
+     * (sans slash final). Joignable uniquement depuis un appareil MEMBRE du
+     * tailnet (p.ex. iPad/iPhone de l'utilisateur) ; non résolvable depuis un
+     * appareil hors tailnet. Valeur PUBLIQUE : l'accès est protégé par le JWT
+     * Supabase (Authorization: Bearer), pas par le secret de cette URL.
+     * Si vidée, le client js/brain.js (window.MUF.brain) repasse en mode
+     * dégradé silencieux (ask() rejette proprement, aucun appel réseau).
      */
-    BRAIN_URL: '',
+    BRAIN_URL: 'https://vm-pc.tail1b2aa8.ts.net',
   };
 })();
