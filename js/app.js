@@ -117,6 +117,24 @@ const PLUGINS = [
                 d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
             </svg>`,
   },
+  {
+    id:   'assistant-cerveau',
+    nom:  'Assistant Cerveau',
+    desc: 'Poser une question au « Cerveau Multivac » (assistant interne)',
+    /* Plugin RÉSERVÉ : visible/accessible uniquement pour les utilisateurs
+       dont l'ID Supabase figure dans MUF_CONFIG.BRAIN_OWNER_IDS. Pour tous les
+       autres, l'entrée est masquée (nav + accueil) et l'accès direct par hash
+       est bloqué. Voir estProprietaireCerveau() / pluginsVisibles(). */
+    ownerOnly: true,
+    icone: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+              viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9.5 3a3 3 0 00-3 3 3 3 0 00-2 5.2A3 3 0 005 16.5a3 3 0
+                   004.5 2.6V3.5A2.5 2.5 0 009.5 3zM14.5 3a3 3 0 013 3 3 3 0
+                   012 5.2A3 3 0 0119 16.5a3 3 0 01-4.5 2.6V3.5A2.5 2.5 0
+                   0114.5 3z"/>
+            </svg>`,
+  },
   /* Exemple de futurs plugins — décommenter quand ils existent :
   {
     id:   'diagnostic',
@@ -132,6 +150,48 @@ const PLUGINS = [
   },
   */
 ];
+
+/* ============================================================
+   Gating des plugins réservés (ex. « Assistant Cerveau »)
+   ------------------------------------------------------------
+   Certains plugins portent un flag `ownerOnly: true` : ils ne sont
+   VISIBLES (drawer + accueil) et ACCESSIBLES (routing par hash) que
+   pour les utilisateurs dont l'ID Supabase figure dans la liste
+   MUF_CONFIG.BRAIN_OWNER_IDS. Pour tous les autres techniciens, ces
+   plugins n'existent tout simplement pas dans l'UI.
+
+   L'auth pouvant se résoudre APRÈS le premier rendu (session restaurée
+   de façon asynchrone), on réévalue le gating à chaque changement de
+   session via window.Auth.onChange (cf. init()).
+   ============================================================ */
+
+/* ID de l'utilisateur Supabase connecté (synchrone, ou null si pas encore
+   d'auth / pas de session). window.Auth.getUser() renvoie { id, ... } | null. */
+function idUtilisateurCourant() {
+  if (!window.Auth || typeof window.Auth.getUser !== 'function') return null;
+  var u = window.Auth.getUser();
+  return u && u.id ? u.id : null;
+}
+
+/* L'utilisateur connecté est-il propriétaire du Cerveau (liste blanche) ? */
+function estProprietaireCerveau() {
+  var cfg = window.MUF_CONFIG || {};
+  var owners = Array.isArray(cfg.BRAIN_OWNER_IDS) ? cfg.BRAIN_OWNER_IDS : [];
+  var id = idUtilisateurCourant();
+  return !!id && owners.indexOf(id) !== -1;
+}
+
+/* Un plugin est-il visible pour l'utilisateur courant ? Les plugins non
+   réservés le sont toujours ; les plugins `ownerOnly` exigent la liste blanche. */
+function pluginVisible(plugin) {
+  if (!plugin || !plugin.ownerOnly) return true;
+  return estProprietaireCerveau();
+}
+
+/* Sous-ensemble de PLUGINS visible pour l'utilisateur courant (nav + accueil). */
+function pluginsVisibles() {
+  return PLUGINS.filter(pluginVisible);
+}
 
 /* ============================================================
    Références DOM
@@ -166,7 +226,12 @@ let _chargerAbort = null;
 function construireNavigation() {
   if (!drawerNav) return;
 
-  PLUGINS.forEach(plugin => {
+  /* Idempotent : la nav peut être reconstruite quand l'auth change (gating).
+     On purge les liens existants avant de les régénérer, sans toucher au
+     badge de version (recréé/maintenu par afficherBadgeVersion). */
+  drawerNav.innerHTML = '';
+
+  pluginsVisibles().forEach(plugin => {
     const hash = `#plugin-${plugin.id}`;
 
     const lien = document.createElement('a');
@@ -403,8 +468,8 @@ async function chargerPlugin(nom) {
    Affiché quand aucun hash n'est présent dans l'URL
    ============================================================ */
 function afficherAccueil() {
-  /* Construction de la grille de plugins */
-  const cardsPlugins = PLUGINS.map(plugin => `
+  /* Construction de la grille de plugins (filtrée selon le gating). */
+  const cardsPlugins = pluginsVisibles().map(plugin => `
     <a href="#plugin-${plugin.id}" class="plugin-card" aria-label="Ouvrir ${plugin.nom}">
       <span class="plugin-card-icon" aria-hidden="true">${plugin.icone}</span>
       <span class="plugin-card-name">${plugin.nom}</span>
@@ -454,6 +519,18 @@ function router() {
   const matchPlugin = hash.match(/^#plugin-(.+)$/);
   if (matchPlugin) {
     const nomPlugin = matchPlugin[1];
+
+    /* Garde de gating : un plugin réservé (ownerOnly) reste inaccessible par
+       accès direct au hash si l'utilisateur courant n'est pas autorisé. On
+       redirige silencieusement vers l'accueil (pas de fuite d'existence). */
+    const pluginCible = PLUGINS.find(p => p.id === nomPlugin);
+    if (pluginCible && !pluginVisible(pluginCible)) {
+      mettreAJourNavActive(null);
+      afficherAccueil();
+      mettreAJourBoutonTaxo();
+      return;
+    }
+
     mettreAJourNavActive(nomPlugin);
     chargerPlugin(nomPlugin);
     return;
@@ -494,6 +571,28 @@ function init() {
 
   /* Route initiale au chargement */
   router();
+
+  /* --------------------------------------------------------
+     Réévaluation du gating à la résolution / au changement d'auth.
+     L'app peut se construire AVANT que la session Supabase ne soit
+     restaurée (asynchrone). Quand l'auth devient prête (ou qu'on se
+     connecte/déconnecte), l'appartenance à BRAIN_OWNER_IDS peut changer :
+     on reconstruit alors la nav (apparition/disparition de l'entrée
+     réservée) et on rejoue le routeur courant (pour révéler le plugin
+     fraîchement autorisé, ou éjecter d'un plugin devenu interdit).
+     On ne reconstruit que si l'état de propriété a réellement changé,
+     pour éviter tout clignotement inutile de la nav.
+     -------------------------------------------------------- */
+  if (window.Auth && typeof window.Auth.onChange === 'function') {
+    var etaitProprietaire = estProprietaireCerveau();
+    window.Auth.onChange(function () {
+      var estProprietaire = estProprietaireCerveau();
+      if (estProprietaire === etaitProprietaire) return;
+      etaitProprietaire = estProprietaire;
+      construireNavigation();
+      router();
+    });
+  }
 
   /* PWA */
   enregistrerServiceWorker();

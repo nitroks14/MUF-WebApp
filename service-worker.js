@@ -18,11 +18,14 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache.
-   Version courante : v101. Historique des versions → voir CHANGELOG.md.
-   NB : ce compteur (v101) est le cache du SW, distinct de la version
-   PRODUIT de l'app (APP_VERSION = 2.0.0, cf. js/app.js). */
-const CACHE_NOM     = 'muf-webapp-v101';
-const CACHE_PLUGINS = 'muf-plugins-v101';
+   Version courante : v102. Historique des versions → voir CHANGELOG.md.
+   NB : ce compteur (v102) est le cache du SW, distinct de la version
+   PRODUIT de l'app (APP_VERSION = 2.0.0, cf. js/app.js).
+   bump cache v101 -> v102 : ajout du client Cerveau (js/brain.js) et du plugin
+   réservé « Assistant Cerveau » (plugins/assistant-cerveau/index.html) au
+   précache (Phase 3 — UI window.MUF.brain.ask, gaté sur MUF_CONFIG.BRAIN_OWNER_IDS). */
+const CACHE_NOM     = 'muf-webapp-v102';
+const CACHE_PLUGINS = 'muf-plugins-v102';
 
 /* Document de repli pour les navigations hors-ligne (PWA / refresh offline). */
 const FALLBACK_DOC = './index.html';
@@ -48,6 +51,7 @@ const ASSETS_STATIQUES = [
   './js/anti-autofill.js',
   './js/client-autocomplete.js',
   './js/client-learning.js',
+  './js/brain.js',
   './js/aruco-marker.js',
   './js/aruco-vision.js',
   './js/libs/lz-string.min.js',
@@ -73,6 +77,11 @@ const ASSETS_PLUGINS = [
   './plugins/calcul-vide/index.html',
   './plugins/rapport-intervention/index.html',
   './plugins/retour-garantie/index.html',
+  /* Plugin réservé « Assistant Cerveau » (gaté sur MUF_CONFIG.BRAIN_OWNER_IDS,
+     cf. js/app.js). Précaché comme les autres plugins ; l'asset n'est de toute
+     façon servi/rendu qu'aux utilisateurs autorisés (l'entrée est masquée pour
+     les autres et l'accès direct par hash est bloqué). */
+  './plugins/assistant-cerveau/index.html',
   /* Template Excel fetché à l'exécution par liste-pieces (chargerTemplate →
      fetch(TEMPLATE_PATH)). Précaché ici pour que la génération de fiche
      fonctionne offline même si le plugin n'a jamais été ouvert online.

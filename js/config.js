@@ -30,5 +30,30 @@
      * Domaine email autorisé à l'inscription (garde-fou frontend).
      */
     ALLOWED_EMAIL_DOMAIN: 'multivac.fr',
+
+    /**
+     * URL HTTPS du « Cerveau Multivac » exposé via `tailscale serve`
+     * (sans slash final). Joignable uniquement depuis un appareil MEMBRE du
+     * tailnet (p.ex. iPad/iPhone de l'utilisateur) ; non résolvable depuis un
+     * appareil hors tailnet. Valeur PUBLIQUE : l'accès est protégé par le JWT
+     * Supabase (Authorization: Bearer), pas par le secret de cette URL.
+     * Si vidée, le client js/brain.js (window.MUF.brain) repasse en mode
+     * dégradé silencieux (ask() rejette proprement, aucun appel réseau).
+     */
+    BRAIN_URL: 'https://vm-pc.tail1b2aa8.ts.net',
+
+    /**
+     * Liste des IDs utilisateur Supabase autorisés à VOIR et UTILISER le plugin
+     * « Assistant Cerveau » (plugins/assistant-cerveau). Pour tout autre
+     * utilisateur, l'entrée du plugin reste INVISIBLE (ni dans le drawer, ni
+     * sur l'accueil) et l'accès direct par hash est bloqué (cf. js/app.js).
+     *
+     * Tableau (pour évolutivité : on pourra élargir l'accès sans changer le
+     * code de gating). Le gating compare l'« id » de l'utilisateur Supabase
+     * connecté (window.Auth.getUser().id) à cette liste.
+     *
+     * Actuellement : Nicolas uniquement.
+     */
+    BRAIN_OWNER_IDS: ['74ac7efa-a460-41fa-8443-65aefc385b3f'],
   };
 })();
