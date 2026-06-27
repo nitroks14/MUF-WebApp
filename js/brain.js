@@ -22,8 +22,14 @@
  * Contrat de l'API (côté VM) :
  *   POST {BRAIN_URL}/v1/ask
  *     Headers : Authorization: Bearer <JWT Supabase>, Content-Type: application/json
- *     Body    : { question, contexte?: {...}, options?: {...} }
+ *     Body    : { question, contexte?: {...}, options?: {...},
+ *                 historique?: [{ role: "user"|"assistant", content: string }] }
  *     Réponse : { reponse, confiance, provider_utilise, meta, debug? }
+ *
+ *   CONVERSATION (chat multi-tours) : le champ OPTIONNEL `historique` contient les
+ *   tours PRÉCÉDENTS de la discussion (SANS le message courant ; `question` =
+ *   dernier message utilisateur). Rétro-compatible : sans `historique`, le
+ *   comportement « coup par coup » est identique à l'existant.
  *
  * ⚠️ La génération est LENTE (LLM « thinking » : ~12-16 s). Le timeout client
  *    par défaut est donc volontairement large (30 s), surchargeable via
@@ -33,10 +39,12 @@
  *   .ask(question, options) → Promise<{ reponse, confiance, provider_utilise, meta, debug? }>
  *       question : string (la question utilisateur).
  *       options  : {
- *         contexte? : { type_machine?, generation?, options? }  → corps.contexte
- *         options?  : { provider?, top_k?, rerank?, debug? }     → corps.options
- *         timeout?  : number (ms, défaut 30000)
- *         signal?   : AbortSignal externe optionnel (annulation par l'appelant)
+ *         contexte?   : { type_machine?, generation?, options? }  → corps.contexte
+ *         options?    : { provider?, top_k?, rerank?, debug? }     → corps.options
+ *         historique? : [{ role: "user"|"assistant", content }]    → corps.historique
+ *                       (tours PRÉCÉDENTS uniquement ; voir contrat ci-dessus)
+ *         timeout?    : number (ms, défaut 30000)
+ *         signal?     : AbortSignal externe optionnel (annulation par l'appelant)
  *       }
  *   .ready() → Promise<void> résolue quand l'auth est prête ET l'URL configurée,
  *              rejetée sinon (sans bruit). Utile pour tester la dispo en amont.
@@ -103,9 +111,36 @@
   }
 
   /* ----------------------------------------------------------
+     Normalise un tableau d'historique de conversation.
+     N'accepte que des tours bien formés { role, content } où role ∈
+     { "user", "assistant" } et content est une chaîne non vide. Toute
+     entrée invalide est ÉCARTÉE silencieusement (robustesse : on ne veut
+     jamais polluer le contrat serveur). Renvoie un tableau (éventuellement
+     vide) — l'appelant décide de le transmettre ou non.
+     ---------------------------------------------------------- */
+  function normaliserHistorique(historique) {
+    if (!Array.isArray(historique)) return [];
+
+    var propre = [];
+    for (var i = 0; i < historique.length; i++) {
+      var tour = historique[i];
+      if (!tour || typeof tour !== 'object') continue;
+
+      var role = tour.role;
+      if (role !== 'user' && role !== 'assistant') continue;
+
+      if (typeof tour.content !== 'string' || tour.content === '') continue;
+
+      propre.push({ role: role, content: tour.content });
+    }
+    return propre;
+  }
+
+  /* ----------------------------------------------------------
      Construit le corps de la requête à partir des arguments publics.
-     On ne transmet contexte / options QUE s'ils sont fournis, pour
-     laisser le serveur appliquer ses propres valeurs par défaut.
+     On ne transmet contexte / options / historique QUE s'ils sont fournis
+     (et non vides), pour laisser le serveur appliquer ses propres valeurs
+     par défaut et rester rétro-compatible avec le mode « coup par coup ».
      ---------------------------------------------------------- */
   function construireCorps(question, options) {
     var corps = { question: String(question == null ? '' : question) };
@@ -115,6 +150,16 @@
     }
     if (options && options.options && typeof options.options === 'object') {
       corps.options = options.options;
+    }
+
+    /* Conversation : on ne transmet `historique` que s'il contient au moins
+       un tour valide. Sans historique → corps strictement identique à l'API
+       d'origine (rétro-compatibilité garantie). */
+    if (options && options.historique !== undefined) {
+      var hist = normaliserHistorique(options.historique);
+      if (hist.length > 0) {
+        corps.historique = hist;
+      }
     }
 
     return corps;

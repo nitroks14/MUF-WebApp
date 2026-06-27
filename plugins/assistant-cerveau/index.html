@@ -1,8 +1,13 @@
 <!--
-  Plugin : Assistant Cerveau
-  Mini-UI au-dessus de window.MUF.brain.ask() (cf. js/brain.js) : pose une
-  question au « Cerveau Multivac » (RAG + LLM hébergé côté VM, joignable via
-  tailnet) et affiche la réponse.
+  Plugin : Assistant Cerveau (CHAT multi-tours)
+  Interface de discussion au-dessus de window.MUF.brain.ask() (cf. js/brain.js) :
+  fil de messages (bulles utilisateur + réponses de l'Assistant), mémoire de
+  conversation en cours (historique transmis au « Cerveau Multivac » à chaque
+  tour) et réponses rendues en markdown léger anti-XSS.
+
+  Le Cerveau (RAG + LLM hébergé côté VM, joignable via tailnet) reçoit, à chaque
+  envoi : la NOUVELLE question + l'HISTORIQUE des tours précédents (sans le
+  message courant). Cf. contrat /v1/ask dans js/brain.js.
 
   Plugin RÉSERVÉ : son entrée n'apparaît dans la nav/l'accueil que pour les
   utilisateurs dont l'ID Supabase ∈ MUF_CONFIG.BRAIN_OWNER_IDS (gating dans
@@ -14,34 +19,182 @@
 
 <style>
   /* ============================================================
-     Styles spécifiques au plugin Assistant Cerveau
+     Styles spécifiques au plugin Assistant Cerveau (chat)
      ============================================================ */
 
   .ac-intro {
     font-size: var(--font-size-sm, 13px);
     color: var(--color-text-muted, #666);
-    margin: 0 0 16px 0;
+    margin: 0 0 12px 0;
     line-height: 1.5;
   }
 
-  .ac-field {
+  /* En-tête du chat : titre + bouton « Nouvelle conversation » */
+  .ac-chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
     margin-bottom: 12px;
   }
 
-  .ac-field label {
-    display: block;
+  .ac-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    background: var(--color-bg-alt, #F8F9FA);
+    color: var(--color-text, #111);
+    border: 1px solid var(--color-border, #d0d5dd);
+    border-radius: var(--radius-sm, 6px);
     font-size: var(--font-size-sm, 13px);
     font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .ac-btn-secondary:hover:not(:disabled) { border-color: var(--color-primary, #003A70); }
+  .ac-btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  /* ---- Fil de messages ---- */
+  .ac-thread {
+    border: 1px solid var(--color-border, #d0d5dd);
+    border-radius: var(--radius-sm, 6px);
+    background: var(--color-bg, #fff);
+    padding: 14px;
+    /* Hauteur bornée : le fil scrolle, la saisie reste accessible (mobile-first). */
+    min-height: 220px;
+    max-height: 58vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Message d'amorce quand le fil est vide */
+  .ac-empty {
+    margin: auto;
+    text-align: center;
+    color: var(--color-text-muted, #666);
+    font-size: var(--font-size-sm, 13px);
+    line-height: 1.5;
+    padding: 16px;
+  }
+
+  /* Une rangée de message : alignée à droite (user) ou à gauche (assistant). */
+  .ac-row {
+    display: flex;
+    flex-direction: column;
+    max-width: 88%;
+  }
+  .ac-row-user      { align-self: flex-end;   align-items: flex-end; }
+  .ac-row-assistant { align-self: flex-start; align-items: flex-start; }
+
+  .ac-bubble {
+    padding: 10px 13px;
+    border-radius: 14px;
+    font-size: var(--font-size-base, 14px);
+    line-height: 1.55;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  /* Bulle utilisateur : pleine couleur primaire. */
+  .ac-row-user .ac-bubble {
+    background: var(--color-primary, #003A70);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+    white-space: pre-wrap; /* préserve les retours à la ligne saisis */
+  }
+
+  /* Bulle assistant : fond clair, contenu markdown léger. */
+  .ac-row-assistant .ac-bubble {
+    background: var(--color-bg-alt, #F8F9FA);
+    border: 1px solid var(--color-border, #d0d5dd);
     color: var(--color-text, #111);
-    margin-bottom: 6px;
+    border-bottom-left-radius: 4px;
+  }
+
+  /* Bulle assistant en ERREUR : ton rouge doux (sans planter le fil). */
+  .ac-row-assistant .ac-bubble.ac-bubble-error {
+    background: #fee2e2;
+    border-color: #f5b5b5;
+    color: #991b1b;
+  }
+
+  /* Méta (confiance / provider) sous la réponse assistant. */
+  .ac-bubble-meta {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .ac-chip {
+    display: inline-block;
+    padding: 2px 9px;
+    background: var(--color-bg-alt, #F8F9FA);
+    border: 1px solid var(--color-border, #d0d5dd);
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-muted, #666);
+  }
+
+  /* Indicateur « le Cerveau réfléchit… » */
+  .ac-typing {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--font-size-sm, 13px);
+    color: var(--color-text-muted, #666);
+  }
+  .ac-spinner {
+    width: 15px;
+    height: 15px;
+    border: 2px solid rgba(0, 58, 112, 0.25);
+    border-top-color: var(--color-primary, #003A70);
+    border-radius: 50%;
+    animation: ac-spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes ac-spin { to { transform: rotate(360deg); } }
+
+  /* ---- Rendu markdown léger dans la bulle assistant ---- */
+  .ac-bubble h3 {
+    font-size: var(--font-size-base, 14px);
+    font-weight: 700;
+    color: var(--color-primary, #003A70);
+    margin: 12px 0 6px;
+  }
+  .ac-bubble h3:first-child { margin-top: 0; }
+  .ac-bubble p { margin: 0 0 10px; }
+  .ac-bubble p:last-child { margin-bottom: 0; }
+  .ac-bubble ul { margin: 0 0 10px; padding-left: 20px; }
+  .ac-bubble li { margin-bottom: 4px; }
+  .ac-bubble code {
+    background: rgba(0, 58, 112, 0.08);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.92em;
+  }
+  .ac-bubble strong { font-weight: 700; }
+
+  /* ---- Zone de saisie (en bas) ---- */
+  .ac-composer {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    margin-top: 12px;
   }
 
   .ac-textarea {
-    width: 100%;
+    flex: 1 1 auto;
     box-sizing: border-box;
-    min-height: 96px;
-    resize: vertical;
-    padding: 10px 12px;
+    min-height: 46px;
+    max-height: 160px;
+    resize: none;
+    padding: 11px 12px;
     border: 1px solid var(--color-border, #d0d5dd);
     border-radius: var(--radius-sm, 6px);
     font-size: var(--font-size-base, 14px);
@@ -51,27 +204,21 @@
     color: var(--color-text, #111);
     transition: border-color 0.15s, box-shadow 0.15s;
   }
-
   .ac-textarea:focus {
     outline: none;
     border-color: var(--color-primary, #003A70);
     box-shadow: 0 0 0 3px rgba(0, 58, 112, 0.12);
   }
-
-  .ac-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
+  .ac-textarea:disabled { opacity: 0.7; cursor: not-allowed; }
 
   .ac-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 10px 18px;
-    min-height: var(--input-height, 40px);
+    padding: 0 18px;
+    min-height: 46px;
+    flex-shrink: 0;
     background: var(--color-primary, #003A70);
     color: #fff;
     border: none;
@@ -82,100 +229,14 @@
     cursor: pointer;
     transition: background 0.15s;
   }
-
   .ac-btn:hover:not(:disabled) { background: var(--color-primary-dark, #002850); }
   .ac-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-  /* Spinner inline (état « le Cerveau réfléchit… ») */
-  .ac-spinner {
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: ac-spin 0.7s linear infinite;
-    flex-shrink: 0;
-  }
-
-  @keyframes ac-spin { to { transform: rotate(360deg); } }
-
-  /* Statut texte à côté du bouton (chargement / hint) */
-  .ac-status {
-    font-size: var(--font-size-sm, 13px);
-    color: var(--color-text-muted, #666);
-  }
-
-  /* Bandeau d'erreur gracieux (Cerveau injoignable, etc.) */
-  .ac-error {
-    margin-top: 16px;
-    padding: 12px 14px;
-    background: #fee2e2;
-    border: 1px solid #f5b5b5;
-    border-radius: var(--radius-sm, 6px);
-    color: #991b1b;
-    font-size: var(--font-size-sm, 13px);
-    line-height: 1.45;
-  }
-
-  .ac-error-title { font-weight: 700; margin-bottom: 2px; }
-
-  /* Zone de réponse */
-  .ac-answer {
-    margin-top: 16px;
-  }
-
-  .ac-answer-meta {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 10px;
-  }
-
-  .ac-chip {
-    display: inline-block;
-    padding: 3px 10px;
-    background: var(--color-bg-alt, #F8F9FA);
-    border: 1px solid var(--color-border, #d0d5dd);
-    border-radius: 14px;
+  .ac-hint {
     font-size: 11px;
-    font-weight: 600;
     color: var(--color-text-muted, #666);
+    margin-top: 6px;
   }
-
-  .ac-answer-body {
-    background: var(--color-bg-alt, #F8F9FA);
-    border: 1px solid var(--color-border, #d0d5dd);
-    border-radius: var(--radius-sm, 6px);
-    padding: 14px 16px;
-    font-size: var(--font-size-base, 14px);
-    color: var(--color-text, #111);
-    line-height: 1.55;
-    word-wrap: break-word;
-    overflow-wrap: anywhere;
-  }
-
-  /* Rendu markdown léger de la réponse */
-  .ac-answer-body h3 {
-    font-size: var(--font-size-base, 14px);
-    font-weight: 700;
-    color: var(--color-primary, #003A70);
-    margin: 14px 0 6px;
-  }
-  .ac-answer-body h3:first-child { margin-top: 0; }
-  .ac-answer-body p { margin: 0 0 10px; }
-  .ac-answer-body p:last-child { margin-bottom: 0; }
-  .ac-answer-body ul {
-    margin: 0 0 10px;
-    padding-left: 20px;
-  }
-  .ac-answer-body li { margin-bottom: 4px; }
-  .ac-answer-body code {
-    background: rgba(0, 58, 112, 0.08);
-    padding: 1px 5px;
-    border-radius: 4px;
-    font-size: 0.92em;
-  }
-  .ac-answer-body strong { font-weight: 700; }
 </style>
 
 <div class="card mb-24">
@@ -183,35 +244,30 @@
     <h2 class="card-title">Assistant Cerveau</h2>
   </div>
   <div class="card-body">
-    <p class="ac-intro">
-      Posez une question au « Cerveau Multivac » (assistant interne).
-      La génération prend une dizaine de secondes : merci de patienter
-      pendant la réflexion.
-    </p>
-
-    <div class="ac-field">
-      <label for="ac-question">Votre question</label>
-      <textarea id="ac-question" class="ac-textarea"
-                placeholder="ex : Procédure de calibration du capteur de vide sur une R230 ?"
-                autocomplete="off"></textarea>
-    </div>
-
-    <div class="ac-actions">
-      <button id="ac-ask" type="button" class="ac-btn">
-        <span id="ac-ask-spinner" class="ac-spinner" hidden></span>
-        <span id="ac-ask-label">Demander</span>
+    <div class="ac-chat-header">
+      <p class="ac-intro">
+        Discutez avec le « Cerveau Multivac » (assistant interne). Il garde le
+        fil de la conversation. La génération prend une dizaine de secondes par
+        réponse.
+      </p>
+      <button id="ac-reset" type="button" class="ac-btn-secondary">
+        Nouvelle conversation
       </button>
-      <span id="ac-status" class="ac-status" role="status" aria-live="polite"></span>
     </div>
 
-    <!-- Bandeau d'erreur (masqué par défaut) -->
-    <div id="ac-error" class="ac-error" role="alert" hidden></div>
+    <!-- Fil de messages -->
+    <div id="ac-thread" class="ac-thread" role="log" aria-live="polite" aria-label="Fil de discussion"></div>
 
-    <!-- Réponse (masquée par défaut) -->
-    <div id="ac-answer" class="ac-answer" hidden>
-      <div id="ac-answer-meta" class="ac-answer-meta"></div>
-      <div id="ac-answer-body" class="ac-answer-body"></div>
+    <!-- Composer : saisie + envoi -->
+    <div class="ac-composer">
+      <textarea id="ac-input" class="ac-textarea"
+                placeholder="ex : Procédure de calibration du capteur de vide sur une R230 ?"
+                rows="1" autocomplete="off"></textarea>
+      <button id="ac-send" type="button" class="ac-btn">
+        <span id="ac-send-label">Envoyer</span>
+      </button>
     </div>
+    <div class="ac-hint">Entrée pour envoyer · Maj+Entrée pour un saut de ligne</div>
   </div>
 </div>
 
@@ -234,21 +290,27 @@
   }
 
   /* -- Références DOM -- */
-  var elQuestion   = document.getElementById('ac-question');
-  var elAsk        = document.getElementById('ac-ask');
-  var elAskSpinner = document.getElementById('ac-ask-spinner');
-  var elAskLabel   = document.getElementById('ac-ask-label');
-  var elStatus     = document.getElementById('ac-status');
-  var elError      = document.getElementById('ac-error');
-  var elAnswer     = document.getElementById('ac-answer');
-  var elAnswerMeta = document.getElementById('ac-answer-meta');
-  var elAnswerBody = document.getElementById('ac-answer-body');
+  var elThread    = document.getElementById('ac-thread');
+  var elInput     = document.getElementById('ac-input');
+  var elSend      = document.getElementById('ac-send');
+  var elSendLabel = document.getElementById('ac-send-label');
+  var elReset     = document.getElementById('ac-reset');
 
   /* Garde : si le HTML n'est pas monté (ne devrait pas arriver), on sort. */
-  if (!elQuestion || !elAsk) return;
+  if (!elThread || !elInput || !elSend) return;
 
   /* ----------------------------------------------------------
-     Rendu markdown LÉGER et SÛR.
+     ÉTAT DE LA CONVERSATION
+     `messages` est la SOURCE DE VÉRITÉ : un tableau de tours { role, content }
+     dans l'ordre chronologique, role ∈ { "user", "assistant" }. Les bulles
+     d'erreur affichées dans le fil ne sont PAS mémorisées ici (elles ne font
+     pas partie du contexte envoyé au Cerveau).
+     ---------------------------------------------------------- */
+  var messages = [];
+  var enCours  = false; /* une génération est en vol → on verrouille l'envoi */
+
+  /* ----------------------------------------------------------
+     Rendu markdown LÉGER et SÛR (réutilisé tel quel — NE PAS régresser).
      La réponse du Cerveau peut contenir une structure type markdown
      (### titres, listes « - »/« * », **gras**, `code`). On l'échappe
      INTÉGRALEMENT d'abord (anti-XSS), PUIS on ne réintroduit que des
@@ -305,61 +367,131 @@
   }
 
   /* ----------------------------------------------------------
-     Gestion des états d'affichage (chargement / erreur / réponse).
+     Construit les chips de méta (confiance / provider) — HTML échappé.
+     Renvoie '' si rien d'affichable.
      ---------------------------------------------------------- */
-  function setChargement(actif) {
-    elAsk.disabled = actif;
-    elQuestion.disabled = actif;
-    elAskSpinner.hidden = !actif;
-    elAskLabel.textContent = actif ? 'Patientez…' : 'Demander';
-    elStatus.textContent = actif ? 'Le Cerveau réfléchit… (environ 12-16 s)' : '';
-  }
-
-  function masquerError() {
-    elError.hidden = true;
-    elError.innerHTML = '';
-  }
-
-  function afficherError(message) {
-    elAnswer.hidden = true;
-    elError.hidden = false;
-    elError.innerHTML =
-      '<div class="ac-error-title">Une erreur est survenue</div>' +
-      '<div>' + escapeHtml(message) + '</div>';
-  }
-
-  function afficherReponse(data) {
-    masquerError();
-
-    var reponse = data && typeof data.reponse === 'string' ? data.reponse : '';
-    if (reponse.trim() === '') {
-      afficherError('Le Cerveau a répondu, mais sans contenu exploitable.');
-      return;
-    }
-
-    /* Méta optionnelles : confiance + provider utilisé (discret). */
+  function construireMeta(data) {
     var meta = '';
     if (data && (data.confiance !== undefined && data.confiance !== null)) {
       var c = data.confiance;
-      var cTexte = (typeof c === 'number')
-        ? Math.round(c * 100) + ' %'
-        : String(c);
+      var cTexte = (typeof c === 'number') ? Math.round(c * 100) + ' %' : String(c);
       meta += '<span class="ac-chip">Confiance : ' + escapeHtml(cTexte) + '</span>';
     }
     if (data && data.provider_utilise) {
       meta += '<span class="ac-chip">Source : ' + escapeHtml(String(data.provider_utilise)) + '</span>';
     }
-    elAnswerMeta.innerHTML = meta;
-    elAnswerMeta.style.display = meta ? '' : 'none';
+    return meta;
+  }
 
-    elAnswerBody.innerHTML = rendreMarkdownLeger(reponse);
-    elAnswer.hidden = false;
+  /* ----------------------------------------------------------
+     AUTOSCROLL — colle le fil en bas (dernier message visible).
+     ---------------------------------------------------------- */
+  function scrollerEnBas() {
+    elThread.scrollTop = elThread.scrollHeight;
+  }
+
+  /* ----------------------------------------------------------
+     Placeholder « fil vide » (affiché tant qu'aucun message).
+     ---------------------------------------------------------- */
+  function rendrePlaceholderVide() {
+    elThread.innerHTML =
+      '<div class="ac-empty">Aucun message pour l\'instant.<br>' +
+      'Posez votre première question ci-dessous.</div>';
+  }
+
+  /* ----------------------------------------------------------
+     Ajout d'une bulle UTILISATEUR au fil (texte brut échappé,
+     retours à la ligne préservés via white-space: pre-wrap).
+     ---------------------------------------------------------- */
+  function ajouterBulleUser(texte) {
+    var row = document.createElement('div');
+    row.className = 'ac-row ac-row-user';
+    var bulle = document.createElement('div');
+    bulle.className = 'ac-bubble';
+    bulle.innerHTML = escapeHtml(texte);
+    row.appendChild(bulle);
+    elThread.appendChild(row);
+    scrollerEnBas();
+  }
+
+  /* ----------------------------------------------------------
+     Ajout d'une bulle ASSISTANT (réponse rendue en markdown léger).
+     `data` = objet réponse du Cerveau ({ reponse, confiance, provider_utilise }).
+     ---------------------------------------------------------- */
+  function ajouterBulleAssistant(texte, data) {
+    var row = document.createElement('div');
+    row.className = 'ac-row ac-row-assistant';
+
+    var bulle = document.createElement('div');
+    bulle.className = 'ac-bubble';
+    bulle.innerHTML = rendreMarkdownLeger(texte);
+    row.appendChild(bulle);
+
+    var metaHtml = construireMeta(data);
+    if (metaHtml) {
+      var meta = document.createElement('div');
+      meta.className = 'ac-bubble-meta';
+      meta.innerHTML = metaHtml;
+      row.appendChild(meta);
+    }
+
+    elThread.appendChild(row);
+    scrollerEnBas();
+  }
+
+  /* ----------------------------------------------------------
+     Ajout d'une bulle ASSISTANT en ERREUR (message clair, ton rouge doux).
+     N'est PAS mémorisée dans `messages` (hors contexte conversationnel).
+     ---------------------------------------------------------- */
+  function ajouterBulleErreur(message) {
+    var row = document.createElement('div');
+    row.className = 'ac-row ac-row-assistant';
+    var bulle = document.createElement('div');
+    bulle.className = 'ac-bubble ac-bubble-error';
+    bulle.innerHTML = escapeHtml(message);
+    row.appendChild(bulle);
+    elThread.appendChild(row);
+    scrollerEnBas();
+  }
+
+  /* ----------------------------------------------------------
+     Indicateur de frappe « le Cerveau réfléchit… » (transitoire).
+     Renvoie l'élément créé pour pouvoir le retirer ensuite.
+     ---------------------------------------------------------- */
+  function ajouterIndicateurFrappe() {
+    var row = document.createElement('div');
+    row.className = 'ac-row ac-row-assistant';
+    row.setAttribute('data-ac-typing', '1');
+    var bulle = document.createElement('div');
+    bulle.className = 'ac-bubble';
+    bulle.innerHTML =
+      '<span class="ac-typing"><span class="ac-spinner"></span>' +
+      'Le Cerveau réfléchit… (environ 12-16 s)</span>';
+    row.appendChild(bulle);
+    elThread.appendChild(row);
+    scrollerEnBas();
+    return row;
+  }
+
+  function retirerElement(el) {
+    if (el && el.parentNode) { el.parentNode.removeChild(el); }
+  }
+
+  /* ----------------------------------------------------------
+     Verrouillage de l'UI pendant la génération.
+     ---------------------------------------------------------- */
+  function setChargement(actif) {
+    enCours = actif;
+    elInput.disabled = actif;
+    elSend.disabled  = actif;
+    elReset.disabled = actif;
+    elSendLabel.textContent = actif ? 'Patientez…' : 'Envoyer';
   }
 
   /* ----------------------------------------------------------
      Message d'erreur lisible à partir du rejet de brain.ask().
-     On distingue le cas « Cerveau injoignable » (hors tailnet / réseau KO)
-     des autres erreurs, pour un message clair et non technique.
+     On distingue « Cerveau injoignable » (hors tailnet / réseau KO) et
+     « session expirée » des autres erreurs, pour un message clair.
      ---------------------------------------------------------- */
   function messageDepuisErreur(err) {
     var brut = (err && err.message) ? String(err.message) : '';
@@ -382,56 +514,120 @@
   }
 
   /* ----------------------------------------------------------
-     Action principale — envoi de la question.
+     ENVOI D'UN TOUR.
+     1. Lit + valide la saisie.
+     2. Ajoute le message user au fil ET à `messages`.
+     3. Construit l'HISTORIQUE = TOUS les tours précédents (donc `messages`
+        SANS le message courant, qu'on vient d'ajouter) → on tranche le dernier.
+        C'est exactement le contrat /v1/ask : `question` = message courant,
+        `historique` = tours antérieurs.
+     4. Appelle window.MUF.brain.ask(texte, { historique }).
+     5. Pousse la réponse assistant dans le fil ET dans `messages`.
+        En cas d'erreur : bulle d'erreur dans le fil, l'historique est CONSERVÉ
+        (on n'enregistre pas de tour assistant → la prochaine question repartira
+        proprement du dernier échange réussi).
      ---------------------------------------------------------- */
-  function demander() {
-    var question = elQuestion.value.trim();
+  function envoyer() {
+    if (enCours) return;
 
-    masquerError();
-    elAnswer.hidden = true;
-
-    if (question === '') {
-      afficherError('Veuillez saisir une question avant de demander.');
-      elQuestion.focus();
+    var texte = elInput.value.trim();
+    if (texte === '') {
+      elInput.focus();
       return;
     }
 
     /* Dégradé gracieux si le client Cerveau n'est pas disponible du tout. */
     if (!window.MUF || !window.MUF.brain || typeof window.MUF.brain.ask !== 'function') {
-      afficherError('Cerveau injoignable (hors réseau ?). Le service d\'assistance '
-                  + 'n\'est pas disponible pour le moment.');
+      ajouterBulleUser(texte);
+      messages.push({ role: 'user', content: texte });
+      elInput.value = '';
+      ajusterHauteur();
+      ajouterBulleErreur('Cerveau injoignable (hors réseau ?). Le service '
+        + 'd\'assistance n\'est pas disponible pour le moment.');
       return;
     }
 
-    setChargement(true);
+    /* 2. Message user dans le fil + l'état. */
+    ajouterBulleUser(texte);
+    messages.push({ role: 'user', content: texte });
+    elInput.value = '';
+    ajusterHauteur();
 
-    window.MUF.brain.ask(question)
+    /* 3. Historique = tous les tours SAUF le message courant (le dernier). */
+    var historique = messages.slice(0, messages.length - 1);
+
+    setChargement(true);
+    var indicateur = ajouterIndicateurFrappe();
+
+    window.MUF.brain.ask(texte, { historique: historique })
       .then(function (data) {
-        afficherReponse(data);
+        retirerElement(indicateur);
+
+        var reponse = (data && typeof data.reponse === 'string') ? data.reponse : '';
+        if (reponse.trim() === '') {
+          ajouterBulleErreur('Le Cerveau a répondu, mais sans contenu exploitable.');
+          return;
+        }
+
+        /* 5. Réponse dans le fil + mémorisée pour les tours suivants. */
+        ajouterBulleAssistant(reponse, data);
+        messages.push({ role: 'assistant', content: reponse });
       })
       .catch(function (err) {
-        /* Rejet = cas NORMAL (Cerveau indisponible), pas de log bruyant. */
-        afficherError(messageDepuisErreur(err));
+        /* Rejet = cas NORMAL (Cerveau indisponible) : pas de log bruyant.
+           On retire l'indicateur, on affiche une bulle d'erreur, et on
+           PRÉSERVE l'historique (aucun tour assistant ajouté). */
+        retirerElement(indicateur);
+        ajouterBulleErreur(messageDepuisErreur(err));
       })
       .then(function () {
-        /* finally-like : restaure l'UI dans tous les cas. */
+        /* finally-like : restaure l'UI dans tous les cas + rend la main. */
         setChargement(false);
+        elInput.focus();
       });
   }
 
   /* ----------------------------------------------------------
-     Câblage des évènements.
-     - Clic sur « Demander ».
-     - Ctrl/Cmd + Entrée dans le textarea = envoi rapide.
+     NOUVELLE CONVERSATION — réinitialise le fil ET l'historique.
      ---------------------------------------------------------- */
-  elAsk.addEventListener('click', demander);
+  function nouvelleConversation() {
+    if (enCours) return;
+    messages = [];
+    rendrePlaceholderVide();
+    elInput.value = '';
+    ajusterHauteur();
+    elInput.focus();
+  }
 
-  elQuestion.addEventListener('keydown', function (e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+  /* ----------------------------------------------------------
+     Auto-redimensionnement du textarea (1 → plusieurs lignes, borné CSS).
+     ---------------------------------------------------------- */
+  function ajusterHauteur() {
+    elInput.style.height = 'auto';
+    elInput.style.height = Math.min(elInput.scrollHeight, 160) + 'px';
+  }
+
+  /* ----------------------------------------------------------
+     Câblage des évènements.
+     - Clic « Envoyer ».
+     - Entrée = envoyer ; Maj+Entrée = nouvelle ligne.
+     - Clic « Nouvelle conversation ».
+     ---------------------------------------------------------- */
+  elSend.addEventListener('click', envoyer);
+
+  elInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      demander();
+      envoyer();
     }
   });
+
+  elInput.addEventListener('input', ajusterHauteur);
+
+  elReset.addEventListener('click', nouvelleConversation);
+
+  /* État initial : fil vide. */
+  rendrePlaceholderVide();
 
 })();
 </script>

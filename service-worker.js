@@ -18,14 +18,17 @@
 'use strict';
 
 /* Nom du cache — incrémenter la version pour invalider l'ancien cache.
-   Version courante : v102. Historique des versions → voir CHANGELOG.md.
-   NB : ce compteur (v102) est le cache du SW, distinct de la version
+   Version courante : v103. Historique des versions → voir CHANGELOG.md.
+   NB : ce compteur (v103) est le cache du SW, distinct de la version
    PRODUIT de l'app (APP_VERSION = 2.0.0, cf. js/app.js).
    bump cache v101 -> v102 : ajout du client Cerveau (js/brain.js) et du plugin
    réservé « Assistant Cerveau » (plugins/assistant-cerveau/index.html) au
-   précache (Phase 3 — UI window.MUF.brain.ask, gaté sur MUF_CONFIG.BRAIN_OWNER_IDS). */
-const CACHE_NOM     = 'muf-webapp-v102';
-const CACHE_PLUGINS = 'muf-plugins-v102';
+   précache (Phase 3 — UI window.MUF.brain.ask, gaté sur MUF_CONFIG.BRAIN_OWNER_IDS).
+   bump cache v102 -> v103 : Assistant Cerveau passe en CHAT multi-tours
+   (refonte plugins/assistant-cerveau/index.html en fil de discussion + mémoire)
+   et js/brain.js transmet désormais `historique` à /v1/ask (conversation). */
+const CACHE_NOM     = 'muf-webapp-v103';
+const CACHE_PLUGINS = 'muf-plugins-v103';
 
 /* Document de repli pour les navigations hors-ligne (PWA / refresh offline). */
 const FALLBACK_DOC = './index.html';
