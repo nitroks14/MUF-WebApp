@@ -11,6 +11,33 @@ Les versions sont listées de la plus récente à la plus ancienne.
 
 ---
 
+## v103
+
+- **Assistant Cerveau → CHAT multi-tours.** Le plugin réservé
+  `plugins/assistant-cerveau/index.html` passe d'un mode « coup par coup »
+  (1 question → 1 réponse, sans mémoire) à une **interface de discussion** :
+  fil de messages (bulles utilisateur + Assistant), saisie en bas (Entrée pour
+  envoyer, Maj+Entrée = nouvelle ligne), bouton « Nouvelle conversation »,
+  autoscroll, état de chargement « le Cerveau réfléchit… », et gestion d'erreur
+  gracieuse dans le fil (sans perdre l'historique). Le rendu markdown léger
+  anti-XSS (`escapeHtml` + `rendreMarkdownLeger`) est conservé.
+- **`js/brain.js`** : `ask(question, options)` transmet désormais
+  `options.historique` (tours précédents `{ role, content }`) dans le corps de
+  `/v1/ask`, pour donner le contexte conversationnel au Cerveau. Rétro-compatible :
+  sans historique, le corps est identique à l'existant. Timeout 30 s, JWT et
+  repli offline inchangés.
+- **Bump cache** : assets précachés modifiés (plugin + `brain.js`) →
+  `CACHE_NOM` / `CACHE_PLUGINS` passés de `v102` à `v103`.
+
+## v102
+
+- **Phase 3 du Cerveau Multivac — UI `window.MUF.brain`.** Ajout du client
+  Cerveau `js/brain.js` (wrapper HTTP sur l'API `/v1/ask` hébergée côté VM,
+  joignable via tailnet) et du plugin réservé « Assistant Cerveau »
+  (`plugins/assistant-cerveau/index.html`, gaté sur `MUF_CONFIG.BRAIN_OWNER_IDS`).
+- **Bump cache** : `js/brain.js` et `plugins/assistant-cerveau/index.html`
+  ajoutés au précache → `CACHE_NOM` / `CACHE_PLUGINS` passés de `v101` à `v102`.
+
 ## v101
 
 - **Suppression de la lib Blockly orpheline** (`js/libs/blockly/`, ~1,1 Mo).
